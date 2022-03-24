@@ -1,7 +1,6 @@
 '''
 本模块包含各种类，用于管理、更新各种信息:
     class UE
-    class ResourceMap
     class BS
     class ServingMap
     class ShadowMap

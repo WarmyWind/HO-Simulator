@@ -1,7 +1,11 @@
 '''
-本模块包含SINR计算相关函数:
+本模块包含SINR和数据率计算相关函数:
     get_receive_power
+    get_interference
+    calculate_SINR_dB
+    user_rate
 '''
+
 
 from info_management import *
 from precoding import ZF_precoding

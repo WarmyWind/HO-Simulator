@@ -3,6 +3,7 @@
     plot_BS_location
     plot_UE_trajectory
     plot_cdf
+    plot_bar
 '''
 
 import matplotlib.pyplot as plt
