@@ -52,10 +52,11 @@ def large_scale_fading(PARAMS, BS_list, UE_posi, shadow_map:ShadowMap):
             '''
             x_temp = int(np.ceil(np.real(UE_posi[iUE])) + 250)
             y_temp = int(np.ceil(np.imag(UE_posi[iUE])) + 200)
-            shadow = shadow_map.map[iBS][x_temp, y_temp]
+            shadow = shadow_map.map[iBS][x_temp-1, y_temp-1]
             large_scale_fading_dB[iBS, iUE] = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain
 
     large_scale_fading = 10 ** (-large_scale_fading_dB / 20)
+    # print('大尺度衰落(dB)：',large_scale_fading_dB[:,0])
     # large_fading.update(large_scale_fading)
     return large_scale_fading
 
@@ -92,7 +93,7 @@ if __name__ == '__main__':
     filepath = 'shadowFad_dB1.mat'
     index = 'shadowFad_dB'
     shadowFad_dB = get_shadow_from_mat(filepath, index)
-    # print('shadowFad_dB shape:',shadowFad_dB.shape)
+    print('shadowFad_dB shape:',shadowFad_dB.shape)
     filepath = 'Set_UE_posi_60s_250user_1to2_new.mat'
     index = 'Set_UE_posi'
     UE_posi = get_UE_posi_from_mat(filepath, index)
@@ -101,13 +102,18 @@ if __name__ == '__main__':
     Macro_BS_list = []
 
     for i in range(PARAM.Macro.nBS):
-        Macro_BS_list.append(BS(i,'Macro', PARAM.Macro.nNt, PARAM.nRB, Macro_Posi[i],True,PARAM.Macro.MaxUE))
+        Macro_BS_list.append(BS(i, 'Macro', PARAM.Macro.nNt, PARAM.nRB,PARAM.Macro.Ptmax, Macro_Posi[i], True, PARAM.Macro.MaxUE_per_RB))
 
     shadow = ShadowMap(shadowFad_dB[0])
-    # print(shadow.map.shape)  # (3,)
+    print(shadow.map.shape)  # (3,)
     large_fading = LargeScaleFadingMap(PARAM.Macro.nBS, PARAM.nUE)
-    pathLossdB = large_scale_fading(PARAM, Macro_BS_list, UE_posi[0,:], shadow, large_fading)  # (3, 250)
-    print(pathLossdB.shape, pathLossdB[2,4:6], large_fading.map[2,4:6])  # 看更新后一不一致
+
+    large_h = large_scale_fading(PARAM, Macro_BS_list, UE_posi[0,:], shadow)  # (3, 250)
+    large_fading.update(large_h)
+    print('大尺度信道shape：',large_fading.map.shape)
+    print('大尺度信道：', large_fading.map[:,0])
+    print('大尺度衰落（dB）：', -20 * np.log10(large_fading.map[:,0]))
+
 
     small_h = small_scale_fading(PARAM.nUE, len(Macro_BS_list), PARAM.Macro.nNt)
     print(small_h.shape)

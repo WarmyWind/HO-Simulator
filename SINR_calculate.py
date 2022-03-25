@@ -25,7 +25,7 @@ def get_receive_power(BS_list, channel: InstantChannelMap, precoding_method=ZF_p
             '''这里的功率分配简单的以RB上的用户数作为系数'''
             _Pt_ratio = _BS.resource_map.RB_ocp_num[_RB] / np.sum(_BS.resource_map.RB_ocp_num)  # 占用的功率比例
             _, _cof = precoding_method(_H[:, _serv_UE].T, _BS.Ptmax * _Pt_ratio)
-            receive_power[_serv_UE,_RB] = receive_power[_serv_UE,_RB] + _cof
+            receive_power[_serv_UE,_RB] = receive_power[_serv_UE,_RB] + _BS.nRB * _cof / _BS.resource_map.RB_ocp_num[_RB]
 
     return receive_power
 
@@ -50,7 +50,7 @@ def get_interference(BS_list, UE_list, channel: InstantChannelMap):
                 '''这里的功率分配简单的以RB上的用户数作为系数'''
                 _Pt_ratio = _BS.resource_map.RB_ocp_num[_RB] / np.sum(_BS.resource_map.RB_ocp_num)  # 占用的功率比例
                 interference_power[_UE.no, _RB] = interference_power[_UE.no, _RB] \
-                            + _BS.Ptmax * _Pt_ratio * np.square(np.linalg.norm(H[_inter_Nt, _BS.no, _UE.no]))
+                            + _BS.nRB * _BS.Ptmax * _Pt_ratio * np.square(np.linalg.norm(H[_inter_Nt, _BS.no, _UE.no]))
 
     return interference_power
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     instant_channel = InstantChannelMap(PARAM.Macro.nBS, PARAM.nUE, PARAM.Macro.nNt)
     serving_map = ServingMap(PARAM.Macro.nBS, PARAM.nUE)
 
-    large_h = large_scale_fading(PARAM, Macro_BS_list, UE_posi[0, :], shadow, large_fading)
+    large_h = large_scale_fading(PARAM, Macro_BS_list, UE_posi[0, :], shadow)
     large_fading.update(large_h)
     # print(_large_h[2, 4:6], large_fading.map[2, 4:6])  # 看更新后一不一致
     small_h = small_scale_fading(PARAM.nUE, len(Macro_BS_list), PARAM.Macro.nNt)
@@ -123,6 +123,7 @@ if __name__ == '__main__':
     inter_P = get_interference(Macro_BS_list, UE_list, instant_channel)
     # print(PARAM.sigma2, PARAM.sigma_c)
     SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma2)
+    SINR_dB_c = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
     SNR_dB = calculate_SNR_dB(rec_P, PARAM.sigma2)
     UE_rate = user_rate(PARAM.MLB.RB, SINR_dB)
     print(np.mean(UE_rate))

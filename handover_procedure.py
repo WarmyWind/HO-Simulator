@@ -26,7 +26,7 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
             _best_large_h = large_fading.map[_best_BS, _UE.no]
 
             '''若目标BS信道超过服务BS一定阈值HOM，触发hanover条件'''
-            if _best_BS != _UE.serv_BS and 10*np.log10(_best_large_h) - 10*np.log10(_serv_large_h) >= HOM:
+            if _best_BS != _UE.serv_BS and 20*np.log10(_best_large_h) - 20*np.log10(_serv_large_h) >= HOM:
                 _UE.update_state('handovering')
                 _UE.HO_state.update_target_BS(_best_BS)
                 _UE.HO_state.update_duration(0)
@@ -45,7 +45,7 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
             else:
                 _h = _target_large_h
 
-            if 10*np.log10(_h) - 10*np.log10(_UE.HO_state.h_before) < HOM:
+            if 20*np.log10(_h) - 20*np.log10(_UE.HO_state.h_before) < HOM:
                 '''目标BS信道低于服务BS阈值HOM，HO退出，并记一次HO失败'''
                 # _BS_no = _UE.serv_BS
                 _UE.quit_handover(False, 'served')
