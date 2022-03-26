@@ -12,6 +12,8 @@ from channel_fading import *
 from radio_access import access_init
 from SINR_calculate import *
 from handover_procedure import handover_criteria_eval
+import warnings
+warnings.filterwarnings('ignore')
 
 class SimConfig:  # 仿真参数
     plot_flag = 1  # 是否绘图
@@ -19,11 +21,18 @@ class SimConfig:  # 仿真参数
 
 def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFadingMap, small_fading:SmallScaleFadingMap,
                      instant_channel:InstantChannelMap, serving_map:ServingMap):
+    '''开始仿真'''
     '''初始接入'''
     _ = access_init(PARAM, BS_list, UE_list, large_fading, serving_map)
+
+    '''更新预编码信息'''
+    for _BS in BS_list:
+        _BS.update_precoding_matrix(instant_channel, ZF_precoding)
+
+    '''接入时速率'''
     rec_P = get_receive_power(BS_list, instant_channel)
     inter_P = get_interference(BS_list, UE_list, instant_channel)
-    SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma2)
+    SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
     UE_rate = user_rate(PARAM.MLB.RB, SINR_dB)
     # print(np.mean(UE_rate))
 
@@ -50,11 +59,15 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         TTT = 4
         handover_criteria_eval(PARAM, UE_list, BS_list, large_fading, HOM, TTT, serving_map, 'avg')
 
+        '''更新预编码信息'''
+        for _BS in BS_list:
+            _BS.update_precoding_matrix(instant_channel, ZF_precoding)
+
         '''统计性能'''
         rec_P = get_receive_power(BS_list, instant_channel)
         inter_P = get_interference(BS_list, UE_list, instant_channel)
         # print(PARAM.sigma2, PARAM.sigma_c)
-        SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma2)
+        SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
         # SNR_dB = calculate_SNR_dB(rec_P, PARAM.sigma2)
         UE_rate = user_rate(PARAM.MLB.RB, SINR_dB)
         rate_list.append(UE_rate)
@@ -120,11 +133,13 @@ if __name__ == '__main__':
 
 
     '''开始仿真'''
-    RB_per_UE_list = [4,3,2]
+    RB_per_UE_list = [2]
     rate_list = []
     HO_result_list = []
     start_time = time.time()
     print('Simulation Start.\n')
+    print('Important Parameters:')
+    print('Sigma: sigma_c\n')
     for i in range(len(RB_per_UE_list)):
         print('Simulation of Parameter Set:{} Start.'.format(i+1))
         PARAM.RB_per_UE = RB_per_UE_list[i]
@@ -134,13 +149,14 @@ if __name__ == '__main__':
         _rate_arr, _HO_result = start_simulation(PARAM, Macro_BS_list, UE_list, shadow, large_fading, small_fading, instant_channel, serving_map)
         _end_time = time.time()
         print('Simulation of Parameter Set:{} Complete.'.format(i+1))
-        print('Comsumed Time:{:.2f}s\n'.format(_end_time - _start_time))
+        print('Mean Rate:{:.2f} Mbps'.format(np.mean(_rate_arr)/1e6))
+        print('Consumed Time:{:.2f}s\n'.format(_end_time - _start_time))
         rate_list.append(_rate_arr)
         HO_result_list.append(_HO_result)
 
     end_time = time.time()
     print('All Simulation Complete.')
-    print('Total comsumed Time:{:.2f}s\n'.format(end_time - start_time))
+    print('Total Consumed Time:{:.2f}s\n'.format(end_time - start_time))
 
     if SimConfig.plot_flag == 1:
         from visualization import plot_cdf, plot_bar

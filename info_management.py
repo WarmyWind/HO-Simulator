@@ -19,6 +19,52 @@ def delete_target_from_arr(arr, target):
     arr = np.append(arr[:_idx], arr[_idx + 1:])
     return arr
 
+class ShadowMap:
+    '''
+    ShadowMap有关地理位置
+    '''
+
+    def __init__(self, shadow_data):
+        self.map = shadow_data  # 单位是dB
+
+
+class LargeScaleFadingMap:
+    '''
+    大尺度衰落=路径衰落+阴影衰落
+    '''
+
+    def __init__(self, nBS, nUE):
+        self.map = np.zeros((nBS, nUE))  # 单位不是dB
+
+    def update(self, new_fading):
+        self.map = new_fading
+
+
+class SmallScaleFadingMap:
+    '''
+    目前仅考虑平衰落，即对所有RB的小尺度衰落相同
+    '''
+
+    def __init__(self, nBS, nUE, nNt):
+        self.map = np.zeros((nBS, nUE, nNt))  # 单位不是dB
+
+    def update(self, new_fading):
+        self.map = new_fading
+
+
+class InstantChannelMap:
+    '''
+    瞬时信道
+    '''
+
+    def __init__(self, nBS, nUE, nNt):
+        self.map = np.zeros((nNt, nBS, nUE))  # 单位不是dB
+
+    def calculate_by_fading(self, large_h:LargeScaleFadingMap, small_h:SmallScaleFadingMap):
+        self.map = large_h.map * np.rollaxis(small_h.map, 2)
+
+    def update(self, new_channel):
+        self.map = new_channel
 
 class HO_state:
     def __init__(self):
@@ -180,6 +226,21 @@ class ServingMap:
         return np.where(row > 0)
 
 
+class PrecodingInfo():
+    def __init__(self):
+        '''
+        matrix: 干扰消除矩阵
+        coeffient: 功率系数
+        最终的预编码阵 = sqrt(coeffient) * matrix
+        '''
+        self.matrix = np.array([])
+        self.coeffient = 0
+
+    def update(self, new_matrix, new_coe):
+        self.matrix = new_matrix
+        self.coeffient = new_coe
+
+
 class BS:
     def __init__(self, no, type: str, nNt, nRB, Ptmax, posi, active: bool, MaxUE_per_RB):
         self.no = no
@@ -191,9 +252,22 @@ class BS:
         self.MaxUE_per_RB = MaxUE_per_RB
         self.active = active
         self.resource_map = ResourceMap(nRB, nNt)
+        self.precoding_info = [PrecodingInfo() for _ in range(nRB)]
 
     def update_active(self, new_active: bool):
         self.active = new_active
+
+    def update_precoding_matrix(self, channel: InstantChannelMap, precoding_method):
+        _H = channel.map[:, self.no, :]
+        for _RB in range(self.nRB):
+            _RB_resource = self.resource_map.map[_RB, :]
+            _serv_UE = _RB_resource[np.where(_RB_resource != -1)].astype('int32')
+            if len(_serv_UE) == 0: continue  # 若没有服务用户，跳过
+            '''这里的功率分配简单的以RB上的用户数作为系数'''
+            _Pt_ratio = self.resource_map.RB_ocp_num[_RB] / np.sum(self.resource_map.RB_ocp_num)  # 占用的功率比例
+            _W, _coe = precoding_method(_H[:, _serv_UE].T, self.Ptmax * _Pt_ratio)
+            self.precoding_info[_RB].update(_W, _coe)
+
 
     def if_full_load(self):
         most_idle_RB = self.resource_map.RB_sorted_idx[0]
@@ -230,49 +304,4 @@ class BS:
         return True
 
 
-class ShadowMap:
-    '''
-    ShadowMap有关地理位置
-    '''
 
-    def __init__(self, shadow_data):
-        self.map = shadow_data  # 单位是dB
-
-
-class LargeScaleFadingMap:
-    '''
-    大尺度衰落=路径衰落+阴影衰落
-    '''
-
-    def __init__(self, nBS, nUE):
-        self.map = np.zeros((nBS, nUE))  # 单位不是dB
-
-    def update(self, new_fading):
-        self.map = new_fading
-
-
-class SmallScaleFadingMap:
-    '''
-    目前仅考虑平衰落，即对所有RB的小尺度衰落相同
-    '''
-
-    def __init__(self, nBS, nUE, nNt):
-        self.map = np.zeros((nBS, nUE, nNt))  # 单位不是dB
-
-    def update(self, new_fading):
-        self.map = new_fading
-
-
-class InstantChannelMap:
-    '''
-    瞬时信道
-    '''
-
-    def __init__(self, nBS, nUE, nNt):
-        self.map = np.zeros((nNt, nBS, nUE))  # 单位不是dB
-
-    def calculate_by_fading(self, large_h:LargeScaleFadingMap, small_h:SmallScaleFadingMap):
-        self.map = large_h.map * np.rollaxis(small_h.map, 2)
-
-    def update(self, new_channel):
-        self.map = new_channel

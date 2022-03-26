@@ -22,15 +22,16 @@ def get_receive_power(BS_list, channel: InstantChannelMap, precoding_method=ZF_p
             _RB_resource = _BS.resource_map.map[_RB, :]
             _serv_UE = _RB_resource[np.where(_RB_resource != -1)].astype('int32')
             if len(_serv_UE) == 0: continue  # 若没有服务用户，跳过
-            '''这里的功率分配简单的以RB上的用户数作为系数'''
-            _Pt_ratio = _BS.resource_map.RB_ocp_num[_RB] / np.sum(_BS.resource_map.RB_ocp_num)  # 占用的功率比例
-            _, _cof = precoding_method(_H[:, _serv_UE].T, _BS.Ptmax * _Pt_ratio)
-            receive_power[_serv_UE,_RB] = receive_power[_serv_UE,_RB] + _BS.nRB * _cof / _BS.resource_map.RB_ocp_num[_RB]
+            # '''这里的功率分配简单的以RB上的用户数作为系数'''
+            # _Pt_ratio = _BS.resource_map.RB_ocp_num[_RB] / np.sum(_BS.resource_map.RB_ocp_num)  # 占用的功率比例
+            # _, _coe = precoding_method(_H[:, _serv_UE].T, _BS.Ptmax * _Pt_ratio)
+            _coe = _BS.precoding_info[_RB].coeffient
+            receive_power[_serv_UE,_RB] = receive_power[_serv_UE,_RB] + _BS.nRB * _coe / _BS.resource_map.RB_ocp_num[_RB]
 
     return receive_power
 
 
-def get_interference(BS_list, UE_list, channel: InstantChannelMap):
+def get_interference(BS_list, UE_list, channel: InstantChannelMap, precoding_method=ZF_precoding):
     H = channel.map  # (nNt, nBS, nUE)
     nUE = H.shape[2]
     nRB = BS_list[0].nRB
@@ -43,14 +44,24 @@ def get_interference(BS_list, UE_list, channel: InstantChannelMap):
             if _UE.serv_BS == _BS.no: continue  # 如果是服务基站，不计算干扰
             '''找到有干扰的频段'''
             _inter_RB = np.where(_BS.resource_map.RB_ocp_num[RB_serv_arr] != 0)[0]
+            _H_itf = H[:, _BS.no, :]
             for _RB in _inter_RB:
                 '''找到有干扰的天线'''
                 _inter_Nt = _BS.resource_map.RB_ocp[_RB].astype('int32')
 
-                '''这里的功率分配简单的以RB上的用户数作为系数'''
-                _Pt_ratio = _BS.resource_map.RB_ocp_num[_RB] / np.sum(_BS.resource_map.RB_ocp_num)  # 占用的功率比例
-                interference_power[_UE.no, _RB] = interference_power[_UE.no, _RB] \
-                            + _BS.nRB * _BS.Ptmax * _Pt_ratio * np.square(np.linalg.norm(H[_inter_Nt, _BS.no, _UE.no]))
+                # '''这里的功率分配简单的以RB上的用户数作为系数'''
+                # _Pt_ratio = _BS.resource_map.RB_ocp_num[_RB] / np.sum(_BS.resource_map.RB_ocp_num)  # 占用的功率比例
+                # _RB_resource = _BS.resource_map.map[_RB, :]
+                # _serv_UE = _RB_resource[np.where(_RB_resource != -1)].astype('int32')
+                # _W, _cof = precoding_method(_H_itf[:, _serv_UE].T, _BS.Ptmax * _Pt_ratio)  # 干扰基站编码
+                _W = _BS.precoding_info[_RB].matrix
+                _coe = _BS.precoding_info[_RB].coeffient
+
+                _H = H[_inter_Nt, _BS.no, _UE.no]  # 干扰基站与当前用户信道
+                _itf = _coe * np.square(np.linalg.norm(_H * _W))
+                interference_power[_UE.no, _RB] = interference_power[_UE.no, _RB] + _itf
+                # interference_power[_UE.no, _RB] = interference_power[_UE.no, _RB] \
+                #             + _BS.Ptmax * _Pt_ratio * np.square(np.linalg.norm(H[_inter_Nt, _BS.no, _UE.no]))
 
     return interference_power
 
@@ -126,5 +137,7 @@ if __name__ == '__main__':
     SINR_dB_c = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
     SNR_dB = calculate_SNR_dB(rec_P, PARAM.sigma2)
     UE_rate = user_rate(PARAM.MLB.RB, SINR_dB)
-    print(np.mean(UE_rate))
+    UE_rate_c = user_rate(PARAM.MLB.RB, SINR_dB_c)
+    print('初次接入: 采用sigma2 平均数据率：{:.2f} Mbps'.format(np.mean(UE_rate)/1e6))
+    print('采用sigma_c 平均数据率：{:.2f} Mbps'.format(np.mean(UE_rate_c)/1e6))
     # print(UE_list[0].serv_BS,UE_list[240].serv_BS)
