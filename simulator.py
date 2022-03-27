@@ -124,7 +124,7 @@ if __name__ == '__main__':
     # print(shadowFad_dB[0][1])
 
     '''从文件读取UE位置'''
-    filepath = 'Set_UE_posi_60s_250user_1to2_new.mat'
+    filepath = 'Set_UE_posi_60s_250user_1to2_new1.mat'
     index = 'Set_UE_posi'
     UE_posi = get_UE_posi_from_mat(filepath, index)
 
@@ -133,7 +133,7 @@ if __name__ == '__main__':
 
 
     '''开始仿真'''
-    RB_per_UE_list = [2]
+    RB_per_UE_list = [1,2,3,4]
     rate_list = []
     HO_result_list = []
     start_time = time.time()
