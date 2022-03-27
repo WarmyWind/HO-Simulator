@@ -234,7 +234,7 @@ class PrecodingInfo():
         最终的预编码阵 = sqrt(coeffient) * matrix
         '''
         self.matrix = np.array([])
-        self.coeffient = 0
+        self.coeffient = np.array([])
 
     def update(self, new_matrix, new_coe):
         self.matrix = new_matrix

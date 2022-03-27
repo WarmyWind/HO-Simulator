@@ -28,7 +28,7 @@ def plot_UE_trajectory(Macro_Posi, UE_tra):
     plt.legend(loc='upper right')
     plt.show()
 
-def plot_cdf(data, xlabel, ylabel, label_list, normed=1):
+def plot_cdf(data, xlabel, ylabel, label_list, normed=1, loc = 'lower right'):
     # data is a list of array
     fig, ax = plt.subplots()
     for i in range(len(data)):
@@ -40,7 +40,7 @@ def plot_cdf(data, xlabel, ylabel, label_list, normed=1):
     ax.set_xbound(np.min(data),np.max(data))
     ax.set_ybound(0,1)
     fix_hist_step_vertical_line_at_end(ax)
-    plt.legend(loc='lower right')
+    plt.legend(loc=loc)
     plt.show()
 
 def fix_hist_step_vertical_line_at_end(ax):
@@ -49,7 +49,7 @@ def fix_hist_step_vertical_line_at_end(ax):
         poly.set_xy(poly.get_xy()[:-1])
 
 
-def plot_bar(data, xlabel, ylabel, para_list, label_list):
+def plot_bar(data, xlabel, ylabel, para_list, label_list, loc = 'upper left'):
     # 创建分组柱状图，需要自己控制x轴坐标
     xticks = np.arange(len(para_list))
 
@@ -66,6 +66,6 @@ def plot_bar(data, xlabel, ylabel, para_list, label_list):
     ax.set_xticks(xticks + 0.25)
     ax.set_xticklabels(para_list)
 
-    plt.legend(loc='upper right')
+    plt.legend(loc=loc)
     plt.show()
 
