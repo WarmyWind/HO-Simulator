@@ -159,7 +159,7 @@ if __name__ == '__main__':
     print('Total Consumed Time:{:.2f}s\n'.format(end_time - start_time))
 
     if SimConfig.plot_flag == 1:
-        from visualization import plot_cdf, plot_bar
+        from visualization import plot_cdf, plot_bar, plot_rate_map
         rate_data = rate_list
         label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
         plot_cdf(rate_data, 'bit rate', 'cdf', label_list)
@@ -169,3 +169,5 @@ if __name__ == '__main__':
         para_list = ['RB={}'.format(n) for n in RB_per_UE_list]
         label_list = ['Success', 'Failure', 'Num of Failure Repeat UE']
         plot_bar(HO_result, 'Parameter Set', 'HO result', para_list, label_list)
+
+        plot_rate_map(Macro_Posi, UE_posi, rate_data, para_list)

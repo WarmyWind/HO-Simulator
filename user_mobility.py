@@ -25,9 +25,9 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
     Macro_Posi, Micro_Posi, nMicro = cellStructPPP(PARAM.nCell, PARAM.Dist, PARAM.Micro.nBS_avg)
-    filepath = 'Set_UE_posi_60s_250user_1to2_new.mat'
+    filepath = 'Set_UE_posi_60s_250user_1to2_new1.mat'
     index = 'Set_UE_posi'
     data = get_UE_posi_from_mat(filepath, index)
     # print(data.shape[-1])  # UE轨迹数
     # print(data[:, 0:2])
-    plot_UE_trajectory(Macro_Posi, data[:, 214:215])
+    plot_UE_trajectory(Macro_Posi, data[:, 200:201])
