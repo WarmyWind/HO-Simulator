@@ -9,7 +9,7 @@
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
-
+import scipy.io as scio
 
 def plot_BS_location(Macro_Posi, Micro_Posi):
     fig, ax = plt.subplots()
@@ -56,7 +56,7 @@ def plot_bar(data, xlabel, ylabel, para_list, label_list, loc='upper left'):
     xticks = np.arange(len(para_list))
 
     fig, ax = plt.subplots()
-    # 所有门店第一种产品的销量，注意控制柱子的宽度，这里选择0.25
+    # 注意控制柱子的宽度，这里选择0.25
     for i in range(len(label_list)):
         ax.bar(xticks + i * 0.25, data[i], width=0.25, label=label_list[i])
 
@@ -163,3 +163,49 @@ def add_scalr_bar(ax, x_start, x_end, y, length, fineness, orientation='vertical
         ax.hlines(y=y_end, xmin=x - fineness / 80, xmax=x + fineness / 80, colors='black', ls='-', lw=1)
         ax.text(x + fineness / 80, (y_start + y_end) / 2, '{:.1f}m'.format(length), verticalalignment='center',
                 rotation=270)
+
+if __name__ == '__main__':
+    from simulator import Parameter
+    from channel_fading import get_shadow_from_mat
+    from user_mobility import get_UE_posi_from_mat
+    from network_deployment import cellStructPPP
+
+    def get_data_from_mat(filepath, index):
+        data = scio.loadmat(filepath)
+        data = data.get(index)  # 取出字典里的label
+
+        return data
+
+
+    data = get_data_from_mat('RB123_lyk.mat', 'RB123bitrate')
+    RB123_lyk = np.transpose(data, (2,0,1))
+    data2 = get_data_from_mat('RB123.mat', 'RB123')
+    RB123 = data2
+
+    PARAM = Parameter()
+    # print(PARAM.nCell, PARAM.Macro.Ptmax, PARAM.pathloss.Macro.dFactordB, PARAM.MLB.RB)
+    np.random.seed(0)
+    '''从文件读取阴影衰落'''
+    filepath = 'shadowFad_dB1.mat'
+    index = 'shadowFad_dB'
+    shadowFad_dB = get_shadow_from_mat(filepath, index)
+    # print(shadowFad_dB[0][1])
+
+    '''从文件读取UE位置'''
+    filepath = 'Set_UE_posi_60s_250user_1to2_new1.mat'
+    index = 'Set_UE_posi'
+    UE_posi = get_UE_posi_from_mat(filepath, index)
+
+    '''生成BS位置'''
+    Macro_Posi, _, _ = cellStructPPP(PARAM.nCell, PARAM.Dist, PARAM.Micro.nBS_avg)
+
+    sim_data_list = [1,2,3]
+    # para_list = ['RB' + '={}'.format(n) for n in sim_data_list]
+    # plot_rate_map(Macro_Posi, UE_posi, RB123_lyk, para_list)
+
+    para_list_1 = ['RB' + '={}_lyk'.format(n) for n in sim_data_list]
+    para_list_2 = ['RB' + '={}_ztj'.format(n) for n in sim_data_list]
+    label_list = np.concatenate((para_list_1, para_list_2), axis = 0)
+    data_list = np.concatenate((RB123_lyk, RB123), axis = 0)
+    plot_cdf(data_list, 'bit rate', 'cdf', label_list)
+

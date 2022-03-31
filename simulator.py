@@ -4,6 +4,7 @@
 
 
 import numpy as np
+import scipy.io as scio
 import time
 from para_init import *
 from network_deployment import cellStructPPP
@@ -15,9 +16,6 @@ from handover_procedure import handover_criteria_eval
 import warnings
 warnings.filterwarnings('ignore')
 
-class SimConfig:  # 仿真参数
-    plot_flag = 1  # 是否绘图
-    nDrop = 60  # 时间步进长度，相当于60个循环
 
 def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFadingMap, small_fading:SmallScaleFadingMap,
                      instant_channel:InstantChannelMap, serving_map:ServingMap):
@@ -55,8 +53,8 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         instant_channel.calculate_by_fading(large_fading, small_fading)
 
         '''开始HO eval'''
-        HOM = 3  # dB
-        TTT = 4
+        HOM = PARAM.HOM  # dB
+        TTT = PARAM.TTT
         handover_criteria_eval(PARAM, UE_list, BS_list, large_fading, HOM, TTT, serving_map, 'avg')
 
         '''更新预编码信息'''
@@ -113,6 +111,14 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
 
     return Macro_BS_list, UE_list, shadow, large_fading, small_fading, instant_channel, serving_map
 
+
+class SimConfig:  # 仿真参数
+    plot_flag = 1  # 是否绘图
+    nDrop = 60  # 时间步进长度，相当于60个循环
+    save_file = 1  # 是否保存结果至文件
+    filename = 'HOM'
+    changing_para = 'HOM'
+
 if __name__ == '__main__':
     PARAM = Parameter()
     # print(PARAM.nCell, PARAM.Macro.Ptmax, PARAM.pathloss.Macro.dFactordB, PARAM.MLB.RB)
@@ -133,16 +139,18 @@ if __name__ == '__main__':
 
 
     '''开始仿真'''
-    RB_per_UE_list = [1,2,3,4]
+    sim_data_list = [0,1.5,3,4.5,6]
     rate_list = []
     HO_result_list = []
     start_time = time.time()
     print('Simulation Start.\n')
     print('Important Parameters:')
     print('Sigma: sigma_c\n')
-    for i in range(len(RB_per_UE_list)):
+    for i in range(len(sim_data_list)):
         print('Simulation of Parameter Set:{} Start.'.format(i+1))
-        PARAM.RB_per_UE = RB_per_UE_list[i]
+        # PARAM.RB_per_UE = sim_data_list[i]
+        # PARAM.TTT = sim_data_list[i]
+        PARAM.HOM = sim_data_list[i]
         '''初始化对象'''
         Macro_BS_list, UE_list, shadow, large_fading, small_fading, instant_channel, serving_map= init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB)
         _start_time = time.time()
@@ -157,16 +165,20 @@ if __name__ == '__main__':
     end_time = time.time()
     print('All Simulation Complete.')
     print('Total Consumed Time:{:.2f}s\n'.format(end_time - start_time))
+    if SimConfig.save_file == 1:
+        print("Saving Result as File: {}\n".format(SimConfig.filename))
+        scio.savemat(SimConfig.filename+'.mat', {SimConfig.filename: rate_list})
 
     if SimConfig.plot_flag == 1:
+        print("Plotting Results")
         from visualization import plot_cdf, plot_bar, plot_rate_map
         rate_data = rate_list
-        label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
+        label_list = [SimConfig.changing_para+'={}'.format(n) for n in sim_data_list]
         plot_cdf(rate_data, 'bit rate', 'cdf', label_list)
 
         HO_result = np.array(HO_result_list).transpose()
         HO_result = [HO_result[i] for i in range(len(HO_result))]
-        para_list = ['RB={}'.format(n) for n in RB_per_UE_list]
+        para_list = [SimConfig.changing_para+'={}'.format(n) for n in sim_data_list]
         label_list = ['Success', 'Failure', 'Num of Failure Repeat UE']
         plot_bar(HO_result, 'Parameter Set', 'HO result', para_list, label_list)
 

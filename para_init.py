@@ -13,6 +13,9 @@ class Parameter:  # 仿真场景参数
     nRB = 50  # RB数
     nUE = 250  # 用户设备数
 
+    HOM = 3
+    TTT = 4
+
     class Macro:
         nBS = 2   # 宏基站个数
         nNt = 16  # 宏基站天线个数
