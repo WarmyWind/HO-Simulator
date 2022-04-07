@@ -21,6 +21,9 @@ class Parameter:  # 仿真场景参数
 
     num_neibour_BS_of_UE = 5
 
+    HOM = 3
+    TTT = 4
+
     class Macro:
         nBS = 9   # 宏基站个数
         nNt = 16  # 宏基站天线个数
