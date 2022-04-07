@@ -11,10 +11,11 @@ import matplotlib as mpl
 import numpy as np
 
 
-def plot_BS_location(Macro_Posi, Micro_Posi):
+def plot_BS_location(Macro_Posi, Micro_Posi = None):
     fig, ax = plt.subplots()
     ax.scatter(np.real(Macro_Posi), np.imag(Macro_Posi), label='Macro BS')
-    ax.scatter(np.real(Micro_Posi), np.imag(Micro_Posi), label='Micro BS')
+    if Micro_Posi != None:
+        ax.scatter(np.real(Micro_Posi), np.imag(Micro_Posi), label='Micro BS')
     plt.legend(loc='upper right')
     plt.show()
 
@@ -109,12 +110,15 @@ def plot_rate_map(BS_posi, UE_posi, rate_data, title_list, fineness=20, loc='upp
         map = np.zeros((fineness + 1, fineness + 1))
         map_cnt = np.zeros((fineness + 1, fineness + 1))
 
-        for nDrop in range(UE_posi.shape[0]):
-            for _UE in range(UE_posi.shape[1]):
-                _idx_x, _idx_y = trans_to_map_index(UE_posi[nDrop, _UE])
+        if len(UE_posi.shape == 2):
+            for nDrop in range(UE_posi.shape[0]):
+                for _UE_no in range(UE_posi.shape[1]):
+                    _idx_x, _idx_y = trans_to_map_index(UE_posi[nDrop, _UE_no])
 
-                map[_idx_x, _idx_y] = map[_idx_x, _idx_y] + rate_data[i][nDrop, _UE]
-                map_cnt[_idx_x, _idx_y] = map_cnt[_idx_x, _idx_y] + 1
+                    map[_idx_x, _idx_y] = map[_idx_x, _idx_y] + rate_data[i][nDrop, _UE_no]
+                    map_cnt[_idx_x, _idx_y] = map_cnt[_idx_x, _idx_y] + 1
+        else:
+            raise Exception("UE_posi shape is not supported", UE_posi.shape)
 
         map[map != 0] = map[map != 0] / map_cnt[map_cnt != 0]  # 平均速率
         map_list.append(map)

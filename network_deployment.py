@@ -44,6 +44,16 @@ def cellStructPPP(nCell, Dist, nMicro):
     return Macro_Posi, Micro_Posi, nMicro
 
 
+def road_cell_struct(nCell, Dist):
+    # first_BS = 0 + 0j
+    Macro_Posi = np.array([i*Dist/2 for i in range(nCell)], dtype=np.complex_)
+    Macro_Posi[np.arange(1,nCell,2)] += 1j*np.sqrt(3)*Dist/2
+    return Macro_Posi
+
+
+
+
+
 if __name__ == '__main__':
     '''
     用于测试
@@ -52,5 +62,7 @@ if __name__ == '__main__':
     from visualization import plot_BS_location
 
     PARAM = Parameter()
-    Macro_Posi, Micro_Posi, nMicro = cellStructPPP(PARAM.nCell,PARAM.Dist,PARAM.Micro.nBS_avg)
-    plot_BS_location(Macro_Posi, Micro_Posi)
+    # Macro_Posi, Micro_Posi, nMicro = cellStructPPP(PARAM.nCell,PARAM.Dist,PARAM.Micro.nBS_avg)
+    # plot_BS_location(Macro_Posi, Micro_Posi)
+    Macro_Posi = road_cell_struct(9, 250)
+    plot_BS_location(Macro_Posi)

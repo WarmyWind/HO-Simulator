@@ -18,12 +18,12 @@ def get_shadow_from_mat(filepath, index):
     return shadow_data
 
 
-def large_scale_fading(PARAMS, BS_list, UE_posi, shadow_map:ShadowMap):
+def large_scale_fading(PARAMS, BS_list, UE_list, shadow_map:ShadowMap):
     '''
     大尺度信道衰落=路径衰落+阴影衰落
     :param PARAMS: 仿真参数
     :param BS_list: BS列表，元素是BS类
-    :param UE_posi: UE位置列表
+    :param UE_list: UE列表，元素是UE类
     :param shadow_map: 阴影衰落地图，与地理位置有关
     :param large_fading: 大尺度衰落，LargeScaleFadingMap类
     :return: large_scale_fading，1个二维数组表示BS-UE的大尺度衰落
@@ -46,13 +46,15 @@ def large_scale_fading(PARAMS, BS_list, UE_posi, shadow_map:ShadowMap):
                 pLoss1m = PARAMS.pathloss.Micro.pLoss1mdB
                 # shadow  = PARAMS.pathloss.Micro.shadowdB
 
-            distServer = np.abs(UE_posi[iUE] - BS_list[iBS].posi)  # 用户-基站距离
+            distServer = np.abs(UE_list[iUE].posi - BS_list[iBS].posi)  # 用户-基站距离
             '''
             下面的x_temp和y_temp后加的常数与数据有关
             '''
-            x_temp = int(np.ceil(np.real(UE_posi[iUE])) + 250)
-            y_temp = int(np.ceil(np.imag(UE_posi[iUE])) + 200)
-            shadow = shadow_map.map[iBS][x_temp-1, y_temp-1]
+            x_temp = int(np.ceil(np.real(UE_list[iUE].posi)/0.5))
+            y_temp = int(np.ceil((np.imag(UE_list[iUE].posi)-PARAMS.Dist/2/np.sqrt(3))/0.5))
+            x_temp = np.min((shadow_map.map.shape[2]-1, x_temp))
+            y_temp = np.min((shadow_map.map.shape[1]-1, y_temp))
+            shadow = shadow_map.map[iBS][y_temp, x_temp]
             large_scale_fading_dB[iBS, iUE] = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain
 
     large_scale_fading = 10 ** (-large_scale_fading_dB / 20)

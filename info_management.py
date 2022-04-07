@@ -70,7 +70,7 @@ class HO_state:
     def __init__(self):
         self.target_BS = -1  # 目标BS编号
         self.duration = -1  # 持续时间
-        self.target_h_avg = None  # 目标BS持续时间内的平均大尺度信道
+        self.target_h = None  # 目标BS的测量信道
         self.h_before = None  # HO之前的服务信道
         self.failure_count = 0  # HO失败次数
         self.success_count = 0  # HO成功次数
@@ -81,8 +81,8 @@ class HO_state:
     def update_duration(self, duration):
         self.duration = duration
 
-    def update_target_h_avg(self, h_avg):
-        self.target_h_avg = h_avg
+    def update_target_h(self, h):
+        self.target_h = h
 
     def update_h_before(self, h):
         self.h_before = h
@@ -96,21 +96,28 @@ class HO_state:
     def reset(self):
         self.target_BS = -1
         self.duration = -1
-        self.target_h_avg = None
+        self.target_h = None
+
+
 
 class UE:
-    def __init__(self, no, posi, active: bool):
-        self.no = no
+    def __init__(self, no, type_no, posi, type = None, active: bool = True):
+        self.no = no  # UE编号
         self.posi = posi
+        self.type = type
+        self.type_no = type_no  # 对应类型中的UE编号
         self.active = active
         self.Rreq = 0
         self.state = 'unserved'  # 'served' , 'unserved', or 'handovering'
         self.state_list = ['served', 'unserved', 'handovering']
         self.serv_BS = -1
+        self.serv_BS_L3_h = None  # 服务基站的信道功率L3测量值
         self.RB_Nt_ocp = []  # 占用的RB_Nt,列表内的元素是元组（RB，Nt）
         self.HO_state = HO_state()
+        self.neighbour_BS = []
+        self.neighbour_BS_L3_h = []  # 邻基站的信道功率L3测量值
 
-    def quit_handover(self, HO_result:bool, new_state):
+    def quit_handover(self, HO_result, new_state):
         if self.state == 'handovering':
             self.update_state(new_state)
             # self.serv_BS = -1
@@ -131,16 +138,24 @@ class UE:
         self.Rreq = new_Rreq
 
     def update_state(self, new_state):
-        if not np.isin(new_state, self.state_list):
-            raise Exception("Invalid UE state!", new_state)
+        # if not np.isin(new_state, self.state_list):
+        #     raise Exception("Invalid UE state!", new_state)
         self.state = new_state
 
     def update_serv_BS(self, new_BS):
         self.serv_BS = new_BS
 
+    def update_serv_BS_L3_h(self, new_L3_h):
+        self.serv_BS_L3_h = new_L3_h
+
     def update_RB_Nt_ocp(self, RB_Nt_list):
         self.RB_Nt_ocp = RB_Nt_list
 
+    def update_neighbour_BS(self, neighbour_list):
+        self.neighbour_BS = neighbour_list
+
+    def update_neighbour_BS_L3_h(self, BS_L3_h):
+        self.neighbour_BS_L3_h = BS_L3_h
 
 
 class ResourceMap:
