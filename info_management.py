@@ -99,6 +99,51 @@ class HO_state:
         self.target_h = None
 
 
+class RL_state:
+    def __init__(self, active = False, SINR = -np.inf, Qin = -6, Qout = -8, max_period = 100):
+
+        self.active = active
+        self.duration = -1
+        self.Qin = Qin
+        self.Qout = Qout
+        self.SINR = SINR
+        self.max_period = max_period
+        self.state = 'out'
+
+    def update_by_SINR(self, SINR):
+        if not self.active:
+            raise Exception("UE's RL state is not active!", self.active)
+
+        if SINR > self.Qin:
+            self.update_state('in')
+            self.reset_duration()
+        elif SINR < self.Qout:
+            self.update_state('out')
+            self.add_duration()
+        else:
+            if self.state == 'out':
+                self.add_duration()
+
+        if self.duration >= self.max_period:
+            self.update_state('RLF')
+
+        return self.state
+
+    def update_active(self, new_active):
+        self.active = new_active
+
+    def update_state(self, new_state):
+        self.state = new_state
+
+    def add_duration(self):
+        self.duration = self.duration + 1
+
+    def reset_duration(self):
+        self.duration = -1
+
+
+
+
 
 class UE:
     def __init__(self, no, type_no, posi, type = None, active: bool = True):
@@ -116,6 +161,8 @@ class UE:
         self.HO_state = HO_state()
         self.neighbour_BS = []
         self.neighbour_BS_L3_h = []  # 邻基站的信道功率L3测量值
+        self.RL_state = RL_state()
+
 
     def quit_handover(self, HO_result, new_state):
         if self.state == 'handovering':
@@ -127,6 +174,20 @@ class UE:
                 self.HO_state.add_failure_count()  # 记录一次HO失败
             elif HO_result == True:
                 self.HO_state.add_success_count()  # 记录一次HO成功
+
+    def update_RL_state_by_SINR(self, SINR):
+        result = self.RL_state.update_by_SINR(SINR)
+        return result
+
+    def RLF_happen(self):
+        self.RL_state.reset_duration()
+        self.RL_state.update_active(False)
+        '''其余状态由BS管理'''
+        # self.update_serv_BS(-1)
+        # self.update_state('unserved')
+
+
+
 
     def update_posi(self, new_posi):
         self.posi = new_posi
@@ -200,6 +261,8 @@ class ResourceMap:
         # 改变UE对象状态
         if UE.state != 'served':
             UE.update_state('served')
+            '''RL state由UE管理'''
+            # UE.RL_state.update_active(True)
         UE.update_RB_Nt_ocp(RB_Nt_list)
 
         return True
@@ -217,6 +280,8 @@ class ResourceMap:
         # 改变UE对象状态
         if UE.state != 'unserved':
             UE.update_state('unserved')
+            '''RL state由UE管理'''
+            # UE.RL_state.update_active(False)
         UE.update_RB_Nt_ocp([])
 
         return True
@@ -302,7 +367,7 @@ class BS:
         self.resource_map.add_new_UE(UE, RB_arr, Nt_arr)
 
         # 更新UE状态
-        UE.serv_BS = self.no
+        UE.update_serv_BS(self.no)
 
         # 更新ServingMap
         serving_map.change_by_entry(self.no, UE.no, 1)
@@ -312,11 +377,14 @@ class BS:
         self.resource_map.remove_UE(UE)
 
         # 更新UE状态
-        UE.serv_BS = -1
+        UE.update_serv_BS(-1)
 
         # 更新ServingMap
         serving_map.change_by_entry(self.no, UE.no, 0)
         return True
 
+    def RLF_happen(self, UE: UE, serving_map: ServingMap):
+        UE.RLF_happen()
+        self.unserve_UE(UE, serving_map)
 
 

@@ -6,6 +6,7 @@
 
 from info_management import *
 from resource_allocation import equal_RB_allocate
+from radio_access import *
 import numpy as np
 
 
@@ -15,8 +16,8 @@ def search_object_form_list_by_no(object_list, no):
             return _obj
 
 
-def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFadingMap,
-                           HOM, TTT, serving_map:ServingMap, measure_criteria = 'L3', allocate_method=equal_RB_allocate):
+def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFadingMap, instant_channel: InstantChannelMap,
+                           HOM, TTT, serving_map:ServingMap, measure_criteria='L3', allocate_method=equal_RB_allocate):
     for _UE in UE_list:
         if not _UE.active: continue  # 如果UE不活动，则跳过
         if _UE.state == 'unserved':  continue  # 如果UE不被服务，则跳过
@@ -36,17 +37,27 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
 
             '''若目标BS信道超过服务BS一定阈值HOM，触发hanover条件'''
             if _best_BS != _UE.serv_BS and 10*np.log10(_best_large_h) - 10*np.log10(_serv_large_h) >= HOM:
-                _UE.update_state('handovering')
-                _UE.HO_state.update_target_BS(_best_BS)
-                _UE.HO_state.update_duration(0)
-                _UE.HO_state.update_target_h(_best_large_h)
-                _UE.HO_state.update_h_before(_serv_large_h)
+                _target_BS = search_object_form_list_by_no(BS_list, _best_BS)
+                if not _target_BS.if_full_load():
+                    _UE.update_state('handovering')
+                    _UE.HO_state.update_target_BS(_best_BS)
+                    _UE.HO_state.update_duration(0)
+                    _UE.HO_state.update_target_h(_best_large_h)
+                    _UE.HO_state.update_h_before(_serv_large_h)
 
             continue
 
         '''若在handovering过程，判断是否退出'''
         if _UE.state == 'handovering':
             _UE.HO_state.update_duration(_UE.HO_state.duration + 1)
+            if _UE.RL_state.state == 'RLF':  # 在HO中发生RLF
+                _UE.quit_handover(False, 'unserved')
+                _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
+                _serv_BS.RLF_happen(_UE, serving_map)
+
+                # 尝试接入邻基站
+                _ = access_init(PARAMS, BS_list, [_UE], instant_channel, serving_map)
+
 
             if measure_criteria == 'avg':
                 _target_h = np.square(large_fading.map[_UE.HO_state.target_BS, _UE.no])  # 大尺度信道功率
@@ -59,19 +70,19 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
                 _UE.HO_state.update_target_h(_h)
 
             elif measure_criteria == 'L3':
-                if np.isin(_UE.HO_state.target_BS, _UE.neighbour_BS):  # 目标BS在邻小区列表中
+                if _UE.HO_state.target_BS in _UE.neighbour_BS:  # 目标BS在邻小区列表中
                     _neighbour_BS_L3_h = np.array(_UE.neighbour_BS_L3_h)
                     _h = _neighbour_BS_L3_h[np.where(_UE.neighbour_BS == _UE.HO_state.target_BS)]
                     _UE.HO_state.update_target_h(_h)
                 else:  # 目标BS不在邻小区列表中，退出HO
-                    _UE.quit_handover(False, 'served')  # 计HO failure
+                    _UE.quit_handover(None, 'served')  # 计HO failure
                     continue
 
 
             if 10*np.log10(_UE.HO_state.target_h) - 10*np.log10(_UE.HO_state.h_before) < HOM:
                 '''目标BS信道低于服务BS阈值HOM，HO退出，并记一次HO失败'''
                 # _BS_no = _UE.serv_BS
-                _UE.quit_handover(False, 'served')
+                _UE.quit_handover(None, 'served')
                 # _UE.update_state('served')
                 continue
 
@@ -96,7 +107,7 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
                     # _UE.update_state('served')
                 elif _result == False:
                     '''切换失败则进行记录并接入原BS'''
-                    _UE.quit_handover(False, 'unserved')
+                    _UE.quit_handover(None, 'unserved')
                     # _UE.update_state('unserved')
                     _ = allocate_method([_UE], _serv_BS, PARAMS.RB_per_UE, serving_map)
 

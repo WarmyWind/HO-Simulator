@@ -32,18 +32,26 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
     '''初始接入'''
     _ = access_init(PARAM, BS_list, UE_list, instant_channel, serving_map)
 
+    '''更新UE的服务基站L3测量'''
+    update_serv_BS_L3_h(UE_list, instant_channel, PARAM.L3_coe)
+
     '''更新预编码信息'''
     for _BS in BS_list:
         _BS.update_precoding_matrix(instant_channel, ZF_precoding)
 
-    '''接入时速率'''
+    '''接入时SINR和速率'''
     rec_P = get_receive_power(BS_list, instant_channel)
     inter_P = get_interference(BS_list, UE_list, instant_channel)
     SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
     UE_rate = user_rate(PARAM.MLB.RB, SINR_dB)
     # print(np.mean(UE_rate))
-
     rate_list = [UE_rate]
+
+    '''更新RL state'''
+    SS_SINR = calculate_SS_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
+    for _UE in UE_list:
+        _UE.update_RL_state_by_SINR(SS_SINR[_UE.no])
+
     '''开始步进时长仿真'''
     for drop_idx in range(1, SimConfig.nDrop):
         '''更新UE位置'''
@@ -72,7 +80,8 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         # HOM = 3  # dB
         # TTT = 32
         measure_criteria = 'L3'
-        handover_criteria_eval(PARAM, UE_list, BS_list, large_fading, PARAM.HOM, PARAM.TTT, serving_map, measure_criteria)
+        handover_criteria_eval(PARAM, UE_list, BS_list, large_fading, instant_channel, PARAM.HOM, PARAM.TTT,
+                                serving_map, measure_criteria)
 
         '''更新预编码信息'''
         for _BS in BS_list:
@@ -81,11 +90,15 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         '''统计性能'''
         rec_P = get_receive_power(BS_list, instant_channel)
         inter_P = get_interference(BS_list, UE_list, instant_channel)
-        # print(PARAM.sigma2, PARAM.sigma_c)
         SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
         # SNR_dB = calculate_SNR_dB(rec_P, PARAM.sigma2)
         UE_rate = user_rate(PARAM.MLB.RB, SINR_dB)
         rate_list.append(UE_rate)
+
+        '''更新RL state'''
+        SS_SINR = calculate_SS_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
+        for _UE in UE_list:
+            _UE.update_RL_state_by_SINR(SS_SINR[_UE.no])
 
         progress_bar(drop_idx/(SimConfig.nDrop-1) * 100)
 

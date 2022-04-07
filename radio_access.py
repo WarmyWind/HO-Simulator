@@ -33,7 +33,7 @@ def find_and_update_neighbour_BS(BS_list, UE_list, num_neibour, large_fading: La
         L3_h = []
         for i in range(len(_UE.neighbour_BS)):
             n_idx = _UE.neighbour_BS[i]
-            if not np.isin(n_idx, _neighbour_idx_before):
+            if n_idx not in _neighbour_idx_before:
                 L3_h.append(instant_h_power_mean[i])
             else:
                 _neignour_BS_L3_h_arr = np.array(_UE.neighbour_BS_L3_h)
@@ -91,6 +91,7 @@ def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
                 _instant_h_power = np.square(np.abs(_instant_h))
                 _instant_h_power_mean = np.mean(_instant_h_power, axis = 0)
                 _UE.update_serv_BS_L3_h(_instant_h_power_mean)
+                _UE.RL_state.update_active(True)
         else:
             raise Exception("Invalid allocate method!", allocate_method)
 

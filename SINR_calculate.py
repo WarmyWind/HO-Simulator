@@ -3,6 +3,7 @@
     get_receive_power
     get_interference
     calculate_SINR_dB
+    calculate_SS_SINR_dB
     user_rate
 '''
 
@@ -39,7 +40,7 @@ def get_interference(BS_list, UE_list, channel: InstantChannelMap, precoding_met
         RB_serv_arr = np.array([_UE.RB_Nt_ocp[i][0] for i in range(len(_UE.RB_Nt_ocp))])
         for _BS in BS_list:
             if _UE.serv_BS == _BS.no: continue  # 如果是服务基站，不计算干扰
-            if not np.isin(_BS.no, _UE.neighbour_BS): continue  # 如果不在邻基站列表内，忽略干扰
+            if _BS.no not in _UE.neighbour_BS: continue  # 如果不在邻基站列表内，忽略干扰
             '''找到有干扰的频段'''
             _inter_RB = np.where(_BS.resource_map.RB_ocp_num[RB_serv_arr] != 0)[0]
             _H_itf = H[:, _BS.no, :]
@@ -58,6 +59,14 @@ def get_interference(BS_list, UE_list, channel: InstantChannelMap, precoding_met
 def calculate_SINR_dB(receive_power, interference_power, noise):
     SINR = receive_power/(interference_power+noise)
     return 10*np.log10(SINR)
+
+
+def calculate_SS_SINR_dB(receive_power, interference_power, noise):
+    nRB = np.count_nonzero(receive_power, axis=1)
+    mean_receive_power = np.sum(receive_power, axis=1)/nRB
+    mean_interference_power = np.sum(interference_power, axis=1)/nRB
+    SS_SINR = mean_receive_power/(mean_interference_power+noise)
+    return 10*np.log10(SS_SINR)
 
 
 def user_rate(RB_width, SINR_dB):
