@@ -68,12 +68,17 @@ class InstantChannelMap:
 
 class HO_state:
     def __init__(self):
+        self.failure_type = 4  # 考虑的HOF有多少类型
         self.target_BS = -1  # 目标BS编号
         self.duration = -1  # 持续时间
         self.target_h = None  # 目标BS的测量信道
         self.h_before = None  # HO之前的服务信道
-        self.failure_count = 0  # HO失败次数
+
         self.success_count = 0  # HO成功次数
+        self.success_posi = []  # HO成功的位置
+        self.failure_count = 0  # HO失败次数
+        self.failure_type_count = [0 for _ in range(self.failure_type)]  # HOF各类型次数
+        self.failure_posi = [[] for _ in range(self.failure_type)]  # HO失败的位置
 
     def update_target_BS(self, target_BS):
         self.target_BS = target_BS
@@ -87,11 +92,14 @@ class HO_state:
     def update_h_before(self, h):
         self.h_before = h
 
-    def add_failure_count(self):
+    def add_failure_count(self, HOF_type, posi):
         self.failure_count = self.failure_count + 1
+        self.failure_type_count[HOF_type] = self.failure_type_count[HOF_type] + 1
+        self.failure_posi[HOF_type].append(posi)
 
-    def add_success_count(self):
+    def add_success_count(self, posi):
         self.success_count = self.success_count + 1
+        self.success_posi.append(posi)
 
     def reset(self):
         self.target_BS = -1
@@ -100,24 +108,28 @@ class HO_state:
 
 
 class RL_state:
-    def __init__(self, active = False, SINR = -np.inf, Qin = -6, Qout = -8, max_period = 100):
-
+    def __init__(self, active=False, Qin=-6, Qout=-8, max_period=100):
         self.active = active
         self.duration = -1
         self.Qin = Qin
         self.Qout = Qout
-        self.SINR = SINR
+        self.SINR_record = []
+        self.filtered_SINR_dB = None
         self.max_period = max_period
         self.state = 'out'
 
-    def update_by_SINR(self, SINR):
+    def update_by_SINR(self, SINR, L1_filter_length):
         if not self.active:
             raise Exception("UE's RL state is not active!", self.active)
 
-        if SINR > self.Qin:
+        self.SINR_record.append(SINR)
+        self.SINR_record = self.SINR_record[-L1_filter_length:]
+        self.filtered_SINR_dB = 10*np.log10(np.mean(SINR))
+
+        if self.filtered_SINR_dB > self.Qin:
             self.update_state('in')
             self.reset_duration()
-        elif SINR < self.Qout:
+        elif self.filtered_SINR_dB < self.Qout:
             self.update_state('out')
             self.add_duration()
         else:
@@ -141,22 +153,27 @@ class RL_state:
     def reset_duration(self):
         self.duration = -1
 
+    def reset_SINR(self):
+        self.SINR_record = []
+        self.filtered_SINR_dB = None
 
 
 
 
 class UE:
-    def __init__(self, no, type_no, posi, type = None, active: bool = True):
+    def __init__(self, no, type_no, posi=None, type=None, active:bool = True):
         self.no = no  # UE编号
         self.posi = posi
         self.type = type
         self.type_no = type_no  # 对应类型中的UE编号
         self.active = active
         self.Rreq = 0
-        self.state = 'unserved'  # 'served' , 'unserved', or 'handovering'
+        self.state = 'unserved'  # 'served', 'unserved' or 'handovering'. 'handovering' includes 'HO_Prep' and 'HO_Exec'
         self.state_list = ['served', 'unserved', 'handovering']
         self.serv_BS = -1
         self.serv_BS_L3_h = None  # 服务基站的信道功率L3测量值
+        self.ToS = -1  # 在当前服务小区的停留时间
+        self.MTS = 100  # 最小停留时间参数
         self.RB_Nt_ocp = []  # 占用的RB_Nt,列表内的元素是元组（RB，Nt）
         self.HO_state = HO_state()
         self.neighbour_BS = []
@@ -164,33 +181,45 @@ class UE:
         self.RL_state = RL_state()
 
 
-    def quit_handover(self, HO_result, new_state):
+    def quit_handover(self, HO_result, new_state, HOF_type = None):
         if self.state == 'handovering':
             self.update_state(new_state)
             # self.serv_BS = -1
             # self.RB_Nt_ocp = []
             self.HO_state.reset()
             if HO_result == False:
-                self.HO_state.add_failure_count()  # 记录一次HO失败
+                if HOF_type != None:
+                    self.HO_state.add_failure_count(HOF_type, self.posi)  # 记录一次HO失败
+                else:
+                    raise Exception("Invalid HOF_type", HOF_type)
             elif HO_result == True:
-                self.HO_state.add_success_count()  # 记录一次HO成功
+                self.HO_state.add_success_count(self.posi)  # 记录一次HO成功
 
-    def update_RL_state_by_SINR(self, SINR):
-        result = self.RL_state.update_by_SINR(SINR)
-        return result
+    def update_RL_state_by_SINR(self, SINR, L1_filter_length):
+        return self.RL_state.update_by_SINR(SINR, L1_filter_length)
+
 
     def RLF_happen(self):
         self.RL_state.reset_duration()
+        self.RL_state.reset_SINR()
         self.RL_state.update_active(False)
         '''其余状态由BS管理'''
         # self.update_serv_BS(-1)
         # self.update_state('unserved')
+
+    def HO_happen(self):
+        self.RL_state.reset_duration()
+        self.RL_state.reset_SINR()
 
 
 
 
     def update_posi(self, new_posi):
         self.posi = new_posi
+        if new_posi == None:
+            self.update_active(False)
+        else:
+            self.update_active(True)
 
     def update_active(self, new_active: bool):
         self.active = new_active
@@ -217,6 +246,12 @@ class UE:
 
     def update_neighbour_BS_L3_h(self, BS_L3_h):
         self.neighbour_BS_L3_h = BS_L3_h
+
+    def add_ToS(self):
+        self.ToS = self.ToS + 1
+
+    def reset_ToS(self):
+        self.ToS = -1
 
 
 class ResourceMap:
@@ -259,7 +294,7 @@ class ResourceMap:
         self.RB_sorted_idx = np.argsort(self.RB_ocp_num)
 
         # 改变UE对象状态
-        if UE.state != 'served':
+        if UE.state == 'unserved':
             UE.update_state('served')
             '''RL state由UE管理'''
             # UE.RL_state.update_active(True)
@@ -278,7 +313,7 @@ class ResourceMap:
             self.RB_ocp_num[_RB] = self.RB_ocp_num[_RB] - 1
 
         # 改变UE对象状态
-        if UE.state != 'unserved':
+        if UE.state == 'served':
             UE.update_state('unserved')
             '''RL state由UE管理'''
             # UE.RL_state.update_active(False)

@@ -7,6 +7,7 @@ from info_management import *
 from resource_allocation import equal_RB_allocate
 import numpy as np
 
+
 def find_and_update_neighbour_BS(BS_list, UE_list, num_neibour, large_fading: LargeScaleFadingMap,
                                  instant_channel: InstantChannelMap, L3_coe=4):
     BS_no_list = []
@@ -27,9 +28,9 @@ def find_and_update_neighbour_BS(BS_list, UE_list, num_neibour, large_fading: La
 
         instant_h = instant_channel.map[:, _neighbour_idx, _UE_no]
         instant_h_power = np.square(np.abs(instant_h))
-        instant_h_power_mean = np.mean(instant_h_power, axis = 0)
+        instant_h_power_mean = np.mean(instant_h_power, axis=0)
 
-        k = (1/2)**(L3_coe/4)
+        k = (1 / 2) ** (L3_coe / 4)
         L3_h = []
         for i in range(len(_UE.neighbour_BS)):
             n_idx = _UE.neighbour_BS[i]
@@ -38,10 +39,8 @@ def find_and_update_neighbour_BS(BS_list, UE_list, num_neibour, large_fading: La
             else:
                 _neignour_BS_L3_h_arr = np.array(_UE.neighbour_BS_L3_h)
                 _L3_h_before = _neignour_BS_L3_h_arr[np.where(_neighbour_idx_before == n_idx)][0]
-                L3_h.append((1-k)*_L3_h_before + k*instant_h_power_mean[i])
+                L3_h.append((1 - k) * _L3_h_before + k * instant_h_power_mean[i])
         _UE.update_neighbour_BS_L3_h(L3_h)
-
-
 
 
 def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
@@ -82,14 +81,14 @@ def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
 
             NewBS_idx = _idx[-1]
 
-
         if allocate_method == equal_RB_allocate:
             RB_per_UE = PARAMS.RB_per_UE
             _allo_result = allocate_method([_UE], BS_list[NewBS_idx], int(RB_per_UE), serving_map)
             if _allo_result:
+                '''更新服务基站的L3测量 以及RL state'''
                 _instant_h = instant_h[:, NewBS_idx, _UE.no]
                 _instant_h_power = np.square(np.abs(_instant_h))
-                _instant_h_power_mean = np.mean(_instant_h_power, axis = 0)
+                _instant_h_power_mean = np.mean(_instant_h_power, axis=0)
                 _UE.update_serv_BS_L3_h(_instant_h_power_mean)
                 _UE.RL_state.update_active(True)
         else:
@@ -124,7 +123,7 @@ if __name__ == '__main__':
 
     UE_list = []
     for i in range(PARAM.nUE):
-        UE_list.append(UE(i, UE_posi[0,i], True))
+        UE_list.append(UE(i, UE_posi[0, i], True))
 
     shadow = ShadowMap(shadowFad_dB[0])
     large_fading = LargeScaleFadingMap(PARAM.Macro.nBS, PARAM.nUE)
@@ -138,4 +137,3 @@ if __name__ == '__main__':
 
     result = access_init(PARAM, Macro_BS_list, UE_list, large_fading, serving_map)
     print(result)
-

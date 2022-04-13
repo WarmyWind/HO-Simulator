@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 import scipy.io as scio
+from info_management import *
 
 def plot_BS_location(Macro_Posi, Micro_Posi = None):
     fig, ax = plt.subplots()
@@ -23,11 +24,19 @@ def plot_BS_location(Macro_Posi, Micro_Posi = None):
 def plot_UE_trajectory(Macro_Posi, UE_tra):
     fig, ax = plt.subplots()
     ax.scatter(np.real(Macro_Posi), np.imag(Macro_Posi), label='Macro BS')
-    for i in range(UE_tra.shape[-1]):
-        ax.plot(np.real(UE_tra[:, i]), np.imag(UE_tra[:, i]), label='User{}'.format(i))
+    if len(UE_tra.shape) == 2:
+        for i in range(UE_tra.shape[-1]):
+            _UE_tra = UE_tra[:, i]
+            _UE_tra = _UE_tra[np.where(_UE_tra != None)]
 
-    plt.legend(loc='upper right')
-    plt.show()
+            ax.plot(np.real(_UE_tra.tolist()), np.imag(_UE_tra.tolist()), label='User{}'.format(i))
+    elif len(UE_tra.shape) == 1:
+        UE_tra = UE_tra[np.where(UE_tra != None)]
+        ax.plot(np.real(UE_tra.tolist()), np.imag(UE_tra.tolist()), label='User')
+
+    # plt.legend(loc='upper right')
+    # plt.show()
+    return fig, ax
 
 
 def plot_cdf(data, xlabel, ylabel, label_list, normed=1, loc='lower right'):
@@ -168,8 +177,34 @@ def add_scalr_bar(ax, x_start, x_end, y, length, fineness, orientation='vertical
         ax.text(x + fineness / 80, (y_start + y_end) / 2, '{:.1f}m'.format(length), verticalalignment='center',
                 rotation=270)
 
+def plot_HO_map(UE_list, BS_posi, UE_tra):
+    fig, ax = plot_UE_trajectory(BS_posi, UE_tra)
+
+    for idx in range(len(UE_list)):
+        UE = UE_list[idx]
+        HOF_posi = UE.HO_state.failure_posi
+        HOS_posi = UE.HO_state.success_posi
+        color_list = ['red', 'coral', 'orange', 'gold']
+        for i in range(len(HOF_posi)):
+            # _some_type_HOF_posi = HOF_posi[i]
+            _posi = HOF_posi[i]
+            if idx == 0:
+                ax.scatter(np.real(_posi), np.imag(_posi), marker='x', color=color_list[i], label='HOF type{}'.format(i+1))
+            else:
+                ax.scatter(np.real(_posi), np.imag(_posi), marker='x', color=color_list[i])
+
+
+        if idx == 0:
+            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='o',s=10, color='lawngreen', label='HOS')
+        else:
+            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='o', s=10, color='lawngreen')
+
+    plt.legend()
+    plt.show()
+
+
 if __name__ == '__main__':
-    from simulator import Parameter
+    from simulator import *
     from channel_fading import get_shadow_from_mat
     from user_mobility import get_UE_posi_from_mat
     from network_deployment import cellStructPPP
@@ -179,37 +214,55 @@ if __name__ == '__main__':
         data = data.get(index)  # 取出字典里的label
 
         return data
-
-
-    data = get_data_from_mat('RB123_lyk.mat', 'RB123bitrate')
-    RB123_lyk = np.transpose(data, (2,0,1))
-    data2 = get_data_from_mat('RB123.mat', 'RB123')
-    RB123 = data2
-
-    PARAM = Parameter()
-    # print(PARAM.nCell, PARAM.Macro.Ptmax, PARAM.pathloss.Macro.dFactordB, PARAM.MLB.RB)
-    np.random.seed(0)
-    '''从文件读取阴影衰落'''
-    filepath = 'shadowFad_dB1.mat'
-    index = 'shadowFad_dB'
-    shadowFad_dB = get_shadow_from_mat(filepath, index)
-    # print(shadowFad_dB[0][1])
+    root_path = 'result/0413'
+    rate_arr = np.load(root_path + '/0/rate_arr.npy', allow_pickle=True)
+    UE_list = np.load(root_path + '/0/UE_list.npy', allow_pickle=True)
+    # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
+    label_list = ['Para Set 1']
+    plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
 
     '''从文件读取UE位置'''
-    filepath = 'Set_UE_posi_60s_250user_1to2_new1.mat'
+    filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
     index = 'Set_UE_posi'
     UE_posi = get_UE_posi_from_mat(filepath, index)
+    UE_posi = UE_posi[2, :, :]
+    UE_posi = process_posi_data(UE_posi)
 
     '''生成BS位置'''
-    Macro_Posi, _, _ = cellStructPPP(PARAM.nCell, PARAM.Dist, PARAM.Micro.nBS_avg)
+    Macro_Posi = road_cell_struct(9, 250)
 
-    sim_data_list = [1,2,3]
-    # para_list = ['RB' + '={}'.format(n) for n in sim_data_list]
-    # plot_rate_map(Macro_Posi, UE_posi, RB123_lyk, para_list)
+    plot_HO_map(UE_list[200:203], Macro_Posi, UE_posi[:, 0:3])
 
-    para_list_1 = ['RB' + '={}_lyk'.format(n) for n in sim_data_list]
-    para_list_2 = ['RB' + '={}_ztj'.format(n) for n in sim_data_list]
-    label_list = np.concatenate((para_list_1, para_list_2), axis = 0)
-    data_list = np.concatenate((RB123_lyk, RB123), axis = 0)
-    plot_cdf(data_list, 'bit rate', 'cdf', label_list)
+    # HO_result = np.array(HO_result_list).transpose()
+    # HO_result = [HO_result[i] for i in range(len(HO_result))]
+    # para_list = ['RB={}'.format(n) for n in RB_per_UE_list]
+    # para_list = ['Para Set 1']
+    # label_list = ['Success', 'Failure', 'Num of Failure Repeat UE']
+    # plot_bar(HO_result, 'Parameter Set', 'HO result', para_list, label_list)
+
+
+
+    # data = get_data_from_mat('RB123_lyk.mat', 'RB123bitrate')
+    # RB123_lyk = np.transpose(data, (2,0,1))
+    # data2 = get_data_from_mat('RB123.mat', 'RB123')
+    # RB123 = data2
+    #
+    # PARAM = Parameter()
+    # np.random.seed(0)
+    # '''从文件读取阴影衰落'''
+    # filepath = 'shadowFad_dB1.mat'
+    # index = 'shadowFad_dB'
+    # shadowFad_dB = get_shadow_from_mat(filepath, index)
+    #
+
+    #
+
+    #
+    # sim_data_list = [1,2,3]
+    #
+    # para_list_1 = ['RB' + '={}_lyk'.format(n) for n in sim_data_list]
+    # para_list_2 = ['RB' + '={}_ztj'.format(n) for n in sim_data_list]
+    # label_list = np.concatenate((para_list_1, para_list_2), axis = 0)
+    # data_list = np.concatenate((RB123_lyk, RB123), axis = 0)
+    # plot_cdf(data_list, 'bit rate', 'cdf', label_list)
 

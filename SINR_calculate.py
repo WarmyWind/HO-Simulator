@@ -61,12 +61,12 @@ def calculate_SINR_dB(receive_power, interference_power, noise):
     return 10*np.log10(SINR)
 
 
-def calculate_SS_SINR_dB(receive_power, interference_power, noise):
+def calculate_SS_SINR(receive_power, interference_power, noise):
     nRB = np.count_nonzero(receive_power, axis=1)
     mean_receive_power = np.sum(receive_power, axis=1)/nRB
     mean_interference_power = np.sum(interference_power, axis=1)/nRB
     SS_SINR = mean_receive_power/(mean_interference_power+noise)
-    return 10*np.log10(SS_SINR)
+    return SS_SINR
 
 
 def user_rate(RB_width, SINR_dB):

@@ -30,7 +30,7 @@ def large_scale_fading(PARAMS, BS_list, UE_list, shadow_map:ShadowMap):
     '''
 
     nBS = len(BS_list)  # 所有基站数
-    nUE = PARAMS.nUE  # 所有用户数
+    nUE = len(UE_list)  # 所有用户数
 
     large_scale_fading_dB = np.zeros((nBS, nUE))
     for iUE in range(nUE):
@@ -46,16 +46,20 @@ def large_scale_fading(PARAMS, BS_list, UE_list, shadow_map:ShadowMap):
                 pLoss1m = PARAMS.pathloss.Micro.pLoss1mdB
                 # shadow  = PARAMS.pathloss.Micro.shadowdB
 
-            distServer = np.abs(UE_list[iUE].posi - BS_list[iBS].posi)  # 用户-基站距离
-            '''
-            下面的x_temp和y_temp后加的常数与数据有关
-            '''
-            x_temp = int(np.ceil(np.real(UE_list[iUE].posi)/0.5))
-            y_temp = int(np.ceil((np.imag(UE_list[iUE].posi)-PARAMS.Dist/2/np.sqrt(3))/0.5))
-            x_temp = np.min((shadow_map.map.shape[2]-1, x_temp))
-            y_temp = np.min((shadow_map.map.shape[1]-1, y_temp))
-            shadow = shadow_map.map[iBS][y_temp, x_temp]
-            large_scale_fading_dB[iBS, iUE] = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain
+
+            if not UE_list[iUE].active:
+                large_scale_fading_dB[iBS, iUE] = -np.Inf
+            else:
+                distServer = np.abs(UE_list[iUE].posi - BS_list[iBS].posi)  # 用户-基站距离
+                '''
+                下面的x_temp和y_temp后加的常数与数据有关
+                '''
+                x_temp = int(np.ceil(np.real(UE_list[iUE].posi)/0.5))
+                y_temp = int(np.ceil((np.imag(UE_list[iUE].posi)-PARAMS.Dist/2/np.sqrt(3))/0.5))
+                x_temp = np.min((shadow_map.map.shape[2]-1, x_temp))
+                y_temp = np.min((shadow_map.map.shape[1]-1, y_temp))
+                shadow = shadow_map.map[iBS][y_temp, x_temp]
+                large_scale_fading_dB[iBS, iUE] = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain
 
     large_scale_fading = 10 ** (-large_scale_fading_dB / 20)
     # print('大尺度衰落(dB)：',large_scale_fading_dB[:,0])

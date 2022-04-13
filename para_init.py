@@ -10,19 +10,21 @@ class Parameter:  # 仿真场景参数
     sigma_IC = 5.0035e-10
     sigma_c = sigma2 + sigma
     sigma_e = sigma2 + sigma_IC
+
     nRB = 50  # RB数
     nUE = 300  # 用户设备总数
     nUE_per_type = 100  # 每种用户的数量
+    num_neibour_BS_of_UE = 5
 
     HOM = 3  # dB
     TTT = 32  # 个步进时长
+    HO_Prep_Time = 4  # HO 准备时间
+    HO_Exec_Time = 5
 
     L3_coe = 4  # k = (1/2)^(k/4)
+    L1_filter_length = 20
 
-    num_neibour_BS_of_UE = 5
-
-    HOM = 3
-    TTT = 4
+    posi_resolution = 8
 
     class Macro:
         nBS = 9   # 宏基站个数
