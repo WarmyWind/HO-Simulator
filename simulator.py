@@ -7,6 +7,7 @@
 import numpy as np
 import time
 import os
+import copy
 from para_init import *
 from network_deployment import cellStructPPP, road_cell_struct
 from user_mobility import *
@@ -284,14 +285,14 @@ if __name__ == '__main__':
     PARAM_list = []
     PARAM = Parameter()
     # PARAM_list.append(PARAM)
-    HOM_list = [-4.5, -3, -1.5, 0, 1.5, 3, 4.5, 6]
-    # TTT_list = [8, 16, 24, 32] #  [48, 64, 96, 128]
-    TTT_list = [48, 64, 96, 128]
+    HOM_list = [-3, 0, 3, 6]
+    TTT_list = [8, 16, 24, 32] #  [48, 64, 96, 128]
+    # TTT_list = [48, 64, 96, 128]
     for _HOM in HOM_list:
         PARAM.HOM = _HOM
         for _TTT in TTT_list:
             PARAM.TTT = _TTT
-            PARAM_list.append(PARAM)
+            PARAM_list.append(copy.deepcopy(PARAM))
 
 
 
