@@ -59,8 +59,9 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
             '''若在handovering过程，判断是否退出'''
             _UE.add_ToS()
             _UE.HO_state.update_duration(_UE.HO_state.duration + 1)
-            if _UE.HO_state.duration < TTT:  # TTT之前
-                if _UE.RL_state.state == 'RLF':  # 在HO中发生RLF
+
+            if _UE.HO_state.duration < TTT:
+                if _UE.RL_state.state == 'RLF':  # 在TTT中发生RLF
                     _UE.quit_handover(False, 'unserved', 0)
                     _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
                     _serv_BS.RLF_happen(_UE, serving_map)
@@ -83,8 +84,8 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
                         _neighbour_BS_L3_h = np.array(_UE.neighbour_BS_L3_h)
                         _h = _neighbour_BS_L3_h[np.where(_UE.neighbour_BS == _UE.HO_state.target_BS)]
                         _UE.HO_state.update_target_h(_h)
-                    else:  # 目标BS不在邻小区列表中，退出HO
-                        _UE.quit_handover(None, 'served')  # 不计HOF
+                    else:  # 目标BS不在邻小区列表中，退出HO且不计HOF
+                        _UE.quit_handover(None, 'served')
                         continue
 
                 if 10 * np.log10(_UE.HO_state.target_h) - 10 * np.log10(_UE.HO_state.h_before) < HOM:
@@ -106,6 +107,7 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
                 if _UE.RL_state.state == 'out':
                     '''接收HO CMD时信道质量差，记HOF'''
                     _UE.quit_handover(False, 'served', 1)
+                    _UE.HO_state.HOF_flag = 1
                     continue
 
                 else:
@@ -135,6 +137,7 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
                 if len(_UE.RL_state.SINR_record) >= 2 and _UE.RL_state.state == 'out':
                     '''HO 执行时目标BS信道质量差，记HOF'''
                     _UE.quit_handover(False, 'served', 2)
+                    _UE.HO_state.HOF_flag = 1
                     continue
 
             if _UE.HO_state.duration == TTT + PARAMS.HO_Prep_Time + PARAMS.HO_Exec_Time:

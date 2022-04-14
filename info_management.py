@@ -73,6 +73,7 @@ class HO_state:
         self.duration = -1  # 持续时间
         self.target_h = None  # 目标BS的测量信道
         self.h_before = None  # HO之前的服务信道
+        self.HOF_flag = 0  # 本次HO是否已经记录过HOF
 
         self.success_count = 0  # HO成功次数
         self.success_posi = []  # HO成功的位置
@@ -105,6 +106,7 @@ class HO_state:
         self.target_BS = -1
         self.duration = -1
         self.target_h = None
+        self.HOF_flag = 0
 
 
 class RL_state:
@@ -188,11 +190,11 @@ class UE:
             # self.RB_Nt_ocp = []
             self.HO_state.reset()
             if HO_result == False:
-                if HOF_type != None:
+                if HOF_type != None and self.HO_state.HOF_flag == 0:
                     self.HO_state.add_failure_count(HOF_type, self.posi)  # 记录一次HO失败
                 else:
                     raise Exception("Invalid HOF_type", HOF_type)
-            elif HO_result == True:
+            elif HO_result == True and self.HO_state.HOF_flag == 0:
                 self.HO_state.add_success_count(self.posi)  # 记录一次HO成功
 
     def update_RL_state_by_SINR(self, SINR, L1_filter_length):

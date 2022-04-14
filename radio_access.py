@@ -1,5 +1,6 @@
 '''
 本模块包含接入方法:
+    find_and_update_neighbour_BS
     access_init
 '''
 
@@ -91,6 +92,7 @@ def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
                 _instant_h_power_mean = np.mean(_instant_h_power, axis=0)
                 _UE.update_serv_BS_L3_h(_instant_h_power_mean)
                 _UE.RL_state.update_active(True)
+                _UE.reset_ToS()
         else:
             raise Exception("Invalid allocate method!", allocate_method)
 
