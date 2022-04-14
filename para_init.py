@@ -12,8 +12,8 @@ class Parameter:  # 仿真场景参数
     sigma_e = sigma2 + sigma_IC
 
     nRB = 50  # RB数
-    nUE = 300  # 用户设备总数
-    nUE_per_type = 100  # 每种用户的数量
+    nUE = 150  # 用户设备总数
+    nUE_per_type = 50  # 每种用户的数量
     num_neibour_BS_of_UE = 5
 
     HOM = 3  # dB
@@ -60,7 +60,7 @@ class Parameter:  # 仿真场景参数
         # self.Macro.BS_flag = np.ones((1, self.Macro.nBS))
         self.Macro.MaxUE_per_RB = np.floor(self.Macro.nNt * 0.75)  # 宏基站每个RB的最大服务用户数
         # self.RB_per_UE = int(np.floor(1 * self.Macro.nBS * self.Macro.MaxUE_per_RB * self.nRB / self.nUE))
-        self.RB_per_UE = 2
+        self.RB_per_UE = 4
         self.Micro.MaxUE_per_RB = np.floor(self.Micro.nNt)  # 微基站每个RB的最大服务用户
 
 if __name__ == '__main__':
