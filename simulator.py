@@ -207,7 +207,7 @@ if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         plot_flag = 0  # 是否绘图
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0414_1'
+        root_path = 'result/0414_2'
         nDrop = 10000  # 时间步进长度
 
     def simulator_entry(PARAM_list, shadowFad_dB, UE_posi):
@@ -285,9 +285,9 @@ if __name__ == '__main__':
     PARAM_list = []
     PARAM = Parameter()
     # PARAM_list.append(PARAM)
-    HOM_list = [-3, 0, 3, 6]
-    TTT_list = [8, 16, 24, 32] #  [48, 64, 96, 128]
-    # TTT_list = [48, 64, 96, 128]
+    HOM_list = [0, 1.5, 3, 4.5]
+    # TTT_list = [8, 16, 24, 32] #  [48, 64, 96, 128]
+    TTT_list = [64, 96, 128]
     for _HOM in HOM_list:
         PARAM.HOM = _HOM
         for _TTT in TTT_list:

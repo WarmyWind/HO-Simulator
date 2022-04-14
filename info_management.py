@@ -124,7 +124,7 @@ class RL_state:
 
         self.SINR_record.append(SINR)
         self.SINR_record = self.SINR_record[-L1_filter_length:]
-        self.filtered_SINR_dB = 10*np.log10(np.mean(SINR))
+        self.filtered_SINR_dB = 10*np.log10(np.mean(self.SINR_record))
 
         if self.filtered_SINR_dB > self.Qin:
             self.update_state('in')
