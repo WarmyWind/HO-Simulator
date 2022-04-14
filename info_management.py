@@ -188,7 +188,6 @@ class UE:
             self.update_state(new_state)
             # self.serv_BS = -1
             # self.RB_Nt_ocp = []
-            self.HO_state.reset()
             if HO_result == False:
                 if HOF_type != None and self.HO_state.HOF_flag == 0:
                     self.HO_state.add_failure_count(HOF_type, self.posi)  # 记录一次HO失败
@@ -196,6 +195,8 @@ class UE:
                     raise Exception("Invalid HOF_type", HOF_type)
             elif HO_result == True and self.HO_state.HOF_flag == 0:
                 self.HO_state.add_success_count(self.posi)  # 记录一次HO成功
+            if new_state != 'handovering':
+                self.HO_state.reset()
 
     def update_RL_state_by_SINR(self, SINR, L1_filter_length):
         return self.RL_state.update_by_SINR(SINR, L1_filter_length)

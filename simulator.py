@@ -207,7 +207,7 @@ if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         plot_flag = 0  # 是否绘图
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0414_1'
+        root_path = 'result/0414_new'
         nDrop = 10000  # 时间步进长度
 
     def simulator_entry(PARAM_list, shadowFad_dB, UE_posi):

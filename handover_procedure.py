@@ -106,7 +106,7 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
 
                 if _UE.RL_state.state == 'out':
                     '''接收HO CMD时信道质量差，记HOF'''
-                    _UE.quit_handover(False, 'served', 1)
+                    _UE.quit_handover(False, 'handovering', 1)
                     _UE.HO_state.HOF_flag = 1
                     continue
 
@@ -136,7 +136,7 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
 
                 if len(_UE.RL_state.SINR_record) >= 2 and _UE.RL_state.state == 'out':
                     '''HO 执行时目标BS信道质量差，记HOF'''
-                    _UE.quit_handover(False, 'served', 2)
+                    _UE.quit_handover(False, 'handovering', 2)
                     _UE.HO_state.HOF_flag = 1
                     continue
 
