@@ -191,8 +191,6 @@ class UE:
             if HO_result == False:
                 if HOF_type != None and self.HO_state.HOF_flag == 0:
                     self.HO_state.add_failure_count(HOF_type, self.posi)  # 记录一次HO失败
-                else:
-                    raise Exception("Invalid HOF_type", HOF_type)
             elif HO_result == True and self.HO_state.HOF_flag == 0:
                 self.HO_state.add_success_count(self.posi)  # 记录一次HO成功
             if new_state != 'handovering':
