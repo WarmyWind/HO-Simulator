@@ -209,11 +209,7 @@ if __name__ == '__main__':
     from user_mobility import get_UE_posi_from_mat
     from network_deployment import cellStructPPP
 
-    def get_data_from_mat(filepath, index):
-        data = scio.loadmat(filepath)
-        data = data.get(index)  # 取出字典里的label
 
-        return data
     root_path = 'result/0413'
     rate_arr = np.load(root_path + '/0/rate_arr.npy', allow_pickle=True)
     UE_list = np.load(root_path + '/0/UE_list.npy', allow_pickle=True)
@@ -231,7 +227,7 @@ if __name__ == '__main__':
     '''生成BS位置'''
     Macro_Posi = road_cell_struct(9, 250)
 
-    plot_HO_map(UE_list[200:203], Macro_Posi, UE_posi[:, 0:3])
+    # plot_HO_map(UE_list[200:203], Macro_Posi, UE_posi[:, 0:3])
 
     # HO_result = np.array(HO_result_list).transpose()
     # HO_result = [HO_result[i] for i in range(len(HO_result))]
