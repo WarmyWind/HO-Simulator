@@ -221,16 +221,54 @@ def plot_HO_map(UE_list, BS_posi, UE_tra, label_list=None):
     # plt.show()
 
 
+def plot_large_channel(PARAM, BS_posi, BS_no_list, shadow_map, UE_posi, L3=True):
+    antGain = PARAM.pathloss.Macro.antGaindB
+    dFactor = PARAM.pathloss.Macro.dFactordB
+    pLoss1m = PARAM.pathloss.Macro.pLoss1mdB
+    UE_posi = UE_posi[np.where(UE_posi != None)].tolist()
+    # probe = np.real(UE_posi)
+    fig, ax = plt.subplots()
+    for BS_no in BS_no_list:
+        distServer = np.abs(UE_posi - BS_posi[BS_no])  # 用户-基站距离
+        x_temp = (np.ceil(np.real(UE_posi) / 0.5)).astype(int)
+        y_temp = (np.ceil((np.imag(UE_posi) - PARAM.Dist / 2 / np.sqrt(3)) / 0.5)).astype(int)
+        large_scale_fading_dB = []
+        for _drop in range(len(x_temp)):
+            _x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp[_drop]))
+            _y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp[_drop]))
+            shadow = shadow_map.map[BS_no][_y_temp, _x_temp]
+            _large_scale_fading_dB = pLoss1m + dFactor * np.log10(distServer[_drop]) + shadow - antGain
+            large_scale_fading_dB.append(_large_scale_fading_dB)
+
+        large_scale_fading = 10**(np.array(large_scale_fading_dB)/10)
+        L3_large_scale_fading = [large_scale_fading[0]]
+        if L3:
+            for i in range(1, len(large_scale_fading)):
+                L3_large_scale_fading.append(0.5*L3_large_scale_fading[i-1] + 0.5*large_scale_fading[i])
+            large_scale_fading_dB = 10*np.log10(L3_large_scale_fading)
+
+        x = [j*10 for j in range(len(large_scale_fading))]
+        ax.plot(x, large_scale_fading_dB, label='BS{}'.format(BS_no))
+
+    plt.xlabel('Time(ms)')
+    plt.xticks()
+    plt.ylabel('Large Fading(dB)')
+    plt.legend()
+    plt.show()
+    return ax
+
+
 if __name__ == '__main__':
     from simulator import *
     from channel_fading import get_shadow_from_mat
     from user_mobility import get_UE_posi_from_mat
     from network_deployment import cellStructPPP
 
+    PARAM = Parameter()
 
     root_path = 'result/0414_new'
-    rate_arr = np.load(root_path + '/13/rate_arr.npy', allow_pickle=True)
-    UE_list = np.load(root_path + '/13/UE_list.npy', allow_pickle=True)
+    rate_arr = np.load(root_path + '/4/rate_arr.npy', allow_pickle=True)
+    UE_list = np.load(root_path + '/4/UE_list.npy', allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
     label_list = ['Para Set 1']
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
@@ -244,7 +282,7 @@ if __name__ == '__main__':
 
     example_UE_posi=[]
     example_UE_list = []
-    type_no = [14,0,0]
+    type_no = [14,13,0]
     for i in range(3):
         example_UE_posi.append(UE_posi[i][:,type_no[i]])
         example_UE_list.append(UE_list[i*50+type_no[i]])
@@ -263,6 +301,22 @@ if __name__ == '__main__':
     plt.ylim(-10,226.5)
     plt.show()
 
+    '''从文件读取阴影衰落'''
+    filepath = 'shadowFad_dB_8sigma.mat'
+    index = 'shadowFad_dB'
+    shadowFad_dB = get_shadow_from_mat(filepath, index)
+
+    '''初始化信道、服务信息'''
+    shadow = ShadowMap(shadowFad_dB)
+
+    BS_no_list = [3,4,5,6,7,8]
+    plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
+
+
+    # large_h = large_scale_fading(PARAM, Macro_BS_list, UE_list, shadow)
+    # large_fading.update(large_h)
+
+
     # HO_result = np.array(HO_result_list).transpose()
     # HO_result = [HO_result[i] for i in range(len(HO_result))]
     # para_list = ['RB={}'.format(n) for n in RB_per_UE_list]
@@ -279,9 +333,6 @@ if __name__ == '__main__':
     #
     # PARAM = Parameter()
     # np.random.seed(0)
-    # '''从文件读取阴影衰落'''
-    # filepath = 'shadowFad_dB1.mat'
-    # index = 'shadowFad_dB'
-    # shadowFad_dB = get_shadow_from_mat(filepath, index)
+
 
 
