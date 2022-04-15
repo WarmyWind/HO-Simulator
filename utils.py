@@ -36,7 +36,7 @@ if __name__ == '__main__':
     index = 'Set_UE_posi'
     UE_posi = get_UE_posi_from_mat(filepath, index)
 
-    root_path = 'result/0414_2'
+    root_path = 'result/0414_new'
     for i in range(12):
         rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(i), allow_pickle=True)
         UE_list = np.load(root_path + '/{}/UE_list.npy'.format(i), allow_pickle=True)
@@ -47,6 +47,7 @@ if __name__ == '__main__':
             HOS[_idx] += _UE.HO_state.success_count
             HOF[_idx] += np.array(_UE.HO_state.failure_type_count)
         print('Paraset {}'.format(i+1))
+        print('HOS: {}, HOS rate: {:.2f}, HOF: {}'.format(np.sum(HOS), np.sum(HOS)/(np.sum(HOS)+np.sum(HOF)), np.sum(HOF)))
         for j in range(3):
             _HOS = HOS[j]
             _HOF = np.sum(HOF[j])
