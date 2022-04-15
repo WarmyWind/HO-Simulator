@@ -286,8 +286,8 @@ if __name__ == '__main__':
     PARAM = Parameter()
     # PARAM_list.append(PARAM)
     HOM_list = [0, 1.5, 3, 4.5]
-    TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
-    # TTT_list = [48, 64, 96, 128]
+    # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
+    TTT_list = [64, 96, 128]
     for _HOM in HOM_list:
         PARAM.HOM = _HOM
         for _TTT in TTT_list:
