@@ -12,29 +12,47 @@ import numpy as np
 import scipy.io as scio
 from info_management import *
 
+def plot_hexgon(ax, center, dist):
+    radius = dist/np.sqrt(3)
+    for _center in center:
+        point_list=[]
+        for angle in np.arange(np.pi/6, 2*np.pi+np.pi/6, np.pi/3):
+            point_list.append(_center + radius*np.exp(1j*angle))
+
+        for i in range(len(point_list)):
+            _point1 = point_list[i]
+            _point2 = point_list[(i+1) % len(point_list)]
+            ax.plot(np.real([_point1, _point2]), np.imag([_point1, _point2]), color='silver')
+
+    return ax
+
 def plot_BS_location(Macro_Posi, Micro_Posi = None):
     fig, ax = plt.subplots()
     ax.scatter(np.real(Macro_Posi), np.imag(Macro_Posi), label='Macro BS')
     if Micro_Posi != None:
         ax.scatter(np.real(Micro_Posi), np.imag(Micro_Posi), label='Micro BS')
-    plt.legend(loc='upper right')
-    plt.show()
+    plt.legend()
+    # plt.show()
 
 
-def plot_UE_trajectory(Macro_Posi, UE_tra):
+def plot_UE_trajectory(Macro_Posi, UE_tra, label_list=None):
     fig, ax = plt.subplots()
     ax.scatter(np.real(Macro_Posi), np.imag(Macro_Posi), label='Macro BS')
+    dist = np.abs(Macro_Posi[0]-Macro_Posi[1])
+    ax = plot_hexgon(ax, Macro_Posi, dist)
     if len(UE_tra.shape) == 2:
         for i in range(UE_tra.shape[-1]):
             _UE_tra = UE_tra[:, i]
             _UE_tra = _UE_tra[np.where(_UE_tra != None)]
-
-            ax.plot(np.real(_UE_tra.tolist()), np.imag(_UE_tra.tolist()), label='User{}'.format(i))
+            if label_list == None:
+                ax.plot(np.real(_UE_tra.tolist()), np.imag(_UE_tra.tolist()), label='User{}'.format(i))
+            else:
+                ax.plot(np.real(_UE_tra.tolist()), np.imag(_UE_tra.tolist()), label=label_list[i])
     elif len(UE_tra.shape) == 1:
         UE_tra = UE_tra[np.where(UE_tra != None)]
         ax.plot(np.real(UE_tra.tolist()), np.imag(UE_tra.tolist()), label='User')
 
-    # plt.legend(loc='upper right')
+    plt.legend()
     # plt.show()
     return fig, ax
 
@@ -52,7 +70,7 @@ def plot_cdf(data, xlabel, ylabel, label_list, normed=1, loc='lower right'):
     ax.set_ybound(0, 1)
     fix_hist_step_vertical_line_at_end(ax)
     plt.legend(loc=loc)
-    plt.show()
+    # plt.show()
 
 
 def fix_hist_step_vertical_line_at_end(ax):
@@ -79,7 +97,7 @@ def plot_bar(data, xlabel, ylabel, para_list, label_list, loc='upper left'):
     ax.set_xticklabels(para_list)
 
     plt.legend(loc=loc)
-    plt.show()
+    # plt.show()
 
 
 def plot_rate_map(BS_posi, UE_posi, rate_data, title_list, fineness=20, loc='upper right'):
@@ -158,7 +176,7 @@ def plot_rate_map(BS_posi, UE_posi, rate_data, title_list, fineness=20, loc='upp
                  cax=ax, orientation='vertical', label='Bit Rate')
     # 避免图片显示不完全
     plt.tight_layout()
-    plt.show()
+    # plt.show()
 
 
 def add_scalr_bar(ax, x_start, x_end, y, length, fineness, orientation='vertical'):
@@ -177,30 +195,30 @@ def add_scalr_bar(ax, x_start, x_end, y, length, fineness, orientation='vertical
         ax.text(x + fineness / 80, (y_start + y_end) / 2, '{:.1f}m'.format(length), verticalalignment='center',
                 rotation=270)
 
-def plot_HO_map(UE_list, BS_posi, UE_tra):
-    fig, ax = plot_UE_trajectory(BS_posi, UE_tra)
+def plot_HO_map(UE_list, BS_posi, UE_tra, label_list=None):
+    fig, ax = plot_UE_trajectory(BS_posi, UE_tra, label_list)
 
     for idx in range(len(UE_list)):
         UE = UE_list[idx]
         HOF_posi = UE.HO_state.failure_posi
         HOS_posi = UE.HO_state.success_posi
-        color_list = ['red', 'coral', 'orange', 'gold']
+        color_list = ['black', 'red', 'darkorange', 'blue']
         for i in range(len(HOF_posi)):
             # _some_type_HOF_posi = HOF_posi[i]
             _posi = HOF_posi[i]
             if idx == 0:
-                ax.scatter(np.real(_posi), np.imag(_posi), marker='x', color=color_list[i], label='HOF type{}'.format(i+1))
+                ax.scatter(np.real(_posi), np.imag(_posi), marker='|', color=color_list[i], label='HOF type{}'.format(i+1))
             else:
-                ax.scatter(np.real(_posi), np.imag(_posi), marker='x', color=color_list[i])
+                ax.scatter(np.real(_posi), np.imag(_posi), marker='|', color=color_list[i])
 
 
         if idx == 0:
-            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='o',s=10, color='lawngreen', label='HOS')
+            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d',s=10, color='darkgreen', label='HOS')
         else:
-            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='o', s=10, color='lawngreen')
+            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d', s=10, color='darkgreen')
 
     plt.legend()
-    plt.show()
+    # plt.show()
 
 
 if __name__ == '__main__':
@@ -210,24 +228,37 @@ if __name__ == '__main__':
     from network_deployment import cellStructPPP
 
 
-    root_path = 'result/0413'
-    rate_arr = np.load(root_path + '/0/rate_arr.npy', allow_pickle=True)
-    UE_list = np.load(root_path + '/0/UE_list.npy', allow_pickle=True)
+    root_path = 'result/0414_new'
+    rate_arr = np.load(root_path + '/1/rate_arr.npy', allow_pickle=True)
+    UE_list = np.load(root_path + '/1/UE_list.npy', allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
     label_list = ['Para Set 1']
-    plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
+    # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
 
     '''从文件读取UE位置'''
     filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
     index = 'Set_UE_posi'
     UE_posi = get_UE_posi_from_mat(filepath, index)
-    UE_posi = UE_posi[2, :, :]
+    # UE_posi = UE_posi[2, :, :]
     UE_posi = process_posi_data(UE_posi)
+
+    example_UE_posi=[]
+    for i in range(3):
+        example_UE_posi.append(UE_posi[i][:,0])
+
+    example_UE_posi = np.transpose(example_UE_posi)
 
     '''生成BS位置'''
     Macro_Posi = road_cell_struct(9, 250)
+    label = ['pedestrian','bike','car']
 
-    # plot_HO_map(UE_list[200:203], Macro_Posi, UE_posi[:, 0:3])
+    plot_HO_map(UE_list[0:150:50], Macro_Posi, np.array(example_UE_posi), label_list=label)
+    # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
+    # plt.legend()
+    plt.grid()
+    plt.xlim(-10,1100)
+    plt.ylim(-10,226.5)
+    plt.show()
 
     # HO_result = np.array(HO_result_list).transpose()
     # HO_result = [HO_result[i] for i in range(len(HO_result))]
@@ -249,16 +280,5 @@ if __name__ == '__main__':
     # filepath = 'shadowFad_dB1.mat'
     # index = 'shadowFad_dB'
     # shadowFad_dB = get_shadow_from_mat(filepath, index)
-    #
 
-    #
-
-    #
-    # sim_data_list = [1,2,3]
-    #
-    # para_list_1 = ['RB' + '={}_lyk'.format(n) for n in sim_data_list]
-    # para_list_2 = ['RB' + '={}_ztj'.format(n) for n in sim_data_list]
-    # label_list = np.concatenate((para_list_1, para_list_2), axis = 0)
-    # data_list = np.concatenate((RB123_lyk, RB123), axis = 0)
-    # plot_cdf(data_list, 'bit rate', 'cdf', label_list)
 

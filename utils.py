@@ -42,17 +42,21 @@ if __name__ == '__main__':
         UE_list = np.load(root_path + '/{}/UE_list.npy'.format(i), allow_pickle=True)
         HOS = [0,0,0]
         HOF = [np.array([0,0,0,0]) for _ in range(3)]
+        active_UE_num = [0,0,0]
         for _UE in UE_list:
             _idx = _UE.type
             HOS[_idx] += _UE.HO_state.success_count
             HOF[_idx] += np.array(_UE.HO_state.failure_type_count)
+            if _UE.active == True:
+                active_UE_num[_UE.type] += 1
         print('Paraset {}'.format(i+1))
-        print('HOS: {}, HOS rate: {:.2f}, HOF: {}'.format(np.sum(HOS), np.sum(HOS)/(np.sum(HOS)+np.sum(HOF)), np.sum(HOF)))
+        print('Active UE: {}'.format(active_UE_num))
+        print('HOS: {}, HOS rate: {:.3f}, HOF: {}'.format(np.sum(HOS), np.sum(HOS)/(np.sum(HOS)+np.sum(HOF)), np.sum(HOF)))
         for j in range(3):
             _HOS = HOS[j]
             _HOF = np.sum(HOF[j])
             _success_rate = (_HOS) / (_HOS+_HOF)
-            print('UE type: {}, HOS num: {}, _success_rate: {}, HOF: {}'.format(j+1, _HOS, _success_rate, HOF[j]))
+            print('UE type: {}, HOS num: {}, _success_rate: {:.3f}, HOF: {}'.format(j+1, _HOS, _success_rate, HOF[j]))
 
 
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
