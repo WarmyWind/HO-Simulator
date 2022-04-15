@@ -229,8 +229,8 @@ if __name__ == '__main__':
 
 
     root_path = 'result/0414_new'
-    rate_arr = np.load(root_path + '/1/rate_arr.npy', allow_pickle=True)
-    UE_list = np.load(root_path + '/1/UE_list.npy', allow_pickle=True)
+    rate_arr = np.load(root_path + '/13/rate_arr.npy', allow_pickle=True)
+    UE_list = np.load(root_path + '/13/UE_list.npy', allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
     label_list = ['Para Set 1']
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
@@ -243,8 +243,11 @@ if __name__ == '__main__':
     UE_posi = process_posi_data(UE_posi)
 
     example_UE_posi=[]
+    example_UE_list = []
+    type_no = [14,0,0]
     for i in range(3):
-        example_UE_posi.append(UE_posi[i][:,0])
+        example_UE_posi.append(UE_posi[i][:,type_no[i]])
+        example_UE_list.append(UE_list[i*50+type_no[i]])
 
     example_UE_posi = np.transpose(example_UE_posi)
 
@@ -252,7 +255,7 @@ if __name__ == '__main__':
     Macro_Posi = road_cell_struct(9, 250)
     label = ['pedestrian','bike','car']
 
-    plot_HO_map(UE_list[0:150:50], Macro_Posi, np.array(example_UE_posi), label_list=label)
+    plot_HO_map(example_UE_list, Macro_Posi, np.array(example_UE_posi), label_list=label)
     # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
     # plt.legend()
     plt.grid()
