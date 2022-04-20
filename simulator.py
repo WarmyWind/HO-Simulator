@@ -97,14 +97,6 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         '''更新UE的邻基站及其的L3测量'''
         find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading, instant_channel, PARAM.L3_coe)
 
-
-        '''开始HO eval'''
-        # HOM = 3  # dB
-        # TTT = 32
-        measure_criteria = 'L3'
-        handover_criteria_eval(PARAM, UE_list, BS_list, large_fading, instant_channel, PARAM.HOM, PARAM.TTT,
-                                serving_map, measure_criteria)
-
         '''更新预编码信息'''
         for _BS in BS_list:
             _BS.update_precoding_matrix(instant_channel, ZF_precoding)
@@ -129,6 +121,16 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
                 # if _UE.RL_state.active == False:
                 #     print('there')
                 _UE.update_RL_state_by_SINR(SS_SINR[_UE.no], PARAM.L1_filter_length)
+
+
+
+        '''开始HO eval'''
+        # HOM = 3  # dB
+        # TTT = 32
+        measure_criteria = 'L3'
+        handover_criteria_eval(PARAM, UE_list, BS_list, large_fading, instant_channel, PARAM.HOM, PARAM.TTT,
+                                serving_map, measure_criteria)
+
 
         progress_bar(drop_idx/(SimConfig.nDrop-1) * 100)
 
@@ -157,8 +159,6 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
 
     '''创建UE对象，并加入列表'''
     UE_list = []
-    # random_UE_idx = np.random.choice(len(UE_posi[0]),PARAM.nUE,replace=False)
-
     if isinstance(UE_posi, list):
         for i in range(len(UE_posi)):
             _UE_posi_arr = UE_posi[i]
@@ -207,7 +207,7 @@ if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         plot_flag = 0  # 是否绘图
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0414_new'
+        root_path = 'result/0420_4'
         nDrop = 10000  # 时间步进长度
 
     def simulator_entry(PARAM_list, shadowFad_dB, UE_posi):
@@ -284,10 +284,12 @@ if __name__ == '__main__':
 
     PARAM_list = []
     PARAM = Parameter()
+    # PARAM.HOM = 4.5
+    # PARAM.TTT = [96, 24, 16]
     # PARAM_list.append(PARAM)
-    HOM_list = [0, 1.5, 3, 4.5]
+    HOM_list = [-9]
     # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
-    TTT_list = [64, 96, 128]
+    TTT_list = [16, 32, 48, 64]
     for _HOM in HOM_list:
         PARAM.HOM = _HOM
         for _TTT in TTT_list:
@@ -298,7 +300,7 @@ if __name__ == '__main__':
 
     np.random.seed(0)
     '''从文件读取阴影衰落'''
-    filepath = 'shadowFad_dB_8sigma.mat'
+    filepath = 'shadowFad_dB_2sigma.mat'
     index = 'shadowFad_dB'
     shadowFad_dB = get_shadow_from_mat(filepath, index)
     # probe = shadowFad_dB[0][1]

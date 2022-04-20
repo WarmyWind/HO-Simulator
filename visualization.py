@@ -304,7 +304,7 @@ if __name__ == '__main__':
     plt.show()
 
     '''从文件读取阴影衰落'''
-    filepath = 'shadowFad_dB_0sigma.mat'
+    filepath = 'shadowFad_dB_4sigma.mat'
     index = 'shadowFad_dB'
     shadowFad_dB = get_shadow_from_mat(filepath, index)
 

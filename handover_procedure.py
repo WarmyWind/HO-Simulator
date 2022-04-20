@@ -13,8 +13,12 @@ from utils import *
 
 def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFadingMap,
                            instant_channel: InstantChannelMap,
-                           HOM, TTT, serving_map: ServingMap, measure_criteria='L3', allocate_method=equal_RB_allocate):
+                           HOM, TTT_list, serving_map: ServingMap, measure_criteria='L3', allocate_method=equal_RB_allocate):
     for _UE in UE_list:
+        if isinstance(TTT_list, list):
+            TTT = TTT_list[_UE.type]
+        else:
+            TTT = TTT_list
 
         if not _UE.active:
             if _UE.serv_BS != -1:

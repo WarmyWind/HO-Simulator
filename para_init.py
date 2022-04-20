@@ -43,13 +43,13 @@ class Parameter:  # 仿真场景参数
             antGaindB = 0
             dFactordB = 37.6
             pLoss1mdB = 15.3  # 36.8
-            shadowdB = 8
+            shadowdB = 2
 
         class Micro:
             antGaindB = 0
             dFactordB = 36.7
             pLoss1mdB = 30.6  # 36.8
-            shadowdB = 10
+            shadowdB = 2
 
     class MLB:
         RB = 180 * 1e3  # 180kHz
