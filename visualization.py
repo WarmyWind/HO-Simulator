@@ -61,16 +61,16 @@ def plot_cdf(data, xlabel, ylabel, label_list, normed=1, loc='lower right'):
     # data is a list of array
     fig, ax = plt.subplots()
     for i in range(len(data)):
-        _d = data[i].flatten()
+        _d = np.array(data[i]).flatten()
         ax.hist(_d, bins=250, density=normed, cumulative='Ture', histtype='step', label=label_list[i])
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    ax.set_xbound(np.min(data), np.max(data))
+    # ax.set_xbound(np.min(data), np.max(data))
     ax.set_ybound(0, 1)
     fix_hist_step_vertical_line_at_end(ax)
     plt.legend(loc=loc)
-    # plt.show()
+    plt.show()
 
 
 def fix_hist_step_vertical_line_at_end(ax):
@@ -207,15 +207,15 @@ def plot_HO_map(UE_list, BS_posi, UE_tra, label_list=None):
             # _some_type_HOF_posi = HOF_posi[i]
             _posi = HOF_posi[i]
             if idx == 0:
-                ax.scatter(np.real(_posi), np.imag(_posi), marker='|', color=color_list[i], label='HOF type{}'.format(i+1))
+                ax.scatter(np.real(_posi), np.imag(_posi), marker='|', s=100, color=color_list[i], label='HOF type{}'.format(i+1))
             else:
-                ax.scatter(np.real(_posi), np.imag(_posi), marker='|', color=color_list[i])
+                ax.scatter(np.real(_posi), np.imag(_posi), marker='|', s=100, color=color_list[i])
 
 
         if idx == 0:
-            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d',s=10, color='darkgreen', label='HOS')
+            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d', s=20, color='darkgreen', label='HOS')
         else:
-            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d', s=10, color='darkgreen')
+            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d', s=20, color='darkgreen')
 
     plt.legend()
     # plt.show()
@@ -282,7 +282,7 @@ if __name__ == '__main__':
 
     example_UE_posi=[]
     example_UE_list = []
-    type_no = [14,13,0]
+    type_no = [14,13,0]  # 选取三个不同种类的UE编号
     for i in range(3):
         example_UE_posi.append(UE_posi[i][:,type_no[i]])
         example_UE_list.append(UE_list[i*50+type_no[i]])
@@ -293,28 +293,42 @@ if __name__ == '__main__':
     Macro_Posi = road_cell_struct(9, 250)
     label = ['pedestrian','bike','car']
 
+    '''绘制UE例子的HO地图'''
     plot_HO_map(example_UE_list, Macro_Posi, np.array(example_UE_posi), label_list=label)
     # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
     # plt.legend()
     plt.grid()
-
     plt.axis('square')
     plt.xlim(-10, 1100)
     plt.ylim(-210, 426.5)
     plt.show()
 
     '''从文件读取阴影衰落'''
-    filepath = 'shadowFad_dB_4sigma.mat'
+    filepath = 'shadowFad_dB_2sigma.mat'
     index = 'shadowFad_dB'
     shadowFad_dB = get_shadow_from_mat(filepath, index)
 
     '''初始化信道、服务信息'''
     shadow = ShadowMap(shadowFad_dB)
 
+    '''绘制大尺度信道信息'''
     BS_no_list = [3,4,5,6,7,8]
     plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
 
+    observe_length = 16
+    before_failure_rate = [[] for _ in range(4)]
+    for i in range(len(UE_list)):
+        _UE = UE_list[i]
+        _UE_posi = UE_posi[_UE.type][:,_UE.type_no]
+        for j in range(len(_UE.HO_state.failure_posi)):
+            for _failure_posi in _UE.HO_state.failure_posi[j]:
+                _posi_idx = np.where(_UE_posi == _failure_posi)[0][0]
+                _drop_idx = _posi_idx*PARAM.posi_resolution
+                before_failure_rate[j].append(rate_arr[_drop_idx-observe_length:_drop_idx, i])
 
+    label_list = ['HOF type {}'.format(n+1) for n in range(4)]
+    #     plot_cdf(rate_data, 'bit rate', 'cdf', label_list)
+    plot_cdf(before_failure_rate, 'bit rate', 'cdf', label_list)
     # large_h = large_scale_fading(PARAM, Macro_BS_list, UE_list, shadow)
     # large_fading.update(large_h)
 
