@@ -36,21 +36,31 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
                 # 尝试接入邻基站
                 _ = access_init(PARAMS, BS_list, [_UE], instant_channel, serving_map)
 
+            '''判断最优基站'''
             if measure_criteria == 'avg' or measure_criteria == 'large_h':
                 _serv_large_h = np.square(large_fading.map[_UE.serv_BS, _UE.no])
-                _best_BS = _UE.neighbour_BS[0]
-                _best_large_h = np.square(large_fading.map[_best_BS, _UE.no])
+                if _UE.neighbour_BS[0] != _UE.serv_BS:
+                    _best_BS = _UE.neighbour_BS[0]
+                    _best_large_h = np.square(large_fading.map[_best_BS, _UE.no])
+                else:
+                    _best_BS = _UE.neighbour_BS[1]
+                    _best_large_h = np.square(large_fading.map[_best_BS, _UE.no])
 
             elif measure_criteria == 'L3':
                 _serv_large_h = _UE.serv_BS_L3_h
-                _best_BS = _UE.neighbour_BS[0]
-                _best_large_h = _UE.neighbour_BS_L3_h[0]
+                if _UE.neighbour_BS[0] != _UE.serv_BS:
+                    _best_BS = _UE.neighbour_BS[0]
+                    _best_large_h = _UE.neighbour_BS_L3_h[0]
+                else:
+                    _best_BS = _UE.neighbour_BS[1]
+                    _best_large_h = _UE.neighbour_BS_L3_h[1]
 
             else:
                 raise Exception("Invalid measure criteria!", measure_criteria)
 
+
             '''若目标BS信道超过服务BS一定阈值HOM，触发hanover条件'''
-            if _best_BS != _UE.serv_BS and 10 * np.log10(_best_large_h) - 10 * np.log10(_serv_large_h) >= HOM:
+            if 10 * np.log10(_best_large_h) - 10 * np.log10(_serv_large_h) >= HOM:
                 _target_BS = search_object_form_list_by_no(BS_list, _best_BS)
                 if not _target_BS.if_full_load():
                     _UE.update_state('handovering')
