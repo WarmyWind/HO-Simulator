@@ -248,7 +248,7 @@ def plot_large_channel(PARAM, BS_posi, BS_no_list, shadow_map, UE_posi, L3=True)
             large_scale_fading_dB = 10*np.log10(L3_large_scale_fading)
 
         x = [j*10 for j in range(len(large_scale_fading))]
-        ax.plot(x, large_scale_fading_dB, label='BS{}'.format(BS_no))
+        ax.plot(x, -large_scale_fading_dB, label='BS{}'.format(BS_no))
 
     plt.xlabel('Time(ms)')
     plt.xticks()
@@ -297,12 +297,14 @@ if __name__ == '__main__':
     # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
     # plt.legend()
     plt.grid()
-    plt.xlim(-10,1100)
-    plt.ylim(-10,226.5)
+
+    plt.axis('square')
+    plt.xlim(-10, 1100)
+    plt.ylim(-210, 426.5)
     plt.show()
 
     '''从文件读取阴影衰落'''
-    filepath = 'shadowFad_dB_8sigma.mat'
+    filepath = 'shadowFad_dB_0sigma.mat'
     index = 'shadowFad_dB'
     shadowFad_dB = get_shadow_from_mat(filepath, index)
 
