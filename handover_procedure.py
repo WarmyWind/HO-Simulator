@@ -15,6 +15,9 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
                            instant_channel: InstantChannelMap,
                            HOM, TTT_list, serving_map: ServingMap, measure_criteria='L3', allocate_method=equal_RB_allocate):
     for _UE in UE_list:
+        if _UE.type == 2 and _UE.type_no == 11 and _UE.active == True:
+            probe = _UE.type
+
         if isinstance(TTT_list, list):
             TTT = TTT_list[_UE.type]
         else:

@@ -207,15 +207,15 @@ def plot_HO_map(UE_list, BS_posi, UE_tra, label_list=None):
             # _some_type_HOF_posi = HOF_posi[i]
             _posi = HOF_posi[i]
             if idx == 0:
-                ax.scatter(np.real(_posi), np.imag(_posi), marker='|', color=color_list[i], label='HOF type{}'.format(i+1))
+                ax.scatter(np.real(_posi), np.imag(_posi), marker='|', s=100, color=color_list[i], label='HOF type{}'.format(i+1))
             else:
-                ax.scatter(np.real(_posi), np.imag(_posi), marker='|', color=color_list[i])
+                ax.scatter(np.real(_posi), np.imag(_posi), marker='|', s=100,  color=color_list[i])
 
 
         if idx == 0:
-            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d',s=10, color='darkgreen', label='HOS')
+            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d', s=20, color='darkgreen', label='HOS')
         else:
-            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d', s=10, color='darkgreen')
+            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d', s=20, color='darkgreen')
 
     plt.legend()
     # plt.show()
@@ -266,9 +266,9 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
 
-    root_path = 'result/0414_new'
-    rate_arr = np.load(root_path + '/4/rate_arr.npy', allow_pickle=True)
-    UE_list = np.load(root_path + '/4/UE_list.npy', allow_pickle=True)
+    root_path = 'result/0420_1'
+    rate_arr = np.load(root_path + '/5/rate_arr.npy', allow_pickle=True)
+    UE_list = np.load(root_path + '/5/UE_list.npy', allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
     label_list = ['Para Set 1']
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
@@ -282,8 +282,9 @@ if __name__ == '__main__':
 
     example_UE_posi=[]
     example_UE_list = []
-    type_no = [14,13,0]
+    type_no = [14,13,11]
     for i in range(3):
+        if i==1: continue
         example_UE_posi.append(UE_posi[i][:,type_no[i]])
         example_UE_list.append(UE_list[i*50+type_no[i]])
 
@@ -304,7 +305,7 @@ if __name__ == '__main__':
     plt.show()
 
     '''从文件读取阴影衰落'''
-    filepath = 'shadowFad_dB_4sigma.mat'
+    filepath = 'shadowFad_dB_2sigma.mat'
     index = 'shadowFad_dB'
     shadowFad_dB = get_shadow_from_mat(filepath, index)
 
@@ -312,7 +313,11 @@ if __name__ == '__main__':
     shadow = ShadowMap(shadowFad_dB)
 
     BS_no_list = [3,4,5,6,7,8]
-    plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
+    # plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
+
+
+
+
 
 
     # large_h = large_scale_fading(PARAM, Macro_BS_list, UE_list, shadow)
@@ -325,16 +330,6 @@ if __name__ == '__main__':
     # para_list = ['Para Set 1']
     # label_list = ['Success', 'Failure', 'Num of Failure Repeat UE']
     # plot_bar(HO_result, 'Parameter Set', 'HO result', para_list, label_list)
-
-
-
-    # data = get_data_from_mat('RB123_lyk.mat', 'RB123bitrate')
-    # RB123_lyk = np.transpose(data, (2,0,1))
-    # data2 = get_data_from_mat('RB123.mat', 'RB123')
-    # RB123 = data2
-    #
-    # PARAM = Parameter()
-    # np.random.seed(0)
 
 
 

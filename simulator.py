@@ -80,6 +80,10 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         '''更新瞬时信道信息'''
         instant_channel.calculate_by_fading(large_fading, small_fading)
 
+        '''更新UE的邻基站及其的L3测量'''
+        find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading, instant_channel,
+                                     PARAM.L3_coe)
+
         '''新出现的活动UE进行接入，停止活动的UE断开'''
         for _UE in UE_list:
             if not _UE.active:
@@ -94,8 +98,6 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         '''更新UE的服务基站L3测量'''
         update_serv_BS_L3_h(UE_list, instant_channel, PARAM.L3_coe)
 
-        '''更新UE的邻基站及其的L3测量'''
-        find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading, instant_channel, PARAM.L3_coe)
 
         '''更新预编码信息'''
         for _BS in BS_list:
@@ -207,7 +209,7 @@ if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         plot_flag = 0  # 是否绘图
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0420_4'
+        root_path = 'result/0421_new_1'
         nDrop = 10000  # 时间步进长度
 
     def simulator_entry(PARAM_list, shadowFad_dB, UE_posi):
@@ -287,7 +289,7 @@ if __name__ == '__main__':
     # PARAM.HOM = 4.5
     # PARAM.TTT = [96, 24, 16]
     # PARAM_list.append(PARAM)
-    HOM_list = [-9]
+    HOM_list = [-1, 0, 3]
     # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
     TTT_list = [16, 32, 48, 64]
     for _HOM in HOM_list:
