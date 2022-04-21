@@ -125,7 +125,6 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
                 _UE.update_RL_state_by_SINR(SS_SINR[_UE.no], PARAM.L1_filter_length)
 
 
-
         '''开始HO eval'''
         # HOM = 3  # dB
         # TTT = 32
@@ -134,6 +133,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
                                 serving_map, measure_criteria)
 
 
+        '''显示进度条'''
         progress_bar(drop_idx/(SimConfig.nDrop-1) * 100)
 
     HO_success = 0
