@@ -115,7 +115,8 @@ class RL_state:
         self.duration = -1
         self.Qin = Qin
         self.Qout = Qout
-        self.SINR_record = []
+        self.SINR_record = []  # 用于判定RLF
+        self.SINR_dB_record_all = []  # 记录仿真中所有的SINR_dB，用于仿真分析
         self.filtered_SINR_dB = None
         self.max_period = max_period
         self.state = 'out'
@@ -124,6 +125,7 @@ class RL_state:
         if not self.active:
             raise Exception("UE's RL state is not active!", self.active)
 
+        self.SINR_dB_record_all.append(10*np.log10(SINR))
         self.SINR_record.append(SINR)
         self.SINR_record = self.SINR_record[-L1_filter_length:]
         self.filtered_SINR_dB = 10*np.log10(np.mean(self.SINR_record))
