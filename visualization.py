@@ -58,18 +58,20 @@ def plot_UE_trajectory(Macro_Posi, UE_tra, label_list=None):
     return fig, ax
 
 
-def plot_cdf(data, xlabel, ylabel, label_list, normed=1, loc='lower right'):
+def plot_cdf(data, xlabel, ylabel, label_list, cumulative=True, normed=1, loc='lower right'):
     # data is a list of array
     fig, ax = plt.subplots()
     for i in range(len(data)):
         _d = np.array(data[i]).flatten()
-        ax.hist(_d, bins=250, density=normed, cumulative='Ture', histtype='step', label=label_list[i])
+        ax.hist(_d, bins=250, density=normed, cumulative=cumulative, histtype='step', label=label_list[i])
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     # ax.set_xbound(np.min(data), np.max(data))
-    ax.set_ybound(0, 1)
-    fix_hist_step_vertical_line_at_end(ax)
+
+    if cumulative:
+        ax.set_ybound(0, 1)
+        fix_hist_step_vertical_line_at_end(ax)
     plt.legend(loc=loc)
     plt.show()
 
@@ -310,7 +312,7 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
 
-    root_path = 'result/0421_new_1'
+    root_path = 'result/0421_new_2'
     rate_arr = np.load(root_path + '/2/rate_arr.npy', allow_pickle=True)
     UE_list = np.load(root_path + '/2/UE_list.npy', allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
@@ -340,7 +342,7 @@ if __name__ == '__main__':
     plt.show()
 
     '''从文件读取阴影衰落'''
-    filepath = 'shadowFad_dB_2sigma.mat'
+    filepath = 'shadowFad_dB_8sigma.mat'
     index = 'shadowFad_dB'
     shadowFad_dB = get_shadow_from_mat(filepath, index)
 
@@ -397,11 +399,17 @@ if __name__ == '__main__':
     #     plot_cdf(rate_data, 'bit rate', 'cdf', label_list)
     plot_cdf(HO_duration_rate, 'bit rate', 'cdf', label_list)
 
+    avg_rate = []
+    for _rate_arr in HO_duration_rate:
+        avg_rate.append(np.mean(_rate_arr))
+    print('Average rate: {}'.format(avg_rate))
+    # plot_cdf(HO_duration_rate, 'bit rate', 'cdf', label_list, cumulative=False)
+
 
     '''选择UE'''
-    HOF_type = 1
+    HOF_type = 2
     for _UE in UE_list:
-        if _UE.HO_state.failure_posi[HOF_type]:
+        if _UE.HO_state.failure_posi[HOF_type] and _UE.HO_state.failure_posi[HOF_type-1] and _UE.type == 2:
             break
     UE_type = _UE.type
     UE_type_no = _UE.type_no
