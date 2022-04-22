@@ -33,6 +33,7 @@ def plot_BS_location(Macro_Posi, Micro_Posi = None):
         ax.scatter(np.real(Micro_Posi), np.imag(Micro_Posi), label='Micro BS')
     plt.legend()
     # plt.show()
+    return ax
 
 
 def plot_UE_trajectory(Macro_Posi, UE_tra, label_list=None):
@@ -221,7 +222,7 @@ def plot_HO_map(UE_list, BS_posi, UE_tra, label_list=None):
     # plt.show()
 
 
-def plot_large_channel(PARAM, BS_posi, BS_no_list, shadow_map, UE_posi, L3=True):
+def plot_large_channel(PARAM, BS_posi, BS_no_list, shadow_map, UE_posi, UE_HOF_posi = None, L3=True):
     antGain = PARAM.pathloss.Macro.antGaindB
     dFactor = PARAM.pathloss.Macro.dFactordB
     pLoss1m = PARAM.pathloss.Macro.pLoss1mdB
@@ -247,16 +248,59 @@ def plot_large_channel(PARAM, BS_posi, BS_no_list, shadow_map, UE_posi, L3=True)
                 L3_large_scale_fading.append(0.5*L3_large_scale_fading[i-1] + 0.5*large_scale_fading[i])
             large_scale_fading_dB = 10*np.log10(L3_large_scale_fading)
 
-        x = [j*10 for j in range(len(large_scale_fading))]
+        # x = [j*PARAM.posi_resolution for j in range(len(large_scale_fading))]
+        x = np.linspace(np.min(np.real(UE_posi)),np.max(np.real(UE_posi)),len(large_scale_fading))
         ax.plot(x, -large_scale_fading_dB, label='BS{}'.format(BS_no))
 
-    plt.xlabel('Time(ms)')
+    if UE_HOF_posi != None:
+        color_list = ['black', 'red', 'darkorange', 'blue']
+        for HOF_type in range(len(UE_HOF_posi)):
+            color = color_list[HOF_type]
+            for j in range(len(UE_HOF_posi[HOF_type])):
+                _HOF_posi = UE_HOF_posi[HOF_type][j]
+                if j == 0:
+                    ax.axvline(np.real(_HOF_posi), c=color, lw=0.5, label='HOF type{}'.format(HOF_type+1))
+                else:
+                    ax.axvline(np.real(_HOF_posi), c=color, lw=0.5)
+    # plt.xlabel('Time(ms)')
+    plt.xlabel('x(m)')
     plt.xticks()
     plt.ylabel('Large Fading(dB)')
-    plt.legend()
+    plt.legend(loc='lower left')
     plt.show()
     return ax
 
+def plot_SINR(UE_posi, UE, UE_HOF_posi = None, Qout = -8):
+    fig, ax = plt.subplots()
+
+    # inactive_drop = np.where(UE_posi != None)[0][0] * PARAM.posi_resolution
+    # _failure_posi = UE.HO_state.failure_posi[HOF_type][0]
+    # _posi_idx = np.where(UE_posi == _failure_posi)[0][0]
+    # _drop_idx = _posi_idx * PARAM.posi_resolution
+    _posi_without_None = UE_posi[np.where(UE_posi != None)].tolist()
+    _probe = len(UE.RL_state.SINR_dB_record_all)
+    x = np.linspace(np.min(np.real(_posi_without_None)), np.max(np.real(_posi_without_None)),
+                        len(UE.RL_state.SINR_dB_record_all))
+    ax.plot(x, UE.RL_state.SINR_dB_record_all)
+
+    ax.axhline(Qout, label='Qout', c='grey')
+
+    if UE_HOF_posi != None:
+        color_list = ['black', 'red', 'darkorange', 'blue']
+        for HOF_type in range(len(UE_HOF_posi)):
+            color = color_list[HOF_type]
+            for j in range(len(UE_HOF_posi[HOF_type])):
+                _HOF_posi = UE_HOF_posi[HOF_type][j]
+                if j == 0:
+                    ax.axvline(np.real(_HOF_posi), c=color, lw=0.5, label='HOF type{}'.format(HOF_type+1))
+                else:
+                    ax.axvline(np.real(_HOF_posi), c=color, lw=0.5)
+    plt.xlabel('x(m)')
+    plt.xticks()
+    plt.ylabel('SINR(dB)')
+    plt.legend(loc='lower left')
+    plt.show()
+    return ax
 
 if __name__ == '__main__':
     from simulator import *
@@ -266,9 +310,9 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
 
-    root_path = 'result/0414_new'
-    rate_arr = np.load(root_path + '/4/rate_arr.npy', allow_pickle=True)
-    UE_list = np.load(root_path + '/4/UE_list.npy', allow_pickle=True)
+    root_path = 'result/0421_new_2'
+    rate_arr = np.load(root_path + '/2/rate_arr.npy', allow_pickle=True)
+    UE_list = np.load(root_path + '/2/UE_list.npy', allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
     label_list = ['Para Set 1']
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
@@ -280,23 +324,12 @@ if __name__ == '__main__':
     # UE_posi = UE_posi[2, :, :]
     UE_posi = process_posi_data(UE_posi)
 
-    example_UE_posi=[]
-    example_UE_list = []
-    type_no = [14,13,0]  # 选取三个不同种类的UE编号
-    for i in range(3):
-        example_UE_posi.append(UE_posi[i][:,type_no[i]])
-        example_UE_list.append(UE_list[i*50+type_no[i]])
-
-    example_UE_posi = np.transpose(example_UE_posi)
-
     '''生成BS位置'''
     Macro_Posi = road_cell_struct(9, 250)
-    label = ['pedestrian','bike','car']
 
-    '''绘制UE例子的HO地图'''
-    plot_HO_map(example_UE_list, Macro_Posi, np.array(example_UE_posi), label_list=label)
-    # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
-    # plt.legend()
+    ax = plot_BS_location(Macro_Posi)
+    dist = np.abs(Macro_Posi[0] - Macro_Posi[1])
+    ax = plot_hexgon(ax, Macro_Posi, dist)
     plt.grid()
     plt.axis('square')
     plt.xlim(-10, 1100)
@@ -313,10 +346,32 @@ if __name__ == '__main__':
 
     '''绘制大尺度信道信息'''
     BS_no_list = [3,4,5,6,7,8]
-    plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
+    # plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
 
+
+    # '''绘制UE例子的HO地图'''
+    # example_UE_posi=[]
+    # example_UE_list = []
+    # type_no = [14,13,0]  # 选取三个不同种类的UE编号
+    # for i in range(3):
+    #     example_UE_posi.append(UE_posi[i][:,type_no[i]])
+    #     example_UE_list.append(UE_list[i*50+type_no[i]])
+    #
+    # example_UE_posi = np.transpose(example_UE_posi)
+    # label = ['pedestrian','bike','car']
+    # plot_HO_map(example_UE_list, Macro_Posi, np.array(example_UE_posi), label_list=label)
+    # # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
+    # # plt.legend()
+    # plt.grid()
+    # plt.axis('square')
+    # plt.xlim(-10, 1100)
+    # plt.ylim(-210, 426.5)
+    # plt.show()
+
+
+    '''绘制HO前的速率cdf'''
     observe_length = 16
-    before_failure_rate = [[] for _ in range(4)]
+    HO_duration_rate = [[] for _ in range(4+1)]
     for i in range(len(UE_list)):
         _UE = UE_list[i]
         _UE_posi = UE_posi[_UE.type][:,_UE.type_no]
@@ -324,11 +379,50 @@ if __name__ == '__main__':
             for _failure_posi in _UE.HO_state.failure_posi[j]:
                 _posi_idx = np.where(_UE_posi == _failure_posi)[0][0]
                 _drop_idx = _posi_idx*PARAM.posi_resolution
-                before_failure_rate[j].append(rate_arr[_drop_idx-observe_length:_drop_idx, i])
+                HO_duration_rate[j].append(rate_arr[_drop_idx-observe_length:_drop_idx, i])
+
+        for _success_posi in _UE.HO_state.success_posi:
+            _posi_idx = np.where(_UE_posi == _success_posi)[0][0]
+            _drop_idx = _posi_idx * PARAM.posi_resolution
+            HO_duration_rate[4].append(rate_arr[_drop_idx - observe_length:_drop_idx, i])
+
+    HO_duration_rate.append(rate_arr[rate_arr != 0])
 
     label_list = ['HOF type {}'.format(n+1) for n in range(4)]
+    label_list.append('HO success')
+    label_list.append('Total')
     #     plot_cdf(rate_data, 'bit rate', 'cdf', label_list)
-    plot_cdf(before_failure_rate, 'bit rate', 'cdf', label_list)
+    plot_cdf(HO_duration_rate, 'bit rate', 'cdf', label_list)
+
+
+    '''选择UE'''
+    HOF_type = 1
+    for _UE in UE_list:
+        if _UE.HO_state.failure_posi[HOF_type]:
+            break
+    UE_type = _UE.type
+    UE_type_no = _UE.type_no
+    _UE_posi = UE_posi[UE_type][:, UE_type_no]
+
+    '''绘制大尺度信道'''
+    _ = plot_large_channel(PARAM, Macro_Posi, [0,1,2,3,4,5,6,7,8], shadow, _UE_posi, _UE.HO_state.failure_posi)
+
+
+
+    '''绘制SINR'''
+    _ = plot_SINR(_UE_posi, _UE, _UE.HO_state.failure_posi)
+
+
+
+    '''绘制UE例子的HO地图'''
+    plot_HO_map([_UE], Macro_Posi, np.transpose([_UE_posi]), label_list=['example car'])
+    # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
+    # plt.legend()
+    plt.grid()
+    plt.axis('square')
+    plt.xlim(-10, 1100)
+    plt.ylim(-210, 426.5)
+    plt.show()
     # large_h = large_scale_fading(PARAM, Macro_BS_list, UE_list, shadow)
     # large_fading.update(large_h)
 
