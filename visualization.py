@@ -31,7 +31,7 @@ def plot_BS_location(Macro_Posi, Micro_Posi = None):
     ax.scatter(np.real(Macro_Posi), np.imag(Macro_Posi), label='Macro BS')
     if Micro_Posi != None:
         ax.scatter(np.real(Micro_Posi), np.imag(Micro_Posi), label='Micro BS')
-    plt.legend()
+    # plt.legend()
     # plt.show()
     return ax
 
@@ -310,7 +310,7 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
 
-    root_path = 'result/0421_new_2'
+    root_path = 'result/0421_new_1'
     rate_arr = np.load(root_path + '/2/rate_arr.npy', allow_pickle=True)
     UE_list = np.load(root_path + '/2/UE_list.npy', allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
@@ -330,10 +330,13 @@ if __name__ == '__main__':
     ax = plot_BS_location(Macro_Posi)
     dist = np.abs(Macro_Posi[0] - Macro_Posi[1])
     ax = plot_hexgon(ax, Macro_Posi, dist)
-    plt.grid()
+    ax.axhline(dist/2/np.sqrt(3), c='black')
+    ax.axhline(dist/np.sqrt(3), c='black', label='road')
+    # plt.grid()
     plt.axis('square')
     plt.xlim(-10, 1100)
     plt.ylim(-210, 426.5)
+    plt.legend()
     plt.show()
 
     '''从文件读取阴影衰落'''
