@@ -36,8 +36,8 @@ if __name__ == '__main__':
     index = 'Set_UE_posi'
     UE_posi = get_UE_posi_from_mat(filepath, index)
 
-    root_path = 'result/0421_new_2'
-    for i in range(8):
+    root_path = 'result/0422_test'
+    for i in range(1):
         rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(i), allow_pickle=True)
         UE_list = np.load(root_path + '/{}/UE_list.npy'.format(i), allow_pickle=True)
         HOS = [0,0,0]

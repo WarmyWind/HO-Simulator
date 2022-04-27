@@ -75,6 +75,7 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
             _UE.HO_state.update_duration(_UE.HO_state.duration + 1)
 
             if _UE.HO_state.duration < TTT:
+                _UE.HO_state.stage = 'TTT'
                 if _UE.RL_state.state == 'RLF':  # 在TTT中发生RLF
                     _UE.quit_handover(False, 'unserved', 0)
                     _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
@@ -114,7 +115,7 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
                 # equal_RB_allocate([_UE], _BS, PARAMS.RB_per_UE, serving_map)
 
             if TTT < _UE.HO_state.duration < TTT + PARAMS.HO_Prep_Time:
-                pass
+                _UE.HO_state.stage = 'HO_prep'
 
             if _UE.HO_state.duration == TTT + PARAMS.HO_Prep_Time:
 
@@ -147,7 +148,7 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
                         continue
 
             if TTT + PARAMS.HO_Prep_Time < _UE.HO_state.duration < TTT + PARAMS.HO_Prep_Time + PARAMS.HO_Exec_Time:
-
+                _UE.HO_state.stage = 'HO_exec'
                 if len(_UE.RL_state.SINR_record) >= 2 and _UE.RL_state.state == 'out':
                     '''HO 执行时目标BS信道质量差，记HOF'''
                     _UE.quit_handover(False, 'handovering', 2)

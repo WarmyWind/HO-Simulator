@@ -41,7 +41,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
     rec_P = get_receive_power(BS_list, instant_channel)
     inter_P = get_interference(BS_list, UE_list, instant_channel)
     SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
-    UE_rate = user_rate(PARAM.MLB.RB, SINR_dB)
+    UE_rate = user_rate(PARAM.MLB.RB, SINR_dB, UE_list)
     # print(np.mean(UE_rate))
     rate_list = [UE_rate]
 
@@ -108,7 +108,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         inter_P = get_interference(BS_list, UE_list, instant_channel)
         SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
         # SNR_dB = calculate_SNR_dB(rec_P, PARAM.sigma2)
-        UE_rate = user_rate(PARAM.MLB.RB, SINR_dB)
+        UE_rate = user_rate(PARAM.MLB.RB, SINR_dB, UE_list)
         rate_list.append(UE_rate)
 
         '''更新RL state'''
@@ -209,7 +209,7 @@ if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         plot_flag = 0  # 是否绘图
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0421_new_1'
+        root_path = 'result/0424_test'
         nDrop = 10000  # 时间步进长度
 
     def simulator_entry(PARAM_list, shadowFad_dB, UE_posi):
@@ -286,12 +286,12 @@ if __name__ == '__main__':
 
     PARAM_list = []
     PARAM = Parameter()
-    # PARAM.HOM = 4.5
-    # PARAM.TTT = [96, 24, 16]
+    # PARAM.HOM = 3
+    # PARAM.TTT = [32, 16, 16]
     # PARAM_list.append(PARAM)
-    HOM_list = [-1, 0, 3]
+    HOM_list = [0]
     # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
-    TTT_list = [16, 32, 48, 64]
+    TTT_list = [48]
     for _HOM in HOM_list:
         PARAM.HOM = _HOM
         for _TTT in TTT_list:
@@ -302,7 +302,7 @@ if __name__ == '__main__':
 
     np.random.seed(0)
     '''从文件读取阴影衰落'''
-    filepath = 'shadowFad_dB_2sigma.mat'
+    filepath = 'shadowFad_dB_8sigma.mat'
     index = 'shadowFad_dB'
     shadowFad_dB = get_shadow_from_mat(filepath, index)
     # probe = shadowFad_dB[0][1]

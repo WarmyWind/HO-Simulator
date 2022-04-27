@@ -312,9 +312,9 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
 
-    root_path = 'result/0421_new_2'
-    rate_arr = np.load(root_path + '/2/rate_arr.npy', allow_pickle=True)
-    UE_list = np.load(root_path + '/2/UE_list.npy', allow_pickle=True)
+    root_path = 'result/0424_test'
+    rate_arr = np.load(root_path + '/0/rate_arr.npy', allow_pickle=True)
+    UE_list = np.load(root_path + '/0/UE_list.npy', allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
     label_list = ['Para Set 1']
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
@@ -342,7 +342,7 @@ if __name__ == '__main__':
     plt.show()
 
     '''从文件读取阴影衰落'''
-    filepath = 'shadowFad_dB_8sigma.mat'
+    filepath = 'shadowFad_dB_6sigma_60dcov.mat'
     index = 'shadowFad_dB'
     shadowFad_dB = get_shadow_from_mat(filepath, index)
 
@@ -351,7 +351,7 @@ if __name__ == '__main__':
 
     '''绘制大尺度信道信息'''
     BS_no_list = [3,4,5,6,7,8]
-    # plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
+    plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
 
 
     # '''绘制UE例子的HO地图'''

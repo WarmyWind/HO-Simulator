@@ -68,6 +68,8 @@ class InstantChannelMap:
 
 class HO_state:
     def __init__(self):
+        self.stage = None  # 'TTT' or 'HO_prep' or 'HO_exec'
+
         self.failure_type = 4  # 考虑的HOF有多少类型
         self.target_BS = -1  # 目标BS编号
         self.duration = -1  # 持续时间
