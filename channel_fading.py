@@ -61,10 +61,10 @@ def large_scale_fading(PARAMS, BS_list, UE_list, shadow_map:ShadowMap):
                 shadow = shadow_map.map[iBS][y_temp, x_temp]
                 large_scale_fading_dB[iBS, iUE] = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain
 
-    large_scale_fading = 10 ** (-large_scale_fading_dB / 20)
+    large_scale_channel = 10 ** (-large_scale_fading_dB / 20)
     # print('大尺度衰落(dB)：',large_scale_fading_dB[:,0])
     # large_fading.update(large_scale_fading)
-    return large_scale_fading
+    return large_scale_channel
 
 
 def small_scale_fading(nUE, nBS, nNt, fading_model='Rayleigh'):

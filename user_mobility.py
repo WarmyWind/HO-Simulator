@@ -23,7 +23,7 @@ def get_UE_posi_from_mat(filepath, index):
 
     return posi_data
 
-def process_posi_data(posi_data):
+def process_posi_data(posi_data, fill_symbol = None):
     new_posi_data = []
     if len(posi_data.shape) == 2:
         for _UE_no in range(posi_data.shape[1]):
@@ -33,7 +33,7 @@ def process_posi_data(posi_data):
             _change_point = np.where(_move_distance > 800)
             if len(_change_point[0]) == 1:
                 _change_point = _change_point[0][0] + 1
-                _temp1 = np.array([None for _ in range(posi_data.shape[0])])
+                _temp1 = np.array([fill_symbol for _ in range(posi_data.shape[0])])
                 _temp2 = np.copy(_temp1)
                 _temp1[:_change_point] = _posi[:_change_point]
                 _temp2[_change_point:] = _posi[_change_point:]

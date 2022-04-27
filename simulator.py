@@ -151,15 +151,15 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
 
     return np.array(rate_list), UE_list
 
-def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
-    '''初始化所有对象'''
-    '''创建BS对象，并加入列表'''
-    Macro_BS_list = []
-    # print("Macro Ptmax:", PARAM.Macro.Ptmax)
-    for i in range(PARAM.Macro.nBS):
-        Macro_BS_list.append(BS(i, 'Macro', PARAM.Macro.nNt, PARAM.nRB, PARAM.Macro.Ptmax, Macro_Posi[i], True, PARAM.Macro.MaxUE_per_RB))
 
-    '''创建UE对象，并加入列表'''
+def create_Macro_BS_list(PARAM, Macro_Posi):
+    macro_BS_list = []
+    for i in range(PARAM.Macro.nBS):
+        macro_BS_list.append(BS(i, 'Macro', PARAM.Macro.nNt, PARAM.nRB, PARAM.Macro.Ptmax, Macro_Posi[i], True, PARAM.Macro.MaxUE_per_RB))
+    return macro_BS_list
+
+
+def create_UE_list(PARAM, UE_posi):
     UE_list = []
     if isinstance(UE_posi, list):
         for i in range(len(UE_posi)):
@@ -189,6 +189,16 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
                     _active = False
                 UE_list.append(UE(i*PARAM.nUE_per_type+_UE_no, _UE_no, _UE_posi, i, active=_active))
 
+    return UE_list
+
+
+def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
+    '''初始化所有对象'''
+    '''创建BS对象，并加入列表'''
+    Macro_BS_list = create_Macro_BS_list(PARAM, Macro_Posi)
+
+    '''创建UE对象，并加入列表'''
+    UE_list = create_UE_list(PARAM, UE_posi)
 
     '''初始化信道、服务信息'''
     shadow = ShadowMap(shadowFad_dB)
