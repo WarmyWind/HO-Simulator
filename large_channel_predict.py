@@ -10,6 +10,7 @@ from channel_fading import get_shadow_from_mat
 from network_deployment import road_cell_struct
 from user_mobility import *
 from simulator import create_Macro_BS_list
+from torch.utils.data import Dataset, DataLoader
 PARAM = Parameter()
 
 def get_large_channel(PARAMS, BS_list, UE_posi, shadowFad_dB):
@@ -22,6 +23,7 @@ def get_large_channel(PARAMS, BS_list, UE_posi, shadowFad_dB):
         BS_posi.append(_BS.posi)
     BS_posi = np.array(BS_posi)  # shape = [nBS]
 
+    # 根据阴影衰落地图产生阴影衰落
     x_temp = np.floor(np.ceil(np.real(UE_posi) / 0.5)).astype(int)  # shape = [nDrop, nUE]
     y_temp = np.floor(np.ceil((np.imag(UE_posi) - PARAMS.Dist / 2 / np.sqrt(3)) / 0.5)).astype(int)
     x_temp[x_temp > (shadowFad_dB.shape[2] - 1)] = shadowFad_dB.shape[2] - 1
@@ -40,43 +42,13 @@ def get_large_channel(PARAMS, BS_list, UE_posi, shadowFad_dB):
     UE_posi = np.rollaxis(UE_posi, 0, 3)  # shape = [nDrop, nUE, nBS]
     distServer = np.abs(UE_posi - BS_posi)  # shape = [nDrop, nUE, nBS]
 
-
+    # 计算大尺度衰落
     antGain = PARAMS.pathloss.Macro.antGaindB
     dFactor = PARAMS.pathloss.Macro.dFactordB
     pLoss1m = PARAMS.pathloss.Macro.pLoss1mdB
-
     large_scale_fading_dB = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain
-    # for iDrop in range(nDrop):
-    #     for iUE in range(nUE):
-    #         _UE_posi = UE_posi[iDrop, iUE]
-    #         for iBS in range(nBS):
-    #             _BS_posi = BS_list[iBS].posi
-    #             if BS_list[iBS].type == 'Macro':
-    #                 antGain = PARAMS.pathloss.Macro.antGaindB
-    #                 dFactor = PARAMS.pathloss.Macro.dFactordB
-    #                 pLoss1m = PARAMS.pathloss.Macro.pLoss1mdB
-    #                 # shadow  = PARAMS.pathloss.Macro.shadowdB
-    #             else:
-    #                 antGain = PARAMS.pathloss.Micro.antGaindB
-    #                 dFactor = PARAMS.pathloss.Micro.dFactordB
-    #                 pLoss1m = PARAMS.pathloss.Micro.pLoss1mdB
-    #                 # shadow  = PARAMS.pathloss.Micro.shadowdB
-    #
-    #
-    #             if _UE_posi == None:
-    #                 large_scale_fading_dB[iDrop, iBS, iUE] = -np.Inf
-    #             else:
-    #                 distServer = np.abs(_UE_posi - _BS_posi)  # 用户-基站距离
-    #                 '''
-    #                 下面的x_temp和y_temp后加的常数与数据有关
-    #                 '''
-    #                 x_temp = int(np.ceil(np.real(_UE_posi)/0.5))
-    #                 y_temp = int(np.ceil((np.imag(_UE_posi)-PARAMS.Dist/2/np.sqrt(3))/0.5))
-    #                 x_temp = np.min((shadowFad_dB.shape[2]-1, x_temp))
-    #                 y_temp = np.min((shadowFad_dB.shape[1]-1, y_temp))
-    #                 shadow = shadowFad_dB[iBS][y_temp, x_temp]
-    #                 large_scale_fading_dB[iDrop, iBS, iUE] = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain
 
+    # 转换为大尺度信道
     large_scale_channel = 10 ** (-large_scale_fading_dB / 20)
         # print('大尺度衰落(dB)：',large_scale_fading_dB[:,0])
         # large_fading.update(large_scale_fading)
@@ -120,7 +92,7 @@ for i in range(3):
 
 
 
-def create_dataset(large_channel, UE_posi, obs_len=5, pred_len=5):
+def handle_data(large_channel, UE_posi, obs_len=5, pred_len=5):
     x_large_h = []
     x_posi = []
     y_large_h = []
@@ -129,13 +101,26 @@ def create_dataset(large_channel, UE_posi, obs_len=5, pred_len=5):
         _posi = UE_posi[:, iUE]
         _useful_idx = np.where(_posi != (1+1j)*np.inf)
         _posi = _posi[_useful_idx]
-        _large_channel_data = large_channel[_useful_idx,iUE,:]
+        _large_channel_data = np.squeeze(large_channel[_useful_idx,iUE,:])
         for i in np.arange(0,len(_posi)-pred_len,obs_len):
             x_large_h.append(_large_channel_data[i:i+obs_len])
             x_posi.append(_posi[i:i+obs_len])
             y_large_h.append(_large_channel_data[i+obs_len:i+obs_len+pred_len])
 
-    return
+    return x_large_h, x_posi, y_large_h
 
+class Mydata(Dataset):
+    def __init__(self, x_large_h, x_posi, y_large_h):
+        self.data = list(zip(x_large_h, x_posi, y_large_h))
 
-train_set = create_dataset(large_channel, UE_posi)
+    def __getitem__(self, idx):
+        assert idx < len(self.data)
+        return self.data[idx]
+
+    def __len__(self):
+        return len(self.data)
+
+x_large_h, x_posi, y_large_h = handle_data(large_channel, UE_posi)
+train_set = Mydata(x_large_h, x_posi, y_large_h)
+train_dataloader = DataLoader(train_set, batch_size=512, shuffle=True)
+
