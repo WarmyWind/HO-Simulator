@@ -30,17 +30,18 @@ def find_and_update_neighbour_BS(BS_list, UE_list, num_neibour, large_fading: La
         instant_h = instant_channel.map[:, _neighbour_idx, _UE_no]
         instant_h_power = np.square(np.abs(instant_h))
         instant_h_power_mean = np.mean(instant_h_power, axis=0)
+        instant_h_mean = np.sqrt(instant_h_power_mean)
 
         k = (1 / 2) ** (L3_coe / 4)
         L3_h = []
         for i in range(len(_UE.neighbour_BS)):
             n_idx = _UE.neighbour_BS[i]
             if n_idx not in _neighbour_idx_before:
-                L3_h.append(instant_h_power_mean[i])
+                L3_h.append(instant_h_mean[i])
             else:
                 _neignour_BS_L3_h_arr = np.array(_UE.neighbour_BS_L3_h)
                 _L3_h_before = _neignour_BS_L3_h_arr[np.where(_neighbour_idx_before == n_idx)][0]
-                L3_h.append((1 - k) * _L3_h_before + k * instant_h_power_mean[i])
+                L3_h.append((1 - k) * _L3_h_before + k * instant_h_mean[i])
         _UE.update_neighbour_BS_L3_h(L3_h)
 
 
@@ -90,7 +91,7 @@ def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
                 _instant_h = instant_h[:, NewBS_idx, _UE.no]
                 _instant_h_power = np.square(np.abs(_instant_h))
                 _instant_h_power_mean = np.mean(_instant_h_power, axis=0)
-                _UE.update_serv_BS_L3_h(_instant_h_power_mean)
+                _UE.update_serv_BS_L3_h(np.sqrt(_instant_h_power_mean))
                 _UE.RL_state.update_active(True)
                 _UE.reset_ToS()
         else:

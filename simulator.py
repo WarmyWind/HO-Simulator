@@ -13,15 +13,15 @@ from network_deployment import cellStructPPP, road_cell_struct
 from user_mobility import *
 from channel_fading import *
 from radio_access import access_init, find_and_update_neighbour_BS
-from channel_measurement import update_serv_BS_L3_h
+from channel_measurement import *
 from SINR_calculate import *
-from handover_procedure import handover_criteria_eval
+from handover_procedure import *
 from utils import *
 import warnings
 warnings.filterwarnings('ignore')
 
 def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFadingMap, small_fading:SmallScaleFadingMap,
-                     instant_channel:InstantChannelMap, serving_map:ServingMap):
+                     instant_channel:InstantChannelMap, serving_map:ServingMap, NN=None, normalize_para=None):
     '''开始仿真'''
 
     '''更新UE的邻基站'''
@@ -29,6 +29,10 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
 
     '''初始接入'''
     _ = access_init(PARAM, BS_list, UE_list, instant_channel, serving_map)
+
+    '''更新所有基站的L3测量（预测大尺度信道时需要）'''
+    if PARAM.active_HO:
+        update_all_BS_L3_h_record(UE_list, instant_channel, PARAM.L3_coe)
 
     '''更新UE的服务基站L3测量'''
     update_serv_BS_L3_h(UE_list, instant_channel, PARAM.L3_coe)
@@ -80,6 +84,10 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         '''更新瞬时信道信息'''
         instant_channel.calculate_by_fading(large_fading, small_fading)
 
+        '''更新所有基站的L3测量（预测大尺度信道时需要）'''
+        if PARAM.active_HO:
+            update_all_BS_L3_h_record(UE_list, instant_channel, PARAM.L3_coe)
+
         '''更新UE的邻基站及其的L3测量'''
         find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading, instant_channel,
                                      PARAM.L3_coe)
@@ -113,24 +121,23 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
 
         '''更新RL state'''
         SS_SINR = calculate_SS_SINR(rec_P, inter_P, PARAM.sigma_c)
-        # SS_SINR_list.append(SS_SINR)
-        # if len(SS_SINR) < PARAM.L1_filter_length:
-        #     _SS_SINR = np.mean(np.array(SS_SINR_list), axis=0)
-        # else:
-        #     _SS_SINR = np.mean(np.array(SS_SINR_list)[-PARAM.L1_filter_length:, :], axis=0)
+
         for _UE in UE_list:
             if _UE.active:
-                # if _UE.RL_state.active == False:
-                #     print('there')
+
                 _UE.update_RL_state_by_SINR(SS_SINR[_UE.no], PARAM.L1_filter_length)
 
 
         '''开始HO eval'''
-        # HOM = 3  # dB
-        # TTT = 32
-        measure_criteria = 'L3'
-        handover_criteria_eval(PARAM, UE_list, BS_list, large_fading, instant_channel, PARAM.HOM, PARAM.TTT,
-                                serving_map, measure_criteria)
+        if not PARAM.active_HO:
+            # 被动HO
+            measure_criteria = 'L3'
+            handover_criteria_eval(PARAM, UE_list, BS_list, large_fading, instant_channel,
+                                    serving_map, measure_criteria)
+        else:
+            measure_criteria = 'L3'
+            actice_HO_eval(PARAM, NN, normalize_para, UE_list, BS_list, large_fading, instant_channel,
+                                    serving_map, measure_criteria)
 
 
         '''显示进度条'''
@@ -219,8 +226,10 @@ if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         plot_flag = 0  # 是否绘图
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0424_test'
+        root_path = 'result/0506_AHO'
         nDrop = 10000  # 时间步进长度
+        NN_path = 'Model/large_h_predict/DNN_0506/DNN_0506.dat'
+        normalize_para_filename = 'Model/large_h_predict/DNN_0506/normalize_para.npy'
 
     def simulator_entry(PARAM_list, shadowFad_dB, UE_posi):
         if SimConfig.save_flag == 1:
@@ -241,14 +250,24 @@ if __name__ == '__main__':
         print('Simulation Start.\n')
         print('Important Parameters:')
         print('Sigma: sigma_c\n')
+        print('Active HO: {}'.format(_PARAM.active_HO))
 
         for i in range(len(PARAM_list)):
             PARAM = PARAM_list[i]
             print('Simulation of Parameter Set:{} Start.'.format(i+1))
+            if PARAM.active_HO:
+                NN = DNN_Model_Wrapper(input_dim=5*9+5*2, output_dim=5*9, no_units=100, learn_rate=0.001,
+                                          batch_size=1000)
+                NN.load(SimConfig.NN_path)
+
+                normalize_para = np.load(SimConfig.normalize_para_filename, allow_pickle=True).tolist()
+                NN.mean, NN.std = normalize_para['mean1'], normalize_para['sigma1']  # 读取归一化系数
+            else:
+                NN = None
 
             Macro_BS_list, UE_list, shadow, large_fading, small_fading, instant_channel, serving_map = init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB)
             _start_time = time.time()
-            _rate_arr, _UE_list = start_simulation(PARAM, Macro_BS_list, UE_list, shadow, large_fading, small_fading, instant_channel, serving_map)
+            _rate_arr, _UE_list = start_simulation(PARAM, Macro_BS_list, UE_list, shadow, large_fading, small_fading, instant_channel, serving_map, NN, normalize_para)
             _end_time = time.time()
             print('Simulation of Parameter Set:{} Complete.'.format(i+1))
             print('Mean Rate:{:.2f} Mbps'.format(np.mean(_rate_arr[_rate_arr != 0])/1e6))
@@ -265,32 +284,6 @@ if __name__ == '__main__':
         print('All Simulation Complete.')
         print('Total Consumed Time:{:.2f}s\n'.format(end_time - start_time))
 
-        # if SimConfig.plot_flag == 1:
-        #     from visualization import plot_cdf, plot_bar, plot_rate_map
-        #     rate_data = rate_list
-        #     label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
-        #     plot_cdf(rate_data, 'bit rate', 'cdf', label_list)
-        #
-        #     HO_result = np.array(HO_result_list).transpose()
-        #     HO_result = [HO_result[i] for i in range(len(HO_result))]
-        #     para_list = ['RB={}'.format(n) for n in RB_per_UE_list]
-        #     label_list = ['Success', 'Failure', 'Num of Failure Repeat UE']
-        #     plot_bar(HO_result, 'Parameter Set', 'HO result', para_list, label_list)
-        #
-        #
-        #     if len(UE_posi.shape) == 3:
-        #         trans_UE_posi = np.zeros(UE_posi.shape[1], PARAM.nUE)
-        #         _type = 0
-        #         _UE_no = -1
-        #         for nDrop in range(UE_posi.shape[1]):
-        #             for _UE_type_no in range(UE_posi.shape[2]):
-        #                 if _UE_type_no >= PARAM.nUE_per_type:
-        #                     _type += 1
-        #                     continue
-        #                 _UE_no += 1
-        #                 trans_UE_posi[nDrop, _UE_no] = UE_posi[_type, nDrop, _UE_type_no]
-
-            # plot_rate_map(Macro_Posi, UE_posi, rate_data, para_list)
         return
 
 
@@ -299,9 +292,9 @@ if __name__ == '__main__':
     # PARAM.HOM = 3
     # PARAM.TTT = [32, 16, 16]
     # PARAM_list.append(PARAM)
-    HOM_list = [0]
+    HOM_list = [0, 3]
     # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
-    TTT_list = [48]
+    TTT_list = [32]
     for _HOM in HOM_list:
         PARAM.HOM = _HOM
         for _TTT in TTT_list:
@@ -312,7 +305,7 @@ if __name__ == '__main__':
 
     np.random.seed(0)
     '''从文件读取阴影衰落'''
-    filepath = 'shadowFad_dB_8sigma.mat'
+    filepath = 'shadowFad_dB_6sigma_60dcov.mat'
     index = 'shadowFad_dB'
     shadowFad_dB = get_shadow_from_mat(filepath, index)
     # probe = shadowFad_dB[0][1]

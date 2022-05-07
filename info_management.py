@@ -167,9 +167,11 @@ class RL_state:
 
 
 class UE:
-    def __init__(self, no, type_no, posi=None, type=None, active:bool = True):
+    def __init__(self, no, type_no, posi=None, type=None, active:bool = True, record_len=5):
         self.no = no  # UE编号
+        self.record_len = record_len
         self.posi = posi
+        self.posi_record = [posi for _ in range(record_len)]
         self.type = type
         self.type_no = type_no  # 对应类型中的UE编号
         self.active = active
@@ -182,8 +184,12 @@ class UE:
         self.MTS = 100  # 最小停留时间参数
         self.RB_Nt_ocp = []  # 占用的RB_Nt,列表内的元素是元组（RB，Nt）
         self.HO_state = HO_state()
+
+
         self.neighbour_BS = []
         self.neighbour_BS_L3_h = []  # 邻基站的信道功率L3测量值
+        self.all_BS_L3_h_record = []
+
         self.RL_state = RL_state()
 
 
@@ -194,11 +200,17 @@ class UE:
             # self.RB_Nt_ocp = []
             if HO_result == False:
                 if HOF_type != None and self.HO_state.HOF_flag == 0:
-                    self.HO_state.add_failure_count(HOF_type, self.posi)  # 记录一次HO失败
+                    self.record_HOF(HOF_type)  # 记录一次HO失败
             elif HO_result == True and self.HO_state.HOF_flag == 0:
-                self.HO_state.add_success_count(self.posi)  # 记录一次HO成功
+                self.record_HOS()  # 记录一次HO成功
             if new_state != 'handovering':
                 self.HO_state.reset()
+
+    def record_HOF(self, HOF_type):
+        self.HO_state.add_failure_count(HOF_type, self.posi)
+
+    def record_HOS(self):
+        self.HO_state.add_success_count(self.posi)
 
     def update_RL_state_by_SINR(self, SINR, L1_filter_length):
         return self.RL_state.update_by_SINR(SINR, L1_filter_length)
@@ -217,10 +229,10 @@ class UE:
         self.RL_state.reset_SINR()
 
 
-
-
     def update_posi(self, new_posi):
         self.posi = new_posi
+        self.posi_record.append(new_posi)
+        self.posi_record = self.posi_record[1:]
         if new_posi == None:
             self.update_active(False)
         else:
@@ -240,8 +252,19 @@ class UE:
     def update_serv_BS(self, new_BS):
         self.serv_BS = new_BS
 
-    def update_serv_BS_L3_h(self, new_L3_h):
-        self.serv_BS_L3_h = new_L3_h
+    def update_serv_BS_L3_h(self, instant_h_mean, k=0.5):
+        if self.serv_BS_L3_h == None:
+            self.serv_BS_L3_h = instant_h_mean
+        else:
+            self.serv_BS_L3_h = (1-k)*self.serv_BS_L3_h + k*instant_h_mean
+
+    def update_all_BS_L3_h_record(self, instant_h_mean, record_len=5, k=0.5):
+        if len(self.all_BS_L3_h_record) != record_len:
+            self.all_BS_L3_h_record = np.kron(instant_h_mean, np.ones((record_len, 1)))  # (5,9)
+        else:
+            _new_L3 = (1-k)*self.all_BS_L3_h_record[-1, :]+k*instant_h_mean  # (,9)
+            self.all_BS_L3_h_record = np.concatenate((_new_L3[np.newaxis,:], self.all_BS_L3_h_record), axis=0)  # (6,9)
+            self.all_BS_L3_h_record = self.all_BS_L3_h_record[1:, :]
 
     def update_RB_Nt_ocp(self, RB_Nt_list):
         self.RB_Nt_ocp = RB_Nt_list

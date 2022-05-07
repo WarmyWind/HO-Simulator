@@ -52,7 +52,6 @@ def get_interference(BS_list, UE_list, channel: InstantChannelMap, precoding_met
                 _itf = np.sum(_coe * np.square(np.linalg.norm(np.dot(_H, _W))))
                 interference_power[_UE.no, _RB] = interference_power[_UE.no, _RB] + _itf
 
-
     return interference_power
 
 

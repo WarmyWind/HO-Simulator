@@ -49,7 +49,8 @@ class BaseNet(object):
         # self.learn_rate = state_dict['lr']
         self.network = state_dict['model']
         self.optimizer = state_dict['optimizer']
-        print('  restoring model, lr: %f' % (self.learn_rate))
+        # print('  restoring model, lr: %f' % (self.learn_rate))
+        print('restoring model')
         return
 
 
@@ -94,6 +95,8 @@ class DNN_Model_Wrapper(BaseNet):
         self.no_units = no_units
         self.learn_rate = learn_rate
         self.batch_size = batch_size
+        self.mean = 0
+        self.std = 1
         # self.no_batches = no_batches
         # self.schedule = None  # [] #[50,200,400,600]
         self.network = DNN_Model(input_dim=input_dim, output_dim=output_dim,
@@ -139,6 +142,12 @@ class DNN_Model_Wrapper(BaseNet):
         # calculate fit loss based on mean and standard deviation of output
         total_loss = self.criteria(output, y.view(-1, self.output_dim))
         return total_loss * len(y)
+
+    def predict(self, x):
+        x = x.cuda()
+        self.optimizer.zero_grad()
+        return self.network(x) * self.std + self.mean  # 返回反归一化结果
+
 
     def set_train(self):
         self.network.train()

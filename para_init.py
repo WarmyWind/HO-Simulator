@@ -62,6 +62,7 @@ class Parameter:  # 仿真场景参数
         # self.RB_per_UE = int(np.floor(1 * self.Macro.nBS * self.Macro.MaxUE_per_RB * self.nRB / self.nUE))
         self.RB_per_UE = 4
         self.Micro.MaxUE_per_RB = np.floor(self.Micro.nNt)  # 微基站每个RB的最大服务用户
+        self.active_HO = True
 
 if __name__ == '__main__':
     '''

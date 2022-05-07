@@ -55,7 +55,7 @@ def get_large_channel(PARAMS, BS_list, UE_posi, shadowFad_dB):
     return large_scale_channel
 
 
-def handle_data(large_channel, UE_posi, obs_len=5, pred_len=5):
+def handle_data(large_channel, UE_posi, obs_len=5, pred_len=5, dB=True):
     '''根据大尺度信道数据，处理为可用于训练的数据集形式'''
     x_large_h = []
     x_posi_real = []
@@ -73,6 +73,9 @@ def handle_data(large_channel, UE_posi, obs_len=5, pred_len=5):
             x_posi_imag.append(np.imag(_posi[i:i + obs_len]))
             y_large_h.append(_large_channel_data[i+obs_len:i+obs_len+pred_len])
 
+    if dB:
+        x_large_h, y_large_h = 10 * np.log10(x_large_h), 10 * np.log10(y_large_h)
+
     return np.array(x_large_h), np.array(x_posi_real), np.array(x_posi_imag), np.array(y_large_h).astype(float)
 
 
@@ -88,9 +91,6 @@ def generate_dataset(shadow_filepath, UE_posi_filepath_list):
     '''生成BS位置和BS对象列表'''
     Macro_Posi = road_cell_struct(PARAM.nCell, PARAM.Dist)
     Macro_BS_list = create_Macro_BS_list(PARAM, Macro_Posi)
-
-    '''从文件读取UE位置训练集'''
-    # filepath = 'Set_UE_posi_60s_250user_1to2_new1.mat'
 
     trainset_num_per_type = 200
     large_channel = []
