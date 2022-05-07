@@ -228,8 +228,29 @@ if __name__ == '__main__':
         save_flag = 1  # 是否保存结果
         root_path = 'result/0506_AHO'
         nDrop = 10000  # 时间步进长度
+
+        shadow_filepath = 'shadowFad_dB_6sigma_60dcov.mat'
+        shadow_index = 'shadowFad_dB'
+        UE_posi_filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
+        posi_index = 'Set_UE_posi'
+
         NN_path = 'Model/large_h_predict/DNN_0506/DNN_0506.dat'
         normalize_para_filename = 'Model/large_h_predict/DNN_0506/normalize_para.npy'
+
+    PARAM_list = []
+    PARAM = Parameter()
+    PARAM.active_HO = True  # 主动切换
+    # PARAM.HOM = 3
+    # PARAM.TTT = [32, 16, 16]
+    # PARAM_list.append(PARAM)
+    HOM_list = [0, 3]
+    # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
+    TTT_list = [32]
+    for _HOM in HOM_list:
+        PARAM.HOM = _HOM
+        for _TTT in TTT_list:
+            PARAM.TTT = _TTT
+            PARAM_list.append(copy.deepcopy(PARAM))
 
     def simulator_entry(PARAM_list, shadowFad_dB, UE_posi):
         if SimConfig.save_flag == 1:
@@ -287,36 +308,16 @@ if __name__ == '__main__':
         return
 
 
-    PARAM_list = []
-    PARAM = Parameter()
-    # PARAM.HOM = 3
-    # PARAM.TTT = [32, 16, 16]
-    # PARAM_list.append(PARAM)
-    HOM_list = [0, 3]
-    # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
-    TTT_list = [32]
-    for _HOM in HOM_list:
-        PARAM.HOM = _HOM
-        for _TTT in TTT_list:
-            PARAM.TTT = _TTT
-            PARAM_list.append(copy.deepcopy(PARAM))
-
-
-
     np.random.seed(0)
     '''从文件读取阴影衰落'''
-    filepath = 'shadowFad_dB_6sigma_60dcov.mat'
-    index = 'shadowFad_dB'
-    shadowFad_dB = get_shadow_from_mat(filepath, index)
-    # probe = shadowFad_dB[0][1]
+    shadowFad_dB = get_shadow_from_mat(SimConfig.shadow_filepath, SimConfig.shadow_index)
 
     '''从文件读取UE位置'''
     # filepath = 'Set_UE_posi_60s_250user_1to2_new1.mat'
-    filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
-    index = 'Set_UE_posi'
-    UE_posi = get_UE_posi_from_mat(filepath, index)
+    UE_posi = get_UE_posi_from_mat(SimConfig.UE_posi_filepath, SimConfig.posi_index)
     # UE_posi = UE_posi[2, :, :]
     UE_posi = process_posi_data(UE_posi)
 
+    '''进入仿真'''
     simulator_entry(PARAM_list, shadowFad_dB, UE_posi)
 
