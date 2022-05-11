@@ -119,17 +119,22 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         inter_P = get_interference(BS_list, UE_list, instant_channel)
         SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma2)
         # SNR_dB = calculate_SNR_dB(rec_P, PARAM.sigma2)
+
+
         UE_rate = user_rate(PARAM.MLB.RB, SINR_dB, UE_list)
         rate_list.append(UE_rate)
 
         '''更新RL state'''
         SS_SINR = calculate_SS_SINR(rec_P, inter_P, PARAM.sigma2)
-
+        # probe1 = rec_P[106,:]
+        # probe2 = inter_P[106,:]
+        # probe3 = SINR_dB[106,:]
+        # probe4 = SS_SINR[106]
+        # _ = probe4
         for _UE in UE_list:
             if _UE.active:
 
                 _UE.update_RL_state_by_SINR(SS_SINR[_UE.no], PARAM.L1_filter_length)
-
 
         '''开始HO eval'''
         if not PARAM.active_HO:
@@ -228,7 +233,7 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0511_AHO_scene1_sigma2'
+        root_path = 'result/0511_AHO_scene1_sigma_c'
         nDrop = 10000  # 时间步进长度
 
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
@@ -248,7 +253,7 @@ if __name__ == '__main__':
     PARAM = Parameter()
     PARAM.active_HO = True  # 主动切换 或 被动切换
     PARAM.scene = 1
-    # PARAM.sigma2 = PARAM.sigma_c
+    PARAM.sigma2 = PARAM.sigma_c
     PARAM.nUE = 150
     PARAM.nUE_per_type = 50
     # PARAM.HOM = 3
