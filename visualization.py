@@ -313,8 +313,8 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
 
-    root_path = 'result/0511_PHO_scene1_sigma2'
-    rate_arr = np.load(root_path + '/0/rate_arr.npy', allow_pickle=True)
+    root_path = 'result/0511_AHO_scene1_sigma2'
+    rate_arr = np.load(root_path + '/1/rate_arr.npy', allow_pickle=True)
     print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
     UE_list = np.load(root_path + '/0/UE_list.npy', allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
