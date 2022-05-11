@@ -123,33 +123,33 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
 
             if _UE.HO_state.duration == TTT + PARAMS.HO_Prep_Time:
 
-                if _UE.RL_state.state == 'out':
+                if _UE.RL_state.state == 'out' and _UE.HO_state.HOF_flag == 0:
                     '''接收HO CMD时信道质量差，记HOF'''
                     _UE.quit_handover(False, 'handovering', 1)
                     _UE.HO_state.HOF_flag = 1
-                    continue
 
+
+
+                '''UE尝试接入目标BS'''
+                _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
+                _serv_BS.unserve_UE(_UE, serving_map)  # 断开原服务，释放资源
+
+                _target_BS = search_object_form_list_by_no(BS_list, _UE.HO_state.target_BS)
+                if allocate_method == equal_RB_allocate:
+                    _result = allocate_method([_UE], _target_BS, PARAMS.RB_per_UE, serving_map)
                 else:
-                    '''UE尝试接入目标BS'''
-                    _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
-                    _serv_BS.unserve_UE(_UE, serving_map)  # 断开原服务，释放资源
+                    raise Exception("Invalid allocate method!", allocate_method)
 
-                    _target_BS = search_object_form_list_by_no(BS_list, _UE.HO_state.target_BS)
-                    if allocate_method == equal_RB_allocate:
-                        _result = allocate_method([_UE], _target_BS, PARAMS.RB_per_UE, serving_map)
-                    else:
-                        raise Exception("Invalid allocate method!", allocate_method)
+                _UE.update_state('handovering')
 
-                    _UE.update_state('handovering')
-
-                    if _result:
-                        _UE.HO_happen()  # 更新RL state
-                    elif not _result:
-                        '''不进行记录，接入原BS'''
-                        _UE.quit_handover(None, 'unserved')
-                        # _UE.update_state('unserved')
-                        _ = allocate_method([_UE], _serv_BS, PARAMS.RB_per_UE, serving_map)
-                        continue
+                if _result:
+                    _UE.HO_happen()  # 更新RL state
+                elif not _result:
+                    '''不进行记录，接入原BS'''
+                    _UE.quit_handover(None, 'unserved')
+                    # _UE.update_state('unserved')
+                    _ = allocate_method([_UE], _serv_BS, PARAMS.RB_per_UE, serving_map)
+                    continue
 
             if TTT + PARAMS.HO_Prep_Time < _UE.HO_state.duration < TTT + PARAMS.HO_Prep_Time + PARAMS.HO_Exec_Time:
                 _UE.HO_state.stage = 'HO_exec'
@@ -177,7 +177,8 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
     TTT_list = PARAMS.TTT
     HOM = PARAMS.HOM
     for _UE in UE_list:
-
+        if _UE.no == 1:
+            _ = _UE.no
 
         if isinstance(TTT_list, list):
             TTT = TTT_list[_UE.type]
@@ -261,33 +262,33 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
 
             if _UE.HO_state.duration == PARAMS.HO_Prep_Time:
 
-                if _UE.RL_state.state == 'out':
+                if _UE.RL_state.state == 'out' and _UE.HO_state.HOF_flag == 0:
                     '''接收HO CMD时信道质量差，记HOF'''
                     _UE.quit_handover(False, 'handovering', 1)
                     _UE.HO_state.HOF_flag = 1
                     continue
 
+
+                '''UE尝试接入目标BS'''
+                _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
+                _serv_BS.unserve_UE(_UE, serving_map)  # 断开原服务，释放资源
+
+                _target_BS = search_object_form_list_by_no(BS_list, _UE.HO_state.target_BS)
+                if allocate_method == equal_RB_allocate:
+                    _result = allocate_method([_UE], _target_BS, PARAMS.RB_per_UE, serving_map)
                 else:
-                    '''UE尝试接入目标BS'''
-                    _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
-                    _serv_BS.unserve_UE(_UE, serving_map)  # 断开原服务，释放资源
+                    raise Exception("Invalid allocate method!", allocate_method)
 
-                    _target_BS = search_object_form_list_by_no(BS_list, _UE.HO_state.target_BS)
-                    if allocate_method == equal_RB_allocate:
-                        _result = allocate_method([_UE], _target_BS, PARAMS.RB_per_UE, serving_map)
-                    else:
-                        raise Exception("Invalid allocate method!", allocate_method)
+                _UE.update_state('handovering')
 
-                    _UE.update_state('handovering')
-
-                    if _result:
-                        _UE.HO_happen()  # 更新RL state
-                    elif not _result:
-                        '''不进行记录，接入原BS'''
-                        _UE.quit_handover(None, 'unserved')
-                        # _UE.update_state('unserved')
-                        _ = allocate_method([_UE], _serv_BS, PARAMS.RB_per_UE, serving_map)
-                        continue
+                if _result:
+                    _UE.HO_happen()  # 更新RL state
+                elif not _result:
+                    '''不进行记录，接入原BS'''
+                    _UE.quit_handover(None, 'unserved')
+                    # _UE.update_state('unserved')
+                    _ = allocate_method([_UE], _serv_BS, PARAMS.RB_per_UE, serving_map)
+                    continue
 
             if PARAMS.HO_Prep_Time < _UE.HO_state.duration < PARAMS.HO_Prep_Time + PARAMS.HO_Exec_Time:
                 _UE.HO_state.stage = 'HO_exec'

@@ -308,7 +308,7 @@ def plot_SINR(UE_posi, UE, UE_HOF_posi = None, Qout = -8):
 if __name__ == '__main__':
     from simulator import *
     from channel_fading import get_shadow_from_mat
-    from user_mobility import get_UE_posi_from_mat
+    from user_mobility import get_UE_posi_from_file
     from network_deployment import cellStructPPP
 
     PARAM = Parameter()
@@ -316,7 +316,7 @@ if __name__ == '__main__':
     root_path = 'result/0511_AHO_scene1_sigma2'
     rate_arr = np.load(root_path + '/1/rate_arr.npy', allow_pickle=True)
     print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
-    UE_list = np.load(root_path + '/0/UE_list.npy', allow_pickle=True)
+    UE_list = np.load(root_path + '/1/UE_list.npy', allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
     label_list = ['Para Set 1']
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
@@ -324,7 +324,7 @@ if __name__ == '__main__':
     '''从文件读取UE位置'''
     UE_posi_filepath = ['0511_v{}_500.npy'.format(i) for i in range(3)]
     index = 'Set_UE_posi'
-    UE_posi = get_UE_posi_from_file(filepath, index)
+    UE_posi = get_UE_posi_from_file(UE_posi_filepath, index)
     # UE_posi = UE_posi[2, :, :]
     UE_posi = process_posi_data(UE_posi)
 
@@ -342,8 +342,10 @@ if __name__ == '__main__':
 
     # plt.grid()
     plt.axis('square')
-    plt.xlim(-10, 1100)
-    plt.ylim(-210, 426.5)
+    # plt.xlim(-10, 1100)
+    # plt.ylim(-210, 426.5)
+    plt.xlim(-30, 630)
+    plt.ylim(-30, 430)
     plt.legend()
     plt.show()
 
@@ -415,34 +417,36 @@ if __name__ == '__main__':
     plot_cdf(HO_duration_rate, 'bit rate', 'cdf', label_list, cumulative=False)
 
 
-    # '''选择UE'''
-    # HOF_type = 2
-    # for _UE in UE_list:
-    #     if _UE.HO_state.failure_posi[HOF_type] and _UE.HO_state.failure_posi[HOF_type-1] and _UE.type == 2:
-    #         break
-    # UE_type = _UE.type
-    # UE_type_no = _UE.type_no
-    # _UE_posi = UE_posi[UE_type][:, UE_type_no]
-    #
-    # '''绘制大尺度信道'''
-    # _ = plot_large_channel(PARAM, Macro_Posi, [0,1,2,3,4,5,6,7,8], shadow, _UE_posi, _UE.HO_state.failure_posi)
-    #
-    #
-    #
-    # '''绘制SINR'''
-    # _ = plot_SINR(_UE_posi, _UE, _UE.HO_state.failure_posi)
-    #
-    #
-    #
-    # '''绘制UE例子的HO地图'''
-    # plot_HO_map([_UE], Macro_Posi, np.transpose([_UE_posi]), label_list=['example car'])
-    # # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
-    # # plt.legend()
-    # plt.grid()
-    # plt.axis('square')
+    '''选择UE'''
+    HOF_type = 2
+    for _UE in UE_list:
+        if _UE.HO_state.failure_posi[HOF_type] and _UE.HO_state.failure_posi[HOF_type-1] and _UE.type == 2:
+            break
+    UE_type = _UE.type
+    UE_type_no = _UE.type_no
+    _UE_posi = UE_posi[UE_type][:, UE_type_no]
+
+    '''绘制大尺度信道'''
+    _ = plot_large_channel(PARAM, Macro_Posi, [0,1,2,3,4,5,6,7,8], shadow, _UE_posi, _UE.HO_state.failure_posi)
+
+
+
+    '''绘制SINR'''
+    _ = plot_SINR(_UE_posi, _UE, _UE.HO_state.failure_posi)
+
+
+
+    '''绘制UE例子的HO地图'''
+    plot_HO_map([_UE], Macro_Posi, np.transpose([_UE_posi]), label_list=['example car'])
+    # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
+    # plt.legend()
+    plt.grid()
+    plt.axis('square')
     # plt.xlim(-10, 1100)
     # plt.ylim(-210, 426.5)
-    # plt.show()
+    plt.xlim(-30, 630)
+    plt.ylim(-30, 430)
+    plt.show()
 
 
 

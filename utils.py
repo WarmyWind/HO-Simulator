@@ -28,18 +28,18 @@ def get_data_from_mat(filepath, index):
 if __name__ == '__main__':
     from simulator import *
     from channel_fading import get_shadow_from_mat
-    from user_mobility import get_UE_posi_from_mat
+    from user_mobility import get_UE_posi_from_file
     from network_deployment import cellStructPPP
 
-    root_path = 'result/0508_PHO'
+    root_path = 'result/0511_AHO_scene1_sigma2'
 
 
     '''从文件读取UE位置'''
-    filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
-    index = 'Set_UE_posi'
-    UE_posi = get_UE_posi_from_mat(filepath, index)
+    # filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
+    # index = 'Set_UE_posi'
+    # UE_posi = get_UE_posi_from_file(filepath, index)
 
-    for i in range(6):
+    for i in range(2):
         rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(i), allow_pickle=True)
         UE_list = np.load(root_path + '/{}/UE_list.npy'.format(i), allow_pickle=True)
         HOS = [0,0,0]
@@ -66,8 +66,8 @@ if __name__ == '__main__':
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
 
 
-    UE_posi = UE_posi[2, :, :]
-    UE_posi = process_posi_data(UE_posi)
-
-    '''生成BS位置'''
-    Macro_Posi = road_cell_struct(9, 250)
+    # UE_posi = UE_posi[2, :, :]
+    # UE_posi = process_posi_data(UE_posi)
+    #
+    # '''生成BS位置'''
+    # Macro_Posi = road_cell_struct(9, 250)

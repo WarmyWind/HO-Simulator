@@ -228,22 +228,24 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         plot_flag = 0  # 是否绘图
-        save_flag = 1  # 是否保存结果
-        root_path = 'result/0511_PHO_scene1_sigma2'
+        save_flag = 0  # 是否保存结果
+        root_path = 'result/0511_AHO_scene1_sigma2'
         nDrop = 10000  # 时间步进长度
 
         shadow_filepath = '0511new_shadowFad_dB_8sigma_100dcov.mat'
         shadow_index = 'shadowFad_dB'
         # UE_posi_filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
         UE_posi_filepath = ['0511_v{}_500.npy'.format(i) for i in range(3)]
+        # UE_posi_filepath = ['0511_v0_500.npy']
         posi_index = 'Set_UE_posi'
 
-        NN_path = 'Model/large_h_predict/DNN_0508/DNN_0508.dat'
-        normalize_para_filename = 'Model/large_h_predict/DNN_0508/normalize_para.npy'
+        model_name = 'scene1_DNN_0511'
+        NN_path = 'Model/large_h_predict/'+model_name+'/'+model_name+'.dat'
+        normalize_para_filename = 'Model/large_h_predict/'+model_name+'/normalize_para.npy'
 
     PARAM_list = []
     PARAM = Parameter()
-    PARAM.active_HO = False  # 主动切换 或 被动切换
+    PARAM.active_HO = True  # 主动切换 或 被动切换
     PARAM.scene = 1
     # PARAM.sigma2 = PARAM.sigma_c
     PARAM.nUE = 150

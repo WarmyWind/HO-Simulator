@@ -42,7 +42,7 @@ UE_posi_valid_filepath_list = ['posi_data/0511_v{}_100_valid.npy'.format(i) for 
 
 
 batch_size = 1000
-num_epochs = 500
+num_epochs = 300
 lr = 1e-2
 
 def get_normalize_para(data):
