@@ -177,6 +177,8 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
     TTT_list = PARAMS.TTT
     HOM = PARAMS.HOM
     for _UE in UE_list:
+
+
         if isinstance(TTT_list, list):
             TTT = TTT_list[_UE.type]
         else:
@@ -225,13 +227,14 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
 
             '''若目标BS信道超过服务BS一定阈值HOM，触发hanover条件'''
             if 20 * np.log10(_best_large_h) - 20 * np.log10(_serv_large_h) >= HOM:
+
                 _target_BS = search_object_form_list_by_no(BS_list, _best_BS)
 
                 '''预测大尺度信道'''
-                _posi_record = 10*np.log10(_UE.posi_record)
+                _posi_record = np.array(_UE.posi_record)
                 posi_real = (np.real(_posi_record[:, np.newaxis])-normalize_para['mean2'])/normalize_para['sigma2']
                 posi_imag = (np.real(_posi_record[:, np.newaxis])-normalize_para['mean3'])/normalize_para['sigma3']
-                x_large_h = _UE.all_BS_L3_h_record
+                x_large_h = (10*np.log10(_UE.all_BS_L3_h_record) - normalize_para['mean1'])/normalize_para['sigma1']
                 x = np.float32(np.concatenate((x_large_h, posi_real, posi_imag), axis=1))
                 x = torch.tensor(x)
                 _pred = np.array(NN.predict(x).detach().cpu())

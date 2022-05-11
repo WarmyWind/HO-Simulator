@@ -31,13 +31,15 @@ if __name__ == '__main__':
     from user_mobility import get_UE_posi_from_mat
     from network_deployment import cellStructPPP
 
+    root_path = 'result/0508_PHO'
+
+
     '''从文件读取UE位置'''
     filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
     index = 'Set_UE_posi'
     UE_posi = get_UE_posi_from_mat(filepath, index)
 
-    root_path = 'result/0422_test'
-    for i in range(1):
+    for i in range(6):
         rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(i), allow_pickle=True)
         UE_list = np.load(root_path + '/{}/UE_list.npy'.format(i), allow_pickle=True)
         HOS = [0,0,0]

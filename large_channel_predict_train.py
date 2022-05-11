@@ -32,15 +32,15 @@ class Mydataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-shadow_filepath = 'shadowFad_dB_6sigma_60dcov.mat'
-train_set_path = 'Dataset/large_h_dB_with_posi_train_0506.npy'
-valid_set_path = 'Dataset/large_h_dB_with_posi_valid_0506.npy'
-normalize_para_filename = 'Model/large_h_predict/DNN_0506/normalize_para.npy'
-model_name = 'DNN_0506'
+shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
+train_set_path = 'Dataset/large_h_dB_with_posi_train_0508.npy'
+valid_set_path = 'Dataset/large_h_dB_with_posi_valid_0508.npy'
+normalize_para_filename = 'Model/large_h_predict/DNN_0508/normalize_para.npy'
+model_name = 'DNN_0508'
 
 batch_size = 1000
 num_epochs = 500
-lr = 1e-1
+lr = 1e-2
 
 def get_normalize_para(data):
     mean = np.mean(data)

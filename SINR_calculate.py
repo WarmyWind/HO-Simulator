@@ -72,9 +72,9 @@ def user_rate(RB_width, SINR_dB, UE_list):
     SINR = 10**(SINR_dB/10)
     rate = RB_width * np.log2(1+SINR)
     rate_sum = np.sum(rate, axis=1)
-    for _UE in UE_list:
-        if _UE.active and _UE.state == 'handovering' and _UE.HO_state.stage == 'HO_exec':
-            rate_sum[_UE.no] = 1e-6
+    # for _UE in UE_list:
+    #     if _UE.active and _UE.state == 'handovering' and _UE.HO_state.stage == 'HO_exec':
+    #         rate_sum[_UE.no] = 1e-6
     return rate_sum
 
 

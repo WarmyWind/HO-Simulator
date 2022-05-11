@@ -312,8 +312,9 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
 
-    root_path = 'result/0424_test'
+    root_path = 'result/0508_AHO_test'
     rate_arr = np.load(root_path + '/0/rate_arr.npy', allow_pickle=True)
+    print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
     UE_list = np.load(root_path + '/0/UE_list.npy', allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
     label_list = ['Para Set 1']
@@ -396,14 +397,17 @@ if __name__ == '__main__':
     label_list = ['HOF type {}'.format(n+1) for n in range(4)]
     label_list.append('HO success')
     label_list.append('Total')
-    #     plot_cdf(rate_data, 'bit rate', 'cdf', label_list)
     plot_cdf(HO_duration_rate, 'bit rate', 'cdf', label_list)
 
     avg_rate = []
     for _rate_arr in HO_duration_rate:
-        avg_rate.append(np.mean(_rate_arr))
+        if len(_rate_arr) != 0:
+            avg_rate.append(np.mean(_rate_arr))
+        else:
+            avg_rate.append(0)
     print('Average rate: {}'.format(avg_rate))
-    # plot_cdf(HO_duration_rate, 'bit rate', 'cdf', label_list, cumulative=False)
+
+    plot_cdf(HO_duration_rate, 'bit rate', 'cdf', label_list, cumulative=False)
 
 
     '''选择UE'''

@@ -103,7 +103,7 @@ class DNN_Model_Wrapper(BaseNet):
                                                no_units=no_units)
         self.network.cuda()
         self.epoch = 0
-        self.optimizer = torch.optim.SGD(self.network.parameters(), lr=self.learn_rate)
+        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=self.learn_rate)
         # self.optimizer = torch.optim.Adam(self.network.parameters(), lr = self.learn_rate)
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=6, factor=0.35, verbose=True, min_lr=1e-5)
 

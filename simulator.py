@@ -78,15 +78,18 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         small_fading.update(small_h)
 
         '''更新大尺度信道信息'''
-        large_h = large_scale_fading(PARAM, BS_list, UE_list, shadow)
-        large_fading.update(large_h)
+        if drop_idx % PARAM.posi_resolution == 0:
+            large_h = large_scale_fading(PARAM, BS_list, UE_list, shadow)
+            large_fading.update(large_h)
 
         '''更新瞬时信道信息'''
         instant_channel.calculate_by_fading(large_fading, small_fading)
 
         '''更新所有基站的L3测量（预测大尺度信道时需要）'''
-        if PARAM.active_HO:
-            update_all_BS_L3_h_record(UE_list, instant_channel, PARAM.L3_coe)
+        if drop_idx % PARAM.posi_resolution == 0:
+            if PARAM.active_HO:
+
+                update_all_BS_L3_h_record(UE_list, instant_channel, PARAM.L3_coe)
 
         '''更新UE的邻基站及其的L3测量'''
         find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading, instant_channel,
@@ -226,24 +229,24 @@ if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         plot_flag = 0  # 是否绘图
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0506_AHO'
+        root_path = 'result/0508_PHO_test'
         nDrop = 10000  # 时间步进长度
 
-        shadow_filepath = 'shadowFad_dB_6sigma_60dcov.mat'
+        shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
         shadow_index = 'shadowFad_dB'
         UE_posi_filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
         posi_index = 'Set_UE_posi'
 
-        NN_path = 'Model/large_h_predict/DNN_0506/DNN_0506.dat'
-        normalize_para_filename = 'Model/large_h_predict/DNN_0506/normalize_para.npy'
+        NN_path = 'Model/large_h_predict/DNN_0508/DNN_0508.dat'
+        normalize_para_filename = 'Model/large_h_predict/DNN_0508/normalize_para.npy'
 
     PARAM_list = []
     PARAM = Parameter()
-    PARAM.active_HO = True  # 主动切换
+    PARAM.active_HO = False  # 主动切换 或 被动切换
     # PARAM.HOM = 3
     # PARAM.TTT = [32, 16, 16]
     # PARAM_list.append(PARAM)
-    HOM_list = [0, 3]
+    HOM_list = [3]
     # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
     TTT_list = [32]
     for _HOM in HOM_list:
@@ -270,8 +273,8 @@ if __name__ == '__main__':
         start_time = time.time()
         print('Simulation Start.\n')
         print('Important Parameters:')
-        print('Sigma: sigma_c\n')
-        print('Active HO: {}'.format(_PARAM.active_HO))
+        print('Sigma: sigma_c')
+        print('Active HO: {}\n'.format(_PARAM.active_HO))
 
         for i in range(len(PARAM_list)):
             PARAM = PARAM_list[i]
@@ -285,6 +288,7 @@ if __name__ == '__main__':
                 NN.mean, NN.std = normalize_para['mean1'], normalize_para['sigma1']  # 读取归一化系数
             else:
                 NN = None
+                normalize_para = None
 
             Macro_BS_list, UE_list, shadow, large_fading, small_fading, instant_channel, serving_map = init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB)
             _start_time = time.time()

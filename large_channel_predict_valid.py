@@ -14,9 +14,9 @@ from DNN_model_utils import *
 import matplotlib.pyplot as plt
 PARAM = Parameter()
 batch_size = 1000
-num_epochs = 200
-lr = 1e-4
-shadow_filepath = 'shadowFad_dB_6sigma_60dcov.mat'
+num_epochs = 500
+lr = 1e-2
+shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
 
 if __name__ == '__main__':
     '''
@@ -24,12 +24,14 @@ if __name__ == '__main__':
     '''
     net = DNN_Model_Wrapper(input_dim=5 * 9 + 5 * 2, output_dim=5 * 9, no_units=100, learn_rate=lr,
                             batch_size=batch_size)
-    net.load('Model/large_h_predict/DNN_0505/DNN_0505.dat')
+    net.load('Model/large_h_predict/DNN_0508/DNN_0508.dat')
 
-    train_set_path = 'Dataset/large_h_with_posi_train_0428.npy'
-    valid_set_path = 'Dataset/large_h_with_posi_v3_valid_0505.npy'
+    train_set_path = 'Dataset/large_h_dB_with_posi_train_0508.npy'
+    valid_set_path = 'Dataset/large_h_dB_with_posi_valid_0508.npy'
+    train_loss_path = 'Model/large_h_predict/DNN_0508/DNN_loss_train_DNN_0508.npy'
+    valid_loss_path = 'Model/large_h_predict/DNN_0508/DNN_loss_valid_DNN_0508.npy'
 
-    normalize_para_filename = 'Model/large_h_predict/DNN_0505/normalize_para.npy'
+    normalize_para_filename = 'Model/large_h_predict/DNN_0508/normalize_para.npy'
     if not os.path.isfile(normalize_para_filename):
         if os.path.isfile(train_set_path):
             dataset = np.load(train_set_path, allow_pickle=True).tolist()
@@ -92,6 +94,7 @@ if __name__ == '__main__':
         y = _data[1]
         x = torch.tensor(x)
         _pred = np.array(net.predict(x).detach().cpu())
+        _denorm_pred = (_pred * sigma1) + mean1
         _pred = _pred.reshape(y.shape)
         prediction.append(_pred)
         ground_truth.append(y)
@@ -102,9 +105,18 @@ if __name__ == '__main__':
     prediction = np.array(prediction)
     ground_truth = np.array(ground_truth)
 
+    # fig, ax = plt.subplots()
+    # ax.plot(prediction[:, 3, 2], label='Prediction of 4 step forward')
+    # ax.plot(ground_truth[:, 3, 2], label='Ground truth of 4 step forward')
+    # plt.legend()
+    # plt.show()
+
+    train_loss = np.load(train_loss_path, allow_pickle=True).tolist()
+    valid_loss = np.load(valid_loss_path, allow_pickle=True).tolist()
     fig, ax = plt.subplots()
-    ax.plot(prediction[:, 0, 2], label='Prediction of 1 step forward')
-    ax.plot(ground_truth[:, 0, 2], label='Ground truth of 1 step forward')
+    plt.yscale('log')
+    ax.plot(train_loss, label='Train Loss')
+    ax.plot(valid_loss, label='valid Loss')
     plt.legend()
     plt.show()
 

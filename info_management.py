@@ -231,8 +231,12 @@ class UE:
 
     def update_posi(self, new_posi):
         self.posi = new_posi
-        self.posi_record.append(new_posi)
-        self.posi_record = self.posi_record[1:]
+        if None in self.posi_record:
+            self.posi_record = [new_posi for _ in range(self.record_len)]
+        else:
+            self.posi_record.append(new_posi)
+            self.posi_record = self.posi_record[1:]
+
         if new_posi == None:
             self.update_active(False)
         else:
@@ -263,7 +267,7 @@ class UE:
             self.all_BS_L3_h_record = np.kron(instant_h_mean, np.ones((record_len, 1)))  # (5,9)
         else:
             _new_L3 = (1-k)*self.all_BS_L3_h_record[-1, :]+k*instant_h_mean  # (,9)
-            self.all_BS_L3_h_record = np.concatenate((_new_L3[np.newaxis,:], self.all_BS_L3_h_record), axis=0)  # (6,9)
+            self.all_BS_L3_h_record = np.concatenate((self.all_BS_L3_h_record, _new_L3[np.newaxis, :]), axis=0)  # (6,9)
             self.all_BS_L3_h_record = self.all_BS_L3_h_record[1:, :]
 
     def update_RB_Nt_ocp(self, RB_Nt_list):
