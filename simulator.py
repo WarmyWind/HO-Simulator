@@ -232,7 +232,7 @@ if __name__ == '__main__':
         root_path = 'result/0511_PHO_scene1_sigma2'
         nDrop = 10000  # 时间步进长度
 
-        shadow_filepath = '0511new_shadowFad_dB_8sigma_200dcov.mat'
+        shadow_filepath = '0511new_shadowFad_dB_8sigma_100dcov.mat'
         shadow_index = 'shadowFad_dB'
         # UE_posi_filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
         UE_posi_filepath = ['0511_v{}_500.npy'.format(i) for i in range(3)]

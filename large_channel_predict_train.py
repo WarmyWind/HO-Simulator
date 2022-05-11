@@ -32,7 +32,7 @@ class Mydataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-shadow_filepath = '0511new_shadowFad_dB_8sigma_200dcov.mat'
+shadow_filepath = '0511new_shadowFad_dB_8sigma_100dcov.mat'
 train_set_path = 'Dataset/scene1_large_h_dB_with_posi_train_0511.npy'
 valid_set_path = 'Dataset/scene1_large_h_dB_with_posi_valid_0511.npy'
 model_name = 'scene1_DNN_0511'
