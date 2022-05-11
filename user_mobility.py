@@ -39,7 +39,7 @@ def process_posi_data(posi_data, fill_symbol = None):
             _posi = posi_data[:, _UE_no]
             _shift = posi_data[1:, _UE_no]
             _move_distance = np.square(np.abs(_shift - _posi[:-1]))
-            _change_point = np.where(_move_distance > 800)
+            _change_point = np.where(_move_distance > 10)
             if len(_change_point[0]) == 1:
                 _change_point = _change_point[0][0] + 1
                 _temp1 = np.array([fill_symbol for _ in range(posi_data.shape[0])])
