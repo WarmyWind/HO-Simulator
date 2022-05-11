@@ -44,14 +44,14 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
     '''接入时SINR和速率'''
     rec_P = get_receive_power(BS_list, instant_channel)
     inter_P = get_interference(BS_list, UE_list, instant_channel)
-    SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
+    SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma2)
     UE_rate = user_rate(PARAM.MLB.RB, SINR_dB, UE_list)
     # print(np.mean(UE_rate))
     rate_list = [UE_rate]
 
     '''接入时RL state'''
     # SS_SINR_list = []
-    SS_SINR = calculate_SS_SINR(rec_P, inter_P, PARAM.sigma_c)
+    SS_SINR = calculate_SS_SINR(rec_P, inter_P, PARAM.sigma2)
     # SS_SINR_list.append(SS_SINR)
     for _UE in UE_list:
         if _UE.active:
@@ -117,13 +117,13 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         '''统计性能'''
         rec_P = get_receive_power(BS_list, instant_channel)
         inter_P = get_interference(BS_list, UE_list, instant_channel)
-        SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
+        SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma2)
         # SNR_dB = calculate_SNR_dB(rec_P, PARAM.sigma2)
         UE_rate = user_rate(PARAM.MLB.RB, SINR_dB, UE_list)
         rate_list.append(UE_rate)
 
         '''更新RL state'''
-        SS_SINR = calculate_SS_SINR(rec_P, inter_P, PARAM.sigma_c)
+        SS_SINR = calculate_SS_SINR(rec_P, inter_P, PARAM.sigma2)
 
         for _UE in UE_list:
             if _UE.active:
@@ -229,7 +229,7 @@ if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         plot_flag = 0  # 是否绘图
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0511_PHO_scene1'
+        root_path = 'result/0511_PHO_scene1_sigma2'
         nDrop = 10000  # 时间步进长度
 
         shadow_filepath = '0511new_shadowFad_dB_8sigma_200dcov.mat'
@@ -245,6 +245,7 @@ if __name__ == '__main__':
     PARAM = Parameter()
     PARAM.active_HO = False  # 主动切换 或 被动切换
     PARAM.scene = 1
+    # PARAM.sigma2 = PARAM.sigma_c
     PARAM.nUE = 150
     PARAM.nUE_per_type = 50
     # PARAM.HOM = 3
@@ -277,7 +278,7 @@ if __name__ == '__main__':
         start_time = time.time()
         print('Simulation Start.\n')
         print('Important Parameters:')
-        print('Sigma: sigma_c')
+        # print('Sigma: sigma_c')
         print('Active HO: {}\n'.format(_PARAM.active_HO))
 
         for i in range(len(PARAM_list)):
