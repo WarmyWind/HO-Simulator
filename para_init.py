@@ -2,6 +2,7 @@ import numpy as np
 
 
 class Parameter:  # 仿真场景参数
+    scene = 1
     nCell = 9  # 小区个数
     Dist = 250  # 小区间距
     sigma2dBm = -95  # 接收噪声功率

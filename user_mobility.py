@@ -9,18 +9,27 @@ import numpy as np
 import pandas as pd
 from network_deployment import *
 
-def get_UE_posi_from_mat(filepath, index):
+def get_UE_posi_from_file(filepath, index):
     if isinstance(filepath, str):
-        data = scio.loadmat(filepath)
-        posi_data = data.get(index)  # 取出字典里的label
+        if '.mat' in filepath:
+            data = scio.loadmat(filepath)
+            posi_data = data.get(index)  # 取出字典里的label
+        else:
+            posi_data = np.load(filepath, allow_pickle=True)
 
     elif isinstance(filepath, list):
         posi_data = []
         for _path in filepath:
-            data = scio.loadmat(_path)
-            posi_data.append(data.get(index))
+            if '.mat' in filepath:
+                data = scio.loadmat(_path)
+                posi_data.append(data.get(index))
+            else:
+                data = np.load(_path, allow_pickle=True)
+                posi_data.append(data)
         posi_data = np.array(posi_data)
 
+    else:
+        raise Exception('Not supported posi format!')
     return posi_data
 
 def process_posi_data(posi_data, fill_symbol = None):

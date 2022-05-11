@@ -216,7 +216,7 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
     small_fading = SmallScaleFadingMap(PARAM.Macro.nBS, PARAM.nUE, PARAM.Macro.nNt)
     instant_channel = InstantChannelMap(PARAM.Macro.nBS, PARAM.nUE, PARAM.Macro.nNt)
 
-    large_h = large_scale_fading(PARAM, Macro_BS_list, UE_list, shadow)
+    large_h = large_scale_fading(PARAM, Macro_BS_list, UE_list, shadow, scene=PARAM.scene)
     large_fading.update(large_h)
     small_h = small_scale_fading(PARAM.nUE, len(Macro_BS_list), PARAM.Macro.nNt)
     small_fading.update(small_h)
@@ -229,12 +229,13 @@ if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         plot_flag = 0  # 是否绘图
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0508_PHO_test'
+        root_path = 'result/0511_PHO_scene1'
         nDrop = 10000  # 时间步进长度
 
-        shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
+        shadow_filepath = '0511new_shadowFad_dB_8sigma_200dcov.mat'
         shadow_index = 'shadowFad_dB'
-        UE_posi_filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
+        # UE_posi_filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
+        UE_posi_filepath = ['0511_v{}_500.npy'.format(i) for i in range(3)]
         posi_index = 'Set_UE_posi'
 
         NN_path = 'Model/large_h_predict/DNN_0508/DNN_0508.dat'
@@ -243,10 +244,13 @@ if __name__ == '__main__':
     PARAM_list = []
     PARAM = Parameter()
     PARAM.active_HO = False  # 主动切换 或 被动切换
+    PARAM.scene = 1
+    PARAM.nUE = 150
+    PARAM.nUE_per_type = 50
     # PARAM.HOM = 3
     # PARAM.TTT = [32, 16, 16]
     # PARAM_list.append(PARAM)
-    HOM_list = [3]
+    HOM_list = [0, 3]
     # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
     TTT_list = [32]
     for _HOM in HOM_list:
@@ -318,7 +322,7 @@ if __name__ == '__main__':
 
     '''从文件读取UE位置'''
     # filepath = 'Set_UE_posi_60s_250user_1to2_new1.mat'
-    UE_posi = get_UE_posi_from_mat(SimConfig.UE_posi_filepath, SimConfig.posi_index)
+    UE_posi = get_UE_posi_from_file(SimConfig.UE_posi_filepath, SimConfig.posi_index)
     # UE_posi = UE_posi[2, :, :]
     UE_posi = process_posi_data(UE_posi)
 

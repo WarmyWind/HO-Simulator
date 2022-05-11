@@ -50,7 +50,12 @@ def road_cell_struct(nCell, Dist):
     Macro_Posi[np.arange(1,nCell,2)] += 1j*np.sqrt(3)*Dist/2
     return Macro_Posi
 
-
+def cross_road_struction(Dist):
+    # first_BS = 0 + 1j*(Dist-Dist/np.sqrt(3))
+    Macro_Posi1 = np.array([i * Dist + 1j*(Dist-Dist/np.sqrt(3)) for i in range(3)], dtype=np.complex_)
+    Macro_Posi2 = Macro_Posi1 + Dist/2 + 1j*np.sqrt(3)*Dist/2
+    Macro_Posi3 = Macro_Posi2 + Dist / 2 + 1j * np.sqrt(3) * Dist / 2
+    return np.concatenate((Macro_Posi1,Macro_Posi2,Macro_Posi3)) - 1j*Dist/2/np.sqrt(3)
 
 
 
@@ -59,10 +64,11 @@ if __name__ == '__main__':
     用于测试
     '''
     from simulator import Parameter
-    from visualization import plot_BS_location
+    from visualization import *
 
     PARAM = Parameter()
     # Macro_Posi, Micro_Posi, nMicro = cellStructPPP(PARAM.nCell,PARAM.Dist,PARAM.Micro.nBS_avg)
     # plot_BS_location(Macro_Posi, Micro_Posi)
-    Macro_Posi = road_cell_struct(9, 250)
+    Macro_Posi = cross_road_struction(250)
     plot_BS_location(Macro_Posi)
+    plt.show()

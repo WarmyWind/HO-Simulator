@@ -18,7 +18,7 @@ def get_shadow_from_mat(filepath, index):
     return shadow_data
 
 
-def large_scale_fading(PARAMS, BS_list, UE_list, shadow_map:ShadowMap):
+def large_scale_fading(PARAMS, BS_list, UE_list, shadow_map:ShadowMap, scene=0):
     '''
     大尺度信道衰落=路径衰落+阴影衰落
     :param PARAMS: 仿真参数
@@ -54,10 +54,17 @@ def large_scale_fading(PARAMS, BS_list, UE_list, shadow_map:ShadowMap):
                 '''
                 下面的x_temp和y_temp后加的常数与数据有关
                 '''
-                x_temp = int(np.ceil(np.real(UE_list[iUE].posi)/0.5))
-                y_temp = int(np.ceil((np.imag(UE_list[iUE].posi)-PARAMS.Dist/2/np.sqrt(3))/0.5))
-                x_temp = np.min((shadow_map.map.shape[2]-1, x_temp))
-                y_temp = np.min((shadow_map.map.shape[1]-1, y_temp))
+                if scene == 0:
+                    x_temp = int(np.ceil(np.real(UE_list[iUE].posi)/0.5))
+                    y_temp = int(np.ceil((np.imag(UE_list[iUE].posi)-PARAMS.Dist/2/np.sqrt(3))/0.5))
+                    x_temp = np.min((shadow_map.map.shape[2]-1, x_temp))
+                    y_temp = np.min((shadow_map.map.shape[1]-1, y_temp))
+                else:
+                    x_temp = int(np.ceil((np.real(UE_list[iUE].posi) + 15) / 0.5))
+                    y_temp = int(np.ceil((np.imag(UE_list[iUE].posi) + 15) / 0.5))
+                    x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp))
+                    y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp))
+
                 shadow = shadow_map.map[iBS][y_temp, x_temp]
                 large_scale_fading_dB[iBS, iUE] = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain
 

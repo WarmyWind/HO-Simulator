@@ -6,7 +6,7 @@
 import numpy as np
 from utils import *
 from para_init import Parameter
-from channel_fading import get_shadow_from_mat
+from channel_fading import *
 from network_deployment import road_cell_struct
 from user_mobility import *
 from simulator import create_Macro_BS_list
@@ -24,10 +24,16 @@ def get_large_channel(PARAMS, BS_list, UE_posi, shadowFad_dB):
     BS_posi = np.array(BS_posi)  # shape = [nBS]
 
     # 根据阴影衰落地图产生阴影衰落
-    x_temp = np.floor(np.ceil(np.real(UE_posi) / 0.5)).astype(int)  # shape = [nDrop, nUE]
-    y_temp = np.floor(np.ceil((np.imag(UE_posi) - PARAMS.Dist / 2 / np.sqrt(3)) / 0.5)).astype(int)
-    x_temp[x_temp > (shadowFad_dB.shape[2] - 1)] = shadowFad_dB.shape[2] - 1
-    y_temp[y_temp > (shadowFad_dB.shape[1] - 1)] = shadowFad_dB.shape[1] - 1
+    if PARAMS.scene == 0:
+        x_temp = np.floor(np.ceil(np.real(UE_posi) / 0.5)).astype(int)  # shape = [nDrop, nUE]
+        y_temp = np.floor(np.ceil((np.imag(UE_posi) - PARAMS.Dist / 2 / np.sqrt(3)) / 0.5)).astype(int)
+        x_temp[x_temp > (shadowFad_dB.shape[2] - 1)] = shadowFad_dB.shape[2] - 1
+        y_temp[y_temp > (shadowFad_dB.shape[1] - 1)] = shadowFad_dB.shape[1] - 1
+    else:
+        x_temp = np.floor(np.ceil((np.real(UE_posi) + 15) / 0.5)).astype(int)  # shape = [nDrop, nUE]
+        y_temp = np.floor(np.ceil((np.imag(UE_posi) + 15) / 0.5)).astype(int)
+        x_temp[x_temp > (shadowFad_dB.shape[2] - 1)] = shadowFad_dB.shape[2] - 1
+        y_temp[y_temp > (shadowFad_dB.shape[1] - 1)] = shadowFad_dB.shape[1] - 1
 
     shadow = np.zeros((nDrop, nUE, nBS))
     for iDrop in range(nDrop):
@@ -98,7 +104,7 @@ def generate_dataset(shadow_filepath, UE_posi_filepath_list):
     for filepath in UE_posi_filepath_list:
         # filepath = 'posi_data/v{}_2000_train.mat'.format(i + 1)
         index = 'Set_UE_posi'
-        _UE_posi = get_UE_posi_from_mat(filepath, index)
+        _UE_posi = get_UE_posi_from_file(filepath, index)
         _UE_posi = _UE_posi[:, :trainset_num_per_type]
         _UE_posi = process_posi_data(_UE_posi, (1 + 1j) * np.Inf)
         _large_channel = get_large_channel(PARAM, Macro_BS_list, _UE_posi, shadowFad_dB)

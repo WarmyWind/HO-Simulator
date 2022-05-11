@@ -32,11 +32,14 @@ class Mydataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
-train_set_path = 'Dataset/large_h_dB_with_posi_train_0508.npy'
-valid_set_path = 'Dataset/large_h_dB_with_posi_valid_0508.npy'
-normalize_para_filename = 'Model/large_h_predict/DNN_0508/normalize_para.npy'
-model_name = 'DNN_0508'
+shadow_filepath = '0511new_shadowFad_dB_8sigma_200dcov.mat'
+train_set_path = 'Dataset/scene1_large_h_dB_with_posi_train_0511.npy'
+valid_set_path = 'Dataset/scene1_large_h_dB_with_posi_valid_0511.npy'
+model_name = 'scene1_DNN_0511'
+normalize_para_filename = 'Model/large_h_predict/'+model_name+'/normalize_para.npy'
+UE_posi_train_filepath_list = ['posi_data/0511_v{}_500_train.npy'.format(i) for i in range(3)]
+UE_posi_valid_filepath_list = ['posi_data/0511_v{}_100_valid.npy'.format(i) for i in range(3)]
+
 
 batch_size = 1000
 num_epochs = 500
@@ -48,14 +51,17 @@ def get_normalize_para(data):
     return mean, sigma
 
 if __name__ == '__main__':
+    save_filepath = 'Model/large_h_predict/{}'.format(model_name)
+    if not os.path.exists(save_filepath):
+        os.makedirs(save_filepath)
 
     if os.path.isfile(train_set_path):
         dataset = np.load(train_set_path, allow_pickle=True).tolist()
         x_large_h, x_posi_real, x_posi_imag, y_large_h = dataset['0'], dataset['1'], dataset['2'], dataset['3']
 
     else:
-        UE_posi_filepath_list = ['posi_data/v{}_2000_train.mat'.format(i + 1) for i in range(3)]
-        x_large_h, x_posi_real, x_posi_imag, y_large_h = generate_dataset(shadow_filepath, UE_posi_filepath_list)
+
+        x_large_h, x_posi_real, x_posi_imag, y_large_h = generate_dataset(shadow_filepath, UE_posi_train_filepath_list)
         np.save(train_set_path, {'0':x_large_h, '1':x_posi_real, '2':x_posi_imag, '3':y_large_h})
 
 
@@ -82,8 +88,8 @@ if __name__ == '__main__':
         x_large_h, x_posi_real, x_posi_imag, y_large_h = dataset['0'], dataset['1'], dataset['2'], dataset['3']
 
     else:
-        UE_posi_filepath_list = ['posi_data/v{}_500_valid.mat'.format(i + 1) for i in range(3)]
-        x_large_h, x_posi_real, x_posi_imag, y_large_h = generate_dataset(shadow_filepath, UE_posi_filepath_list)
+
+        x_large_h, x_posi_real, x_posi_imag, y_large_h = generate_dataset(shadow_filepath, UE_posi_valid_filepath_list)
         np.save(valid_set_path, {'0':x_large_h, '1':x_posi_real, '2':x_posi_imag, '3':y_large_h})
 
 
@@ -114,9 +120,7 @@ if __name__ == '__main__':
     # net.load('DNN_PRBpredict_bestnet500.dat')
 
 
-    save_filepath = 'Model/large_h_predict/{}'.format(model_name)
-    if not os.path.exists(save_filepath):
-        os.makedirs(save_filepath)
+
 
     train_loss = np.zeros(num_epochs)
     valid_loss = np.zeros(num_epochs)
