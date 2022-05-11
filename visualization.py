@@ -11,6 +11,7 @@ import matplotlib as mpl
 import numpy as np
 import scipy.io as scio
 from info_management import *
+from network_deployment import *
 
 def plot_hexgon(ax, center, dist):
     radius = dist/np.sqrt(3)
@@ -312,7 +313,7 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
 
-    root_path = 'result/0508_AHO_test'
+    root_path = 'result/0511_PHO_scene1_sigma2'
     rate_arr = np.load(root_path + '/0/rate_arr.npy', allow_pickle=True)
     print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
     UE_list = np.load(root_path + '/0/UE_list.npy', allow_pickle=True)
@@ -321,20 +322,24 @@ if __name__ == '__main__':
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
 
     '''从文件读取UE位置'''
-    filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
+    UE_posi_filepath = ['0511_v{}_500.npy'.format(i) for i in range(3)]
     index = 'Set_UE_posi'
-    UE_posi = get_UE_posi_from_mat(filepath, index)
+    UE_posi = get_UE_posi_from_file(filepath, index)
     # UE_posi = UE_posi[2, :, :]
     UE_posi = process_posi_data(UE_posi)
 
     '''生成BS位置'''
-    Macro_Posi = road_cell_struct(9, 250)
+    Macro_Posi = cross_road_struction(200)
 
     ax = plot_BS_location(Macro_Posi)
     dist = np.abs(Macro_Posi[0] - Macro_Posi[1])
     ax = plot_hexgon(ax, Macro_Posi, dist)
-    ax.axhline(dist/2/np.sqrt(3), c='black')
-    ax.axhline(dist/np.sqrt(3), c='black', label='road')
+
+    '''绘制道路'''
+    # ax.axhline(dist/2/np.sqrt(3), c='black')
+    # ax.axhline(dist/np.sqrt(3), c='black', label='road')
+
+
     # plt.grid()
     plt.axis('square')
     plt.xlim(-10, 1100)
@@ -343,9 +348,9 @@ if __name__ == '__main__':
     plt.show()
 
     '''从文件读取阴影衰落'''
-    filepath = 'shadowFad_dB_6sigma_60dcov.mat'
+    shadow_filepath = '0511new_shadowFad_dB_8sigma_100dcov.mat'
     index = 'shadowFad_dB'
-    shadowFad_dB = get_shadow_from_mat(filepath, index)
+    shadowFad_dB = get_shadow_from_mat(shadow_filepath, index)
 
     '''初始化信道、服务信息'''
     shadow = ShadowMap(shadowFad_dB)
@@ -410,36 +415,35 @@ if __name__ == '__main__':
     plot_cdf(HO_duration_rate, 'bit rate', 'cdf', label_list, cumulative=False)
 
 
-    '''选择UE'''
-    HOF_type = 2
-    for _UE in UE_list:
-        if _UE.HO_state.failure_posi[HOF_type] and _UE.HO_state.failure_posi[HOF_type-1] and _UE.type == 2:
-            break
-    UE_type = _UE.type
-    UE_type_no = _UE.type_no
-    _UE_posi = UE_posi[UE_type][:, UE_type_no]
+    # '''选择UE'''
+    # HOF_type = 2
+    # for _UE in UE_list:
+    #     if _UE.HO_state.failure_posi[HOF_type] and _UE.HO_state.failure_posi[HOF_type-1] and _UE.type == 2:
+    #         break
+    # UE_type = _UE.type
+    # UE_type_no = _UE.type_no
+    # _UE_posi = UE_posi[UE_type][:, UE_type_no]
+    #
+    # '''绘制大尺度信道'''
+    # _ = plot_large_channel(PARAM, Macro_Posi, [0,1,2,3,4,5,6,7,8], shadow, _UE_posi, _UE.HO_state.failure_posi)
+    #
+    #
+    #
+    # '''绘制SINR'''
+    # _ = plot_SINR(_UE_posi, _UE, _UE.HO_state.failure_posi)
+    #
+    #
+    #
+    # '''绘制UE例子的HO地图'''
+    # plot_HO_map([_UE], Macro_Posi, np.transpose([_UE_posi]), label_list=['example car'])
+    # # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
+    # # plt.legend()
+    # plt.grid()
+    # plt.axis('square')
+    # plt.xlim(-10, 1100)
+    # plt.ylim(-210, 426.5)
+    # plt.show()
 
-    '''绘制大尺度信道'''
-    _ = plot_large_channel(PARAM, Macro_Posi, [0,1,2,3,4,5,6,7,8], shadow, _UE_posi, _UE.HO_state.failure_posi)
-
-
-
-    '''绘制SINR'''
-    _ = plot_SINR(_UE_posi, _UE, _UE.HO_state.failure_posi)
-
-
-
-    '''绘制UE例子的HO地图'''
-    plot_HO_map([_UE], Macro_Posi, np.transpose([_UE_posi]), label_list=['example car'])
-    # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
-    # plt.legend()
-    plt.grid()
-    plt.axis('square')
-    plt.xlim(-10, 1100)
-    plt.ylim(-210, 426.5)
-    plt.show()
-    # large_h = large_scale_fading(PARAM, Macro_BS_list, UE_list, shadow)
-    # large_fading.update(large_h)
 
 
     # HO_result = np.array(HO_result_list).transpose()
@@ -448,16 +452,3 @@ if __name__ == '__main__':
     # para_list = ['Para Set 1']
     # label_list = ['Success', 'Failure', 'Num of Failure Repeat UE']
     # plot_bar(HO_result, 'Parameter Set', 'HO result', para_list, label_list)
-
-
-
-    # data = get_data_from_mat('RB123_lyk.mat', 'RB123bitrate')
-    # RB123_lyk = np.transpose(data, (2,0,1))
-    # data2 = get_data_from_mat('RB123.mat', 'RB123')
-    # RB123 = data2
-    #
-    # PARAM = Parameter()
-    # np.random.seed(0)
-
-
-
