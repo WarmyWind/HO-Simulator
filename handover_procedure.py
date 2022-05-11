@@ -177,8 +177,8 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
     TTT_list = PARAMS.TTT
     HOM = PARAMS.HOM
     for _UE in UE_list:
-        if _UE.no == 1:
-            _ = _UE.no
+        # if _UE.no == 1:
+        #     _ = _UE.no
 
         if isinstance(TTT_list, list):
             TTT = TTT_list[_UE.type]

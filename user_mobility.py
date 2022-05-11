@@ -20,7 +20,7 @@ def get_UE_posi_from_file(filepath, index):
     elif isinstance(filepath, list):
         posi_data = []
         for _path in filepath:
-            if '.mat' in filepath:
+            if '.mat' in _path:
                 data = scio.loadmat(_path)
                 posi_data.append(data.get(index))
             else:

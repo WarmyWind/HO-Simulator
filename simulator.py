@@ -227,11 +227,11 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
 
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
-        plot_flag = 0  # 是否绘图
-        save_flag = 0  # 是否保存结果
+        save_flag = 1  # 是否保存结果
         root_path = 'result/0511_AHO_scene1_sigma2'
         nDrop = 10000  # 时间步进长度
 
+        # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
         shadow_filepath = '0511new_shadowFad_dB_8sigma_100dcov.mat'
         shadow_index = 'shadowFad_dB'
         # UE_posi_filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
@@ -240,6 +240,7 @@ if __name__ == '__main__':
         posi_index = 'Set_UE_posi'
 
         model_name = 'scene1_DNN_0511'
+        # model_name = 'DNN_0508'
         NN_path = 'Model/large_h_predict/'+model_name+'/'+model_name+'.dat'
         normalize_para_filename = 'Model/large_h_predict/'+model_name+'/normalize_para.npy'
 
@@ -271,8 +272,10 @@ if __name__ == '__main__':
 
         _PARAM = PARAM_list[0]
         '''生成BS位置'''
-        # Macro_Posi, _, _ = cellStructPPP(PARAM.nCell, PARAM.Dist, PARAM.Micro.nBS_avg)
-        Macro_Posi = road_cell_struct(_PARAM.nCell, _PARAM.Dist)
+        if _PARAM.scene == 0:
+            Macro_Posi = road_cell_struct(_PARAM.nCell, _PARAM.Dist)
+        else:
+            Macro_Posi = cross_road_struction(200)
 
         '''开始仿真'''
         rate_list = []

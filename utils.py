@@ -2,6 +2,7 @@ import sys
 import time
 import scipy.io as scio
 import numpy as np
+from visualization import *
 
 def search_object_form_list_by_no(object_list, no):
     for _obj in object_list:
@@ -44,11 +45,17 @@ if __name__ == '__main__':
         UE_list = np.load(root_path + '/{}/UE_list.npy'.format(i), allow_pickle=True)
         HOS = [0,0,0]
         HOF = [np.array([0,0,0,0]) for _ in range(3)]
+        HOF_posi = [[] for _ in range(4)]
         active_UE_num = [0,0,0]
         for _UE in UE_list:
             _idx = _UE.type
             HOS[_idx] += _UE.HO_state.success_count
             HOF[_idx] += np.array(_UE.HO_state.failure_type_count)
+            if len(_UE.HO_state.failure_posi[0]) != 0:
+                HOF_posi[0].append(_UE.HO_state.failure_posi[0])
+            if len(_UE.HO_state.failure_posi[1]) != 0:
+                HOF_posi[1].append(_UE.HO_state.failure_posi[1])
+
             if _UE.active == True:
                 active_UE_num[_UE.type] += 1
         print('Paraset {}'.format(i+1))
@@ -60,7 +67,13 @@ if __name__ == '__main__':
             _success_rate = (_HOS) / (_HOS+_HOF)
             print('UE type: {}, HOS num: {}, _success_rate: {:.3f}, HOF: {}'.format(j+1, _HOS, _success_rate, HOF[j]))
 
+    Macro_Posi = cross_road_struction(200)
+    ax = plot_BS_location(Macro_Posi)
 
+    for RLF_posi in HOF_posi[0]:
+        for _posi in RLF_posi:
+            ax.scatter(np.real(_posi), np.imag(_posi))
+    plt.show()
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
     # label_list = ['Para Set 1']
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)

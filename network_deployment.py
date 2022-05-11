@@ -69,6 +69,6 @@ if __name__ == '__main__':
     PARAM = Parameter()
     # Macro_Posi, Micro_Posi, nMicro = cellStructPPP(PARAM.nCell,PARAM.Dist,PARAM.Micro.nBS_avg)
     # plot_BS_location(Macro_Posi, Micro_Posi)
-    Macro_Posi = cross_road_struction(250)
-    plot_BS_location(Macro_Posi)
+    Macro_Posi = cross_road_struction(200)
+    ax = plot_BS_location(Macro_Posi)
     plt.show()

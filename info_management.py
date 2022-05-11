@@ -121,7 +121,7 @@ class RL_state:
         self.SINR_dB_record_all = []  # 记录仿真中所有的SINR_dB，用于仿真分析
         self.filtered_SINR_dB = None
         self.max_period = max_period
-        self.state = 'out'
+        self.state = 'in'
 
     def update_by_SINR(self, SINR, L1_filter_length):
         if not self.active:
