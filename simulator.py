@@ -236,7 +236,7 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0512_AHO_addbignoise_scene1_sigma_c'
+        root_path = 'result/0512_AHO_fixSS_SINR_scene1_sigma_c'
         nDrop = 10000  # 时间步进长度
 
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
@@ -262,16 +262,16 @@ if __name__ == '__main__':
     # PARAM.HOM = 3
     # PARAM.TTT = [32, 16, 16]
     # PARAM_list.append(PARAM)
-    noise_list = [0.5, 0.2]
-    # HOM_list = [0]
-    PARAM.HOM = 0
+    # noise_list = [0.5, 0.2]
+    HOM_list = [0]
+    # PARAM.HOM = 0
     # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
-    TTT_list = [16, 32, 48, 64]
+    TTT_list = [32]
 
-    # for _HOM in HOM_list:
-    #     PARAM.HOM = _HOM
-    for _noise in noise_list:
-        PARAM.AHO.noise = _noise
+    for _HOM in HOM_list:
+        PARAM.HOM = _HOM
+    # for _noise in noise_list:
+    #     PARAM.AHO.noise = _noise
         for _TTT in TTT_list:
             PARAM.TTT = _TTT
             PARAM_list.append(copy.deepcopy(PARAM))

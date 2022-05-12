@@ -75,6 +75,8 @@ def calculate_SINR_dB(receive_power, interference_power, noise):
 
 def update_SS_SINR(UE_list, noise, L1_filter_length):
     for _UE in UE_list:
+        if not _UE.active: continue
+        if _UE.state == 'unserved': continue
         serv_BS_L3_h = _UE.serv_BS_L3_h
         rec_power = np.square(serv_BS_L3_h)
         neighbour_BS_L3_h = _UE.neighbour_BS_L3_h
