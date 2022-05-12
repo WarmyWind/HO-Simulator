@@ -61,7 +61,7 @@ def get_large_channel(PARAMS, BS_list, UE_posi, shadowFad_dB):
     return large_scale_channel
 
 
-def handle_data(large_channel, UE_posi, obs_len=5, pred_len=5, dB=True):
+def handle_data(large_channel, UE_posi, obs_len=15, pred_len=15, dB=True):
     '''根据大尺度信道数据，处理为可用于训练的数据集形式'''
     x_large_h = []
     x_posi_real = []

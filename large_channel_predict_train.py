@@ -33,9 +33,9 @@ class Mydataset(Dataset):
         return len(self.data)
 
 shadow_filepath = '0511new_shadowFad_dB_8sigma_100dcov.mat'
-train_set_path = 'Dataset/scene1_large_h_dB_with_posi_train_0511.npy'
-valid_set_path = 'Dataset/scene1_large_h_dB_with_posi_valid_0511.npy'
-model_name = 'scene1_DNN_0511'
+train_set_path = 'Dataset/scene1_large_h_dB_with_posi_train_pred15_0512.npy'
+valid_set_path = 'Dataset/scene1_large_h_dB_with_posi_valid_pred15_0512.npy'
+model_name = 'scene1_DNN_0512'
 normalize_para_filename = 'Model/large_h_predict/'+model_name+'/normalize_para.npy'
 UE_posi_train_filepath_list = ['posi_data/0511_v{}_500_train.npy'.format(i) for i in range(3)]
 UE_posi_valid_filepath_list = ['posi_data/0511_v{}_100_valid.npy'.format(i) for i in range(3)]
@@ -115,7 +115,7 @@ if __name__ == '__main__':
         valloader = torch.utils.data.DataLoader(valid_set, batch_size=len(valid_set), shuffle=False, pin_memory=False)
 
 
-    net = DNN_Model_Wrapper(input_dim=5*9+5*2, output_dim=5*9, no_units=100, learn_rate=lr,
+    net = DNN_Model_Wrapper(input_dim=15*9+15*2, output_dim=15*9, no_units=100, learn_rate=lr,
                                               batch_size=batch_size)
     # net.load('DNN_PRBpredict_bestnet500.dat')
 

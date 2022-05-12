@@ -185,7 +185,7 @@ def create_UE_list(PARAM, UE_posi):
                     _active = True
                 else:
                     _active = False
-                UE_list.append(UE(i*PARAM.nUE_per_type+_UE_no, _UE_no, _UE_posi, i, active=_active))
+                UE_list.append(UE(i*PARAM.nUE_per_type+_UE_no, _UE_no, _UE_posi, i, active=_active, record_len=PARAM.AHO.obs_len))
     elif len(UE_posi.shape) == 2:
         for _UE_no in range(PARAM.nUE):
             _UE_posi = UE_posi[0, _UE_no]
@@ -233,7 +233,7 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0511_AHO_scene1_sigma_c'
+        root_path = 'result/0512_AHO_addbignoise_scene1_sigma_c'
         nDrop = 10000  # 时间步进长度
 
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
@@ -244,7 +244,7 @@ if __name__ == '__main__':
         # UE_posi_filepath = ['0511_v0_500.npy']
         posi_index = 'Set_UE_posi'
 
-        model_name = 'scene1_DNN_0511'
+        model_name = 'scene1_DNN_0512'
         # model_name = 'DNN_0508'
         NN_path = 'Model/large_h_predict/'+model_name+'/'+model_name+'.dat'
         normalize_para_filename = 'Model/large_h_predict/'+model_name+'/normalize_para.npy'
@@ -259,11 +259,16 @@ if __name__ == '__main__':
     # PARAM.HOM = 3
     # PARAM.TTT = [32, 16, 16]
     # PARAM_list.append(PARAM)
-    HOM_list = [0, 3]
+    noise_list = [0.5, 0.2]
+    # HOM_list = [0]
+    PARAM.HOM = 0
     # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
-    TTT_list = [32]
-    for _HOM in HOM_list:
-        PARAM.HOM = _HOM
+    TTT_list = [16, 32, 48, 64]
+
+    # for _HOM in HOM_list:
+    #     PARAM.HOM = _HOM
+    for _noise in noise_list:
+        PARAM.AHO.noise = _noise
         for _TTT in TTT_list:
             PARAM.TTT = _TTT
             PARAM_list.append(copy.deepcopy(PARAM))
@@ -295,7 +300,10 @@ if __name__ == '__main__':
             PARAM = PARAM_list[i]
             print('Simulation of Parameter Set:{} Start.'.format(i+1))
             if PARAM.active_HO:
-                NN = DNN_Model_Wrapper(input_dim=5*9+5*2, output_dim=5*9, no_units=100, learn_rate=0.001,
+                obs_len = PARAM.AHO.obs_len
+                pred_len = PARAM.AHO.pred_len
+                nBS = PARAM.nCell
+                NN = DNN_Model_Wrapper(input_dim=obs_len*nBS+obs_len*2, output_dim=pred_len*nBS, no_units=100, learn_rate=0.001,
                                           batch_size=1000)
                 NN.load(SimConfig.NN_path)
 

@@ -167,7 +167,7 @@ class RL_state:
 
 
 class UE:
-    def __init__(self, no, type_no, posi=None, type=None, active:bool = True, record_len=5):
+    def __init__(self, no, type_no, posi=None, type=None, active:bool = True, record_len=15):
         self.no = no  # UE编号
         self.record_len = record_len
         self.posi = posi
@@ -262,12 +262,13 @@ class UE:
         else:
             self.serv_BS_L3_h = (1-k)*self.serv_BS_L3_h + k*instant_h_mean
 
-    def update_all_BS_L3_h_record(self, instant_h_mean, record_len=5, k=0.5):
+    def update_all_BS_L3_h_record(self, instant_h_mean, k=0.5):
+        record_len = self.record_len
         if len(self.all_BS_L3_h_record) != record_len:
-            self.all_BS_L3_h_record = np.kron(instant_h_mean, np.ones((record_len, 1)))  # (5,9)
+            self.all_BS_L3_h_record = np.kron(instant_h_mean, np.ones((record_len, 1)))  # (15,9)
         else:
             _new_L3 = (1-k)*self.all_BS_L3_h_record[-1, :]+k*instant_h_mean  # (,9)
-            self.all_BS_L3_h_record = np.concatenate((self.all_BS_L3_h_record, _new_L3[np.newaxis, :]), axis=0)  # (6,9)
+            self.all_BS_L3_h_record = np.concatenate((self.all_BS_L3_h_record, _new_L3[np.newaxis, :]), axis=0)  # (16,9)
             self.all_BS_L3_h_record = self.all_BS_L3_h_record[1:, :]
 
     def update_RB_Nt_ocp(self, RB_Nt_list):

@@ -177,8 +177,8 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
     TTT_list = PARAMS.TTT
     HOM = PARAMS.HOM
     for _UE in UE_list:
-        if _UE.no == 106:
-            _ = _UE.no
+        # if _UE.no == 106:
+        #     _ = _UE.no
 
         if isinstance(TTT_list, list):
             TTT = TTT_list[_UE.type]
@@ -237,6 +237,9 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                 posi_imag = (np.real(_posi_record[:, np.newaxis])-normalize_para['mean3'])/normalize_para['sigma3']
                 x_large_h = (10*np.log10(_UE.all_BS_L3_h_record) - normalize_para['mean1'])/normalize_para['sigma1']
                 x = np.float32(np.concatenate((x_large_h, posi_real, posi_imag), axis=1))
+                if PARAMS.AHO.add_noise:
+                    # x *= (1+PARAMS.AHO.noise * np.random.randn(x.shape[0], x.shape[1]))
+                    x *= (1+np.random.uniform(-PARAMS.AHO.noise,PARAMS.AHO.noise, size=x.shape))
                 x = torch.tensor(x)
                 _pred = np.array(NN.predict(x).detach().cpu())
                 _pred = _pred.reshape((_UE.record_len, len(BS_list)))

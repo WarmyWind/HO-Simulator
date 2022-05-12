@@ -27,6 +27,12 @@ class Parameter:  # 仿真场景参数
 
     posi_resolution = 8
 
+    class AHO:
+        obs_len = 15
+        pred_len = 15
+        add_noise = True
+        noise = 0.1
+
     class Macro:
         nBS = 9   # 宏基站个数
         nNt = 16  # 宏基站天线个数
