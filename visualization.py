@@ -313,10 +313,11 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
 
-    root_path = 'result/0511_AHO_scene1_sigma2'
-    rate_arr = np.load(root_path + '/1/rate_arr.npy', allow_pickle=True)
-    print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
-    UE_list = np.load(root_path + '/1/UE_list.npy', allow_pickle=True)
+    root_path = 'result/0512_AHO_scene1_sigma_c'
+    data_num = 3
+    rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
     label_list = ['Para Set 1']
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
@@ -383,7 +384,7 @@ if __name__ == '__main__':
 
 
     '''绘制HO前的速率cdf'''
-    observe_length = 16
+    observe_length = 8
     HO_duration_rate = [[] for _ in range(4+1)]
     for i in range(len(UE_list)):
         _UE = UE_list[i]
@@ -392,7 +393,9 @@ if __name__ == '__main__':
             for _failure_posi in _UE.HO_state.failure_posi[j]:
                 _posi_idx = np.where(_UE_posi == _failure_posi)[0][0]
                 _drop_idx = _posi_idx*PARAM.posi_resolution
-                HO_duration_rate[j].append(rate_arr[_drop_idx-observe_length:_drop_idx, i])
+                _rate_arr = rate_arr[_drop_idx-observe_length:_drop_idx, i]
+                if len(_rate_arr) != 0:
+                    HO_duration_rate[j].append(_rate_arr)
 
         for _success_posi in _UE.HO_state.success_posi:
             _posi_idx = np.where(_UE_posi == _success_posi)[0][0]
@@ -407,11 +410,22 @@ if __name__ == '__main__':
     plot_cdf(HO_duration_rate, 'bit rate', 'cdf', label_list)
 
     avg_rate = []
+    HO_rate = []
     for _rate_arr in HO_duration_rate:
-        if len(_rate_arr) != 0:
-            avg_rate.append(np.mean(_rate_arr))
+
+        HO_rate.append(np.array(_rate_arr).reshape(-1,8))
+        avg_rate.append(np.mean(_rate_arr))
+
+
+
+    HO_rate_arr = HO_rate[1:5]
+    _HO_rate = []
+    for _rate in HO_rate_arr:
+        if len(_HO_rate) == 0:
+            _HO_rate = _rate
         else:
-            avg_rate.append(0)
+            _HO_rate = np.append(_HO_rate, _rate, axis=0)
+    print('HO Total Average rate:{}'.format(np.mean(_HO_rate)))
     print('Average rate: {}'.format(avg_rate))
 
     plot_cdf(HO_duration_rate, 'bit rate', 'cdf', label_list, cumulative=False)
