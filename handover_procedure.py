@@ -245,7 +245,13 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                 pred_len = np.ceil(TTT/PARAMS.posi_resolution).astype(int)
                 target_h_pred = 10**(_pred[:pred_len, _best_BS]/10)
                 serv_h_pred = 10**(_pred[:pred_len, _UE.serv_BS]/10)
-                if (20 * np.log10(target_h_pred) - 20 * np.log10(serv_h_pred) >= HOM).all():
+
+                pred_meet_result = 20 * np.log10(target_h_pred) - 20 * np.log10(serv_h_pred) >= HOM
+                meet_ratio = np.count_nonzero(pred_meet_result) / len(pred_meet_result)
+                # if _UE.ToS > 120:
+                #     _ = _UE.no
+
+                if meet_ratio >= PARAMS.AHO.pred_allow_ratio:
                     '''主动切换，直接进行HO准备'''
                     if not _target_BS.if_full_load():
                         _UE.update_state('handovering')
@@ -267,7 +273,6 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                     '''接收HO CMD时信道质量差，记HOF'''
                     _UE.quit_handover(False, 'handovering', 1)
                     _UE.HO_state.HOF_flag = 1
-                    continue
 
 
                 '''UE尝试接入目标BS'''

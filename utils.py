@@ -32,7 +32,7 @@ if __name__ == '__main__':
     from user_mobility import get_UE_posi_from_file
     from network_deployment import cellStructPPP
 
-    root_path = 'result/0512_AHO_scene1_sigma_c'
+    root_path = 'result/0512_AHO_fixSS_SINR_scene1_sigma2'
 
 
     '''从文件读取UE位置'''
@@ -62,12 +62,12 @@ if __name__ == '__main__':
         HOF = np.array(HOF)
         print('Paraset {}'.format(i+1))
         print('Active UE: {}'.format(active_UE_num))
-        print('HOS: {}, HOS rate: {:.3f}, HOF: {} ({})'.format(np.sum(HOS), np.sum(HOS)/(np.sum(HOS)+np.sum(HOF[:,1:])), np.sum(HOF[:,1:]), np.sum(np.array(HOF[:,1:]), axis=0)))
+        print('HOS: {}, HOS rate: {:.3f}, HOF: {} ({})'.format(np.sum(HOS), np.sum(HOS)/(np.sum(HOS)+np.sum(HOF[:,:])), np.sum(HOF[:,:]), np.sum(np.array(HOF[:,:]), axis=0)))
         for j in range(3):
             _HOS = HOS[j]
-            _HOF = np.sum(HOF[j,1:])
+            _HOF = np.sum(HOF[j,:])
             _success_rate = (_HOS) / (_HOS+_HOF)
-            print('UE type: {}, HOS num: {}, _success_rate: {:.3f}, HOF: {}'.format(j+1, _HOS, _success_rate, HOF[j,1:]))
+            print('UE type: {}, HOS num: {}, _success_rate: {:.3f}, HOF: {}'.format(j+1, _HOS, _success_rate, HOF[j,:]))
 
     # Macro_Posi = cross_road_struction(200)
     # ax = plot_BS_location(Macro_Posi)

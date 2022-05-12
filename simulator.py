@@ -44,7 +44,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
     '''接入时SINR和速率'''
     rec_P = get_receive_power(BS_list, instant_channel)
     inter_P = get_interference(BS_list, UE_list, instant_channel)
-    SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma2)
+    SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
     UE_rate = user_rate(PARAM.MLB.RB, SINR_dB, UE_list)
     # print(np.mean(UE_rate))
     rate_list = [UE_rate]
@@ -121,7 +121,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         '''统计性能'''
         rec_P = get_receive_power(BS_list, instant_channel)
         inter_P = get_interference(BS_list, UE_list, instant_channel)
-        SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma2)
+        SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
         # SNR_dB = calculate_SNR_dB(rec_P, PARAM.sigma2)
 
 
@@ -236,7 +236,7 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0512_AHO_fixSS_SINR_scene1_sigma_c'
+        root_path = 'result/0512_AHO_fixSS_SINR_scene1_sigma2_allowratio=0.5'
         nDrop = 10000  # 时间步进长度
 
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
@@ -255,18 +255,19 @@ if __name__ == '__main__':
     PARAM_list = []
     PARAM = Parameter()
     PARAM.active_HO = True  # 主动切换 或 被动切换
+    PARAM.AHO.add_noise = False
     PARAM.scene = 1
-    PARAM.sigma2 = PARAM.sigma_c
-    PARAM.nUE = 150
-    PARAM.nUE_per_type = 50
+    # PARAM.sigma2 = PARAM.sigma_c
+    PARAM.nUE = 240
+    PARAM.nUE_per_type = 80
     # PARAM.HOM = 3
     # PARAM.TTT = [32, 16, 16]
     # PARAM_list.append(PARAM)
     # noise_list = [0.5, 0.2]
-    HOM_list = [0]
+    HOM_list = [0, 3]
     # PARAM.HOM = 0
     # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
-    TTT_list = [32]
+    TTT_list = [32,48,64]
 
     for _HOM in HOM_list:
         PARAM.HOM = _HOM
