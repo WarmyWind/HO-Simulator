@@ -80,7 +80,7 @@ def update_SS_SINR(UE_list, noise, L1_filter_length):
         serv_BS_L3_h = _UE.serv_BS_L3_h
         rec_power = np.square(serv_BS_L3_h)
         neighbour_BS_L3_h = _UE.neighbour_BS_L3_h
-        interf = np.sum(np.square(neighbour_BS_L3_h))
+        interf = np.sum(np.square(neighbour_BS_L3_h)) - rec_power
         SS_SINR = rec_power / (interf + noise)
         _UE.update_RL_state_by_SINR(SS_SINR, L1_filter_length)
 

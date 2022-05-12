@@ -313,8 +313,8 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
 
-    root_path = 'result/0512_AHO_scene1_sigma_c'
-    data_num = 5
+    root_path = 'result/0512_AHO_fixSS_SINR_scene1_sigma_c'
+    data_num = 0
     rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
     # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
     UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
@@ -337,6 +337,24 @@ if __name__ == '__main__':
     ax = plot_hexgon(ax, Macro_Posi, dist)
 
     '''绘制道路'''
+
+    ax.hlines(y=-15, xmin=-15, xmax=415, colors='black', ls='-', lw=1)
+    ax.hlines(y=15, xmin=-15, xmax=185, colors='black', ls='-', lw=1)
+    ax.hlines(y=15, xmin=215, xmax=385, colors='black', ls='-', lw=1)
+    ax.hlines(y=185, xmin=215, xmax=385, colors='black', ls='-', lw=1)
+    ax.hlines(y=215, xmin=215, xmax=385, colors='black', ls='-', lw=1)
+    ax.hlines(y=385, xmin=215, xmax=385, colors='black', ls='-', lw=1)
+    ax.hlines(y=385, xmin=415, xmax=615, colors='black', ls='-', lw=1)
+    ax.hlines(y=415, xmin=185, xmax=615, colors='black', ls='-', lw=1)
+
+
+
+    ax.vlines(x=185, ymin=15, ymax=415, colors='black', ls='-', lw=1)
+    ax.vlines(x=215, ymin=15, ymax=185, colors='black', ls='-', lw=1)
+    ax.vlines(x=215, ymin=215, ymax=385, colors='black', ls='-', lw=1)
+    ax.vlines(x=385, ymin=15, ymax=185, colors='black', ls='-', lw=1)
+    ax.vlines(x=385, ymin=215, ymax=385, colors='black', ls='-', lw=1)
+    ax.vlines(x=415, ymin=-15, ymax=385, colors='black', ls='-', lw=1)
     # ax.axhline(dist/2/np.sqrt(3), c='black')
     # ax.axhline(dist/np.sqrt(3), c='black', label='road')
 
