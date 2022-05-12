@@ -128,8 +128,6 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
                     _UE.quit_handover(False, 'handovering', 1)
                     _UE.HO_state.HOF_flag = 1
 
-
-
                 '''UE尝试接入目标BS'''
                 _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
                 _serv_BS.unserve_UE(_UE, serving_map)  # 断开原服务，释放资源

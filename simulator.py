@@ -50,12 +50,13 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
     rate_list = [UE_rate]
 
     '''接入时RL state'''
+    update_SS_SINR(UE_list, PARAM.sigma2, PARAM.L1_filter_length)
     # SS_SINR_list = []
-    SS_SINR = calculate_SS_SINR(rec_P, inter_P, PARAM.sigma2)
-    # SS_SINR_list.append(SS_SINR)
-    for _UE in UE_list:
-        if _UE.active:
-            _UE.update_RL_state_by_SINR(SS_SINR[_UE.no], PARAM.L1_filter_length)
+    # SS_SINR = calculate_SS_SINR(rec_P, inter_P, PARAM.sigma2)
+    # # SS_SINR_list.append(SS_SINR)
+    # for _UE in UE_list:
+    #     if _UE.active:
+    #         _UE.update_RL_state_by_SINR(SS_SINR[_UE.no], PARAM.L1_filter_length)
 
     '''开始步进时长仿真'''
     for drop_idx in range(1, SimConfig.nDrop):
@@ -109,6 +110,9 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         '''更新UE的服务基站L3测量'''
         update_serv_BS_L3_h(UE_list, instant_channel, PARAM.L3_coe)
 
+        '''更新RL state'''
+        update_SS_SINR(UE_list, PARAM.sigma2, PARAM.L1_filter_length)
+
 
         '''更新预编码信息'''
         for _BS in BS_list:
@@ -124,17 +128,16 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         UE_rate = user_rate(PARAM.MLB.RB, SINR_dB, UE_list)
         rate_list.append(UE_rate)
 
-        '''更新RL state'''
-        SS_SINR = calculate_SS_SINR(rec_P, inter_P, PARAM.sigma2)
+
+        # SS_SINR = calculate_SS_SINR(rec_P, inter_P, PARAM.sigma2)
         # probe1 = rec_P[106,:]
         # probe2 = inter_P[106,:]
         # probe3 = SINR_dB[106,:]
         # probe4 = SS_SINR[106]
         # _ = probe4
-        for _UE in UE_list:
-            if _UE.active:
-
-                _UE.update_RL_state_by_SINR(SS_SINR[_UE.no], PARAM.L1_filter_length)
+        # for _UE in UE_list:
+        #     if _UE.active:
+        #         _UE.update_RL_state_by_SINR(SS_SINR[_UE.no], PARAM.L1_filter_length)
 
         '''开始HO eval'''
         if not PARAM.active_HO:

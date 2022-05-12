@@ -314,7 +314,7 @@ if __name__ == '__main__':
     PARAM = Parameter()
 
     root_path = 'result/0512_AHO_scene1_sigma_c'
-    data_num = 3
+    data_num = 5
     rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
     # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
     UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
@@ -400,7 +400,9 @@ if __name__ == '__main__':
         for _success_posi in _UE.HO_state.success_posi:
             _posi_idx = np.where(_UE_posi == _success_posi)[0][0]
             _drop_idx = _posi_idx * PARAM.posi_resolution
-            HO_duration_rate[4].append(rate_arr[_drop_idx - observe_length:_drop_idx, i])
+            _rate_arr = rate_arr[_drop_idx - observe_length-9:_drop_idx-9, i]
+            if len(_rate_arr) != 0:
+                HO_duration_rate[4].append(_rate_arr)
 
     HO_duration_rate.append(rate_arr[rate_arr != 0])
 

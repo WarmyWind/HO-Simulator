@@ -60,18 +60,27 @@ def calculate_SINR_dB(receive_power, interference_power, noise):
     return 10*np.log10(SINR)
 
 
-def calculate_SS_SINR(receive_power, interference_power, noise):
-    # nRB = np.count_nonzero(receive_power, axis=1)
-    # mean_receive_power = np.sum(receive_power, axis=1) / nRB
-    # mean_interference_power = np.sum(interference_power, axis=1) / nRB
-    # SS_SINR = mean_receive_power / (mean_interference_power + noise)
-    interference_power_sum = np.zeros((150,))
-    receive_power_sum = np.sum(receive_power, axis=1)
-    for _UE_no in range(receive_power.shape[0]):
-        _interf_RB_idx = np.where(receive_power[_UE_no,:] != 0)
-        interference_power_sum[_UE_no] = np.sum(interference_power[_UE_no, _interf_RB_idx])
-    SS_SINR = receive_power_sum / (interference_power_sum + noise)
-    return SS_SINR
+# def calculate_SS_SINR(receive_power, interference_power, noise):
+#     # nRB = np.count_nonzero(receive_power, axis=1)
+#     # mean_receive_power = np.sum(receive_power, axis=1) / nRB
+#     # mean_interference_power = np.sum(interference_power, axis=1) / nRB
+#     # SS_SINR = mean_receive_power / (mean_interference_power + noise)
+#     interference_power_sum = np.zeros((150,))
+#     receive_power_sum = np.sum(receive_power, axis=1)
+#     for _UE_no in range(receive_power.shape[0]):
+#         _interf_RB_idx = np.where(receive_power[_UE_no,:] != 0)
+#         interference_power_sum[_UE_no] = np.sum(interference_power[_UE_no, _interf_RB_idx])
+#     SS_SINR = receive_power_sum / (interference_power_sum + noise)
+#     return SS_SINR
+
+def update_SS_SINR(UE_list, noise, L1_filter_length):
+    for _UE in UE_list:
+        serv_BS_L3_h = _UE.serv_BS_L3_h
+        rec_power = np.square(serv_BS_L3_h)
+        neighbour_BS_L3_h = _UE.neighbour_BS_L3_h
+        interf = np.sum(np.square(neighbour_BS_L3_h))
+        SS_SINR = rec_power / (interf + noise)
+        _UE.update_RL_state_by_SINR(SS_SINR, L1_filter_length)
 
 
 def user_rate(RB_width, SINR_dB, UE_list):
