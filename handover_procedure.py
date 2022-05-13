@@ -1,6 +1,7 @@
 '''
 本模块包含HO相关函数:
     handover_criteria_eval
+    actice_HO_eval
 '''
 
 from info_management import *
@@ -175,8 +176,8 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
     TTT_list = PARAMS.TTT
     HOM = PARAMS.HOM
     for _UE in UE_list:
-        if _UE.no == 176:
-            _ = 176
+        # if _UE.no == 176:
+        #     _ = 176
 
         if isinstance(TTT_list, list):
             TTT = TTT_list[_UE.type]
@@ -215,8 +216,7 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
 
                 _serv_large_h = _UE.serv_BS_L3_h
                 if _UE.neighbour_BS[0] != _UE.serv_BS:
-                    if _UE.no == 176:
-                        _ = 176
+
                     _best_BS = _UE.neighbour_BS[0]
                     _best_large_h = _UE.neighbour_BS_L3_h[0]
                 else:
@@ -230,8 +230,8 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
 
             '''若目标BS信道超过服务BS一定阈值HOM，触发hanover条件'''
             if 20 * np.log10(_best_large_h) - 20 * np.log10(_serv_large_h) >= HOM:
-                if _UE.no == 176:
-                    _ = 176
+                # if _UE.no == 176:
+                #     _ = 176
                 _target_BS = search_object_form_list_by_no(BS_list, _best_BS)
 
                 '''预测大尺度信道'''
@@ -264,10 +264,7 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
 
                 pred_meet_result = 20 * np.log10(target_h_pred) - 20 * np.log10(serv_h_pred) >= HOM
                 meet_ratio = np.count_nonzero(pred_meet_result) / len(pred_meet_result)
-                # if _UE.ToS > 120:
-                #     _ = _UE.no
-                if _UE.no == 202:
-                    _ = 202
+
                 if meet_ratio >= PARAMS.AHO.pred_allow_ratio:
                     '''主动切换，直接进行HO准备'''
                     if not _target_BS.if_full_load():
