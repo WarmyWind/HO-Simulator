@@ -18,7 +18,7 @@ def get_shadow_from_mat(filepath, index):
     return shadow_data
 
 
-def large_scale_fading(PARAMS, BS_list, UE_list, shadow_map:ShadowMap, scene=0):
+def large_scale_channel(PARAMS, BS_list, UE_list, shadow_map:ShadowMap, scene=1):
     '''
     大尺度信道衰落=路径衰落+阴影衰落
     :param PARAMS: 仿真参数
@@ -35,44 +35,113 @@ def large_scale_fading(PARAMS, BS_list, UE_list, shadow_map:ShadowMap, scene=0):
     large_scale_fading_dB = np.zeros((nBS, nUE))
     for iUE in range(nUE):
         for iBS in range(nBS):
-            if BS_list[iBS].type == 'Macro':
-                antGain = PARAMS.pathloss.Macro.antGaindB
-                dFactor = PARAMS.pathloss.Macro.dFactordB
-                pLoss1m = PARAMS.pathloss.Macro.pLoss1mdB
-                # shadow  = PARAMS.pathloss.Macro.shadowdB
-            else:
-                antGain = PARAMS.pathloss.Micro.antGaindB
-                dFactor = PARAMS.pathloss.Micro.dFactordB
-                pLoss1m = PARAMS.pathloss.Micro.pLoss1mdB
-                # shadow  = PARAMS.pathloss.Micro.shadowdB
+            # if BS_list[iBS].type == 'Macro':
+            #     antGain = PARAMS.pathloss.Macro.antGaindB
+            #     dFactor = PARAMS.pathloss.Macro.dFactordB
+            #     pLoss1m = PARAMS.pathloss.Macro.pLoss1mdB
+            #     # shadow  = PARAMS.pathloss.Macro.shadowdB
+            # else:
+            #     antGain = PARAMS.pathloss.Micro.antGaindB
+            #     dFactor = PARAMS.pathloss.Micro.dFactordB
+            #     pLoss1m = PARAMS.pathloss.Micro.pLoss1mdB
+            #     # shadow  = PARAMS.pathloss.Micro.shadowdB
+            #
+            #
+            # if not UE_list[iUE].active:
+            #     large_scale_fading_dB[iBS, iUE] = -np.Inf
+            # else:
+            #     distServer = np.abs(UE_list[iUE].posi - BS_list[iBS].posi)  # 用户-基站距离
+            #     '''
+            #     下面的x_temp和y_temp后加的常数与数据有关
+            #     '''
+            #     if scene == 0:
+            #         x_temp = int(np.ceil(np.real(UE_list[iUE].posi)/0.5))
+            #         y_temp = int(np.ceil((np.imag(UE_list[iUE].posi)-PARAMS.Dist/2/np.sqrt(3))/0.5))
+            #         x_temp = np.min((shadow_map.map.shape[2]-1, x_temp))
+            #         y_temp = np.min((shadow_map.map.shape[1]-1, y_temp))
+            #     else:
+            #         x_temp = int(np.ceil((np.real(UE_list[iUE].posi) + 15) / 0.5))
+            #         y_temp = int(np.ceil((np.imag(UE_list[iUE].posi) + 15) / 0.5))
+            #         x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp))
+            #         y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp))
+            #
+            #     shadow = shadow_map.map[iBS][y_temp, x_temp]
+            #     large_fading_dB = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain
 
-
-            if not UE_list[iUE].active:
-                large_scale_fading_dB[iBS, iUE] = -np.Inf
-            else:
-                distServer = np.abs(UE_list[iUE].posi - BS_list[iBS].posi)  # 用户-基站距离
-                '''
-                下面的x_temp和y_temp后加的常数与数据有关
-                '''
-                if scene == 0:
-                    x_temp = int(np.ceil(np.real(UE_list[iUE].posi)/0.5))
-                    y_temp = int(np.ceil((np.imag(UE_list[iUE].posi)-PARAMS.Dist/2/np.sqrt(3))/0.5))
-                    x_temp = np.min((shadow_map.map.shape[2]-1, x_temp))
-                    y_temp = np.min((shadow_map.map.shape[1]-1, y_temp))
-                else:
-                    x_temp = int(np.ceil((np.real(UE_list[iUE].posi) + 15) / 0.5))
-                    y_temp = int(np.ceil((np.imag(UE_list[iUE].posi) + 15) / 0.5))
-                    x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp))
-                    y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp))
-
-                shadow = shadow_map.map[iBS][y_temp, x_temp]
-                large_scale_fading_dB[iBS, iUE] = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain
+            large_fading_dB = get_large_fading_dB(PARAMS, BS_list[iBS], UE_list[iUE], shadow_map, scene)
+            large_scale_fading_dB[iBS, iUE] = large_fading_dB
 
     large_scale_channel = 10 ** (-large_scale_fading_dB / 20)
     # print('大尺度衰落(dB)：',large_scale_fading_dB[:,0])
     # large_fading.update(large_scale_fading)
     return large_scale_channel
 
+
+def get_large_fading_dB(PARAMS, BS, UE, shadow_map:ShadowMap, scene):
+    # if BS.type == 'Macro':
+    #     antGain = PARAMS.pathloss.Macro.antGaindB
+    #     dFactor = PARAMS.pathloss.Macro.dFactordB
+    #     pLoss1m = PARAMS.pathloss.Macro.pLoss1mdB
+    #     # shadow  = PARAMS.pathloss.Macro.shadowdB
+    # else:
+    #     antGain = PARAMS.pathloss.Micro.antGaindB
+    #     dFactor = PARAMS.pathloss.Micro.dFactordB
+    #     pLoss1m = PARAMS.pathloss.Micro.pLoss1mdB
+    #     # shadow  = PARAMS.pathloss.Micro.shadowdB
+
+    if not UE.active:
+        large_fading_dB = -np.Inf
+    else:
+        # distServer = np.abs(UE.posi - BS.posi)  # 用户-基站距离
+        # '''
+        # 下面的x_temp和y_temp后加的常数与数据有关
+        # '''
+        # if scene == 0:
+        #     x_temp = int(np.ceil(np.real(UE.posi) / 0.5))
+        #     y_temp = int(np.ceil((np.imag(UE.posi) - PARAMS.Dist / 2 / np.sqrt(3)) / 0.5))
+        #     x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp))
+        #     y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp))
+        # else:
+        #     x_temp = int(np.ceil((np.real(UE.posi) + 15) / 0.5))
+        #     y_temp = int(np.ceil((np.imag(UE.posi) + 15) / 0.5))
+        #     x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp))
+        #     y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp))
+        #
+        # shadow = shadow_map.map[BS.no][y_temp, x_temp]
+        # large_fading_dB = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain
+        large_fading_dB = get_large_fading_dB_from_posi(PARAMS, UE.posi, BS.posi, BS.no, shadow_map, BS.type, scene)
+
+    return large_fading_dB
+
+def get_large_fading_dB_from_posi(PARAMS, UE_posi, BS_posi, BS_no, shadow_map:ShadowMap, BS_type, scene):
+    if BS_type == 'Macro':
+        antGain = PARAMS.pathloss.Macro.antGaindB
+        dFactor = PARAMS.pathloss.Macro.dFactordB
+        pLoss1m = PARAMS.pathloss.Macro.pLoss1mdB
+        # shadow  = PARAMS.pathloss.Macro.shadowdB
+    else:
+        antGain = PARAMS.pathloss.Micro.antGaindB
+        dFactor = PARAMS.pathloss.Micro.dFactordB
+        pLoss1m = PARAMS.pathloss.Micro.pLoss1mdB
+        # shadow  = PARAMS.pathloss.Micro.shadowdB
+    distServer = np.abs(UE_posi - BS_posi)  # 用户-基站距离
+    '''
+    下面的x_temp和y_temp后加的常数与数据有关
+    '''
+    if scene == 0:
+        x_temp = int(np.ceil(np.real(UE_posi) / 0.5))
+        y_temp = int(np.ceil((np.imag(UE_posi) - PARAMS.Dist / 2 / np.sqrt(3)) / 0.5))
+        x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp))
+        y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp))
+    else:
+        x_temp = int(np.ceil((np.real(UE_posi) + 15) / 0.5))
+        y_temp = int(np.ceil((np.imag(UE_posi) + 15) / 0.5))
+        x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp))
+        y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp))
+
+    shadow = shadow_map.map[BS_no][y_temp, x_temp]
+    large_fading_dB = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain
+    return large_fading_dB
 
 def small_scale_fading(nUE, nBS, nNt, fading_model='Rayleigh'):
     small_H = np.zeros((nBS,nUE, nNt),dtype=np.complex_)
@@ -119,9 +188,9 @@ if __name__ == '__main__':
 
     shadow = ShadowMap(shadowFad_dB[0])
     print(shadow.map.shape)  # (3,)
-    large_fading = LargeScaleFadingMap(PARAM.Macro.nBS, PARAM.nUE)
+    large_fading = LargeScaleChannelMap(PARAM.Macro.nBS, PARAM.nUE)
 
-    large_h = large_scale_fading(PARAM, Macro_BS_list, UE_posi[0,:], shadow)  # (3, 250)
+    large_h = large_scale_channel(PARAM, Macro_BS_list, UE_posi[0, :], shadow)  # (3, 250)
     large_fading.update(large_h)
     print('大尺度信道shape：',large_fading.map.shape)
     print('大尺度信道：', large_fading.map[:,0])

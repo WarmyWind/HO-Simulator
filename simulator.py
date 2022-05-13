@@ -20,7 +20,7 @@ from utils import *
 import warnings
 warnings.filterwarnings('ignore')
 
-def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFadingMap, small_fading:SmallScaleFadingMap,
+def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleChannelMap, small_fading:SmallScaleFadingMap,
                      instant_channel:InstantChannelMap, serving_map:ServingMap, NN=None, normalize_para=None):
     '''开始仿真'''
 
@@ -32,10 +32,10 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
 
     '''更新所有基站的L3测量（预测大尺度信道时需要）'''
     if PARAM.active_HO:
-        update_all_BS_L3_h_record(UE_list, instant_channel, PARAM.L3_coe)
+        update_all_BS_L3_h_record(UE_list, large_fading, instant_channel, PARAM.L3_coe)
 
     '''更新UE的服务基站L3测量'''
-    update_serv_BS_L3_h(UE_list, instant_channel, PARAM.L3_coe)
+    update_serv_BS_L3_h(UE_list, large_fading, instant_channel, PARAM.L3_coe)
 
     '''更新预编码信息'''
     for _BS in BS_list:
@@ -67,12 +67,18 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
                 if isinstance(UE_posi, list):
                     _UE_posi = UE_posi[_UE.type][_posi_idx, _UE.type_no]
                     _UE.update_posi(_UE_posi)
+                    _future_posi = UE_posi[_UE.type][_posi_idx+1:_posi_idx+1+_UE.record_len, _UE.type_no]
+                    _UE.update_future_posi(_future_posi)
                 elif len(UE_posi.shape) == 2:
                     _UE_posi = UE_posi[_posi_idx, _UE.type_no]
                     _UE.update_posi(_UE_posi)
+                    _future_posi = UE_posi[_UE.type][_posi_idx + 1:_posi_idx + 1 + _UE.record_len, _UE.type_no]
+                    _UE.update_future_posi(_future_posi)
                 elif len(UE_posi.shape) == 3:
                     _UE_posi = UE_posi[_UE.type, _posi_idx, _UE.type_no]
                     _UE.update_posi(_UE_posi)
+                    _future_posi = UE_posi[_UE.type][_posi_idx + 1:_posi_idx + 1 + _UE.record_len, _UE.type_no]
+                    _UE.update_future_posi(_future_posi)
 
         '''更新小尺度信道信息'''
         small_h = small_scale_fading(PARAM.nUE, len(BS_list), PARAM.Macro.nNt)
@@ -80,7 +86,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
 
         '''更新大尺度信道信息'''
         if drop_idx % PARAM.posi_resolution == 0:
-            large_h = large_scale_fading(PARAM, BS_list, UE_list, shadow)
+            large_h = large_scale_channel(PARAM, BS_list, UE_list, shadow)
             large_fading.update(large_h)
 
         '''更新瞬时信道信息'''
@@ -90,7 +96,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
         if drop_idx % PARAM.posi_resolution == 0:
             if PARAM.active_HO:
 
-                update_all_BS_L3_h_record(UE_list, instant_channel, PARAM.L3_coe)
+                update_all_BS_L3_h_record(UE_list, large_fading, instant_channel, PARAM.L3_coe)
 
         '''更新UE的邻基站及其的L3测量'''
         find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading, instant_channel,
@@ -108,7 +114,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
 
 
         '''更新UE的服务基站L3测量'''
-        update_serv_BS_L3_h(UE_list, instant_channel, PARAM.L3_coe)
+        update_serv_BS_L3_h(UE_list, large_fading, instant_channel, PARAM.L3_coe)
 
         '''更新RL state'''
         update_SS_SINR(UE_list, PARAM.sigma2, PARAM.L1_filter_length)
@@ -147,7 +153,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleFad
                                     serving_map, measure_criteria)
         else:
             measure_criteria = 'L3'
-            actice_HO_eval(PARAM, NN, normalize_para, UE_list, BS_list, large_fading, instant_channel,
+            actice_HO_eval(PARAM, NN, normalize_para, UE_list, BS_list, shadow, large_fading, instant_channel,
                                     serving_map, measure_criteria)
 
 
@@ -207,6 +213,10 @@ def create_UE_list(PARAM, UE_posi):
                     _active = False
                 UE_list.append(UE(i*PARAM.nUE_per_type+_UE_no, _UE_no, _UE_posi, i, active=_active))
 
+    for _UE in UE_list:
+        _future_posi = UE_posi[_UE.type][1: 1 + _UE.record_len, _UE.type_no]
+        _UE.update_future_posi(_future_posi)
+
     return UE_list
 
 
@@ -218,13 +228,14 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
     '''创建UE对象，并加入列表'''
     UE_list = create_UE_list(PARAM, UE_posi)
 
+
     '''初始化信道、服务信息'''
     shadow = ShadowMap(shadowFad_dB)
-    large_fading = LargeScaleFadingMap(PARAM.Macro.nBS, PARAM.nUE)
+    large_fading = LargeScaleChannelMap(PARAM.Macro.nBS, PARAM.nUE)
     small_fading = SmallScaleFadingMap(PARAM.Macro.nBS, PARAM.nUE, PARAM.Macro.nNt)
     instant_channel = InstantChannelMap(PARAM.Macro.nBS, PARAM.nUE, PARAM.Macro.nNt)
 
-    large_h = large_scale_fading(PARAM, Macro_BS_list, UE_list, shadow, scene=PARAM.scene)
+    large_h = large_scale_channel(PARAM, Macro_BS_list, UE_list, shadow, scene=PARAM.scene)
     large_fading.update(large_h)
     small_h = small_scale_fading(PARAM.nUE, len(Macro_BS_list), PARAM.Macro.nNt)
     small_fading.update(small_h)
@@ -236,8 +247,8 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0512_AHO_fixSS_SINR_scene1_sigma2_allowratio=0.5'
-        nDrop = 10000  # 时间步进长度
+        root_path = 'result/0513_ideal_AHO_fixSS_SINR_scene1_sigma2'
+        nDrop = 10000 - 16*8 # 时间步进长度
 
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
         shadow_filepath = '0511new_shadowFad_dB_8sigma_100dcov.mat'
@@ -254,8 +265,12 @@ if __name__ == '__main__':
 
     PARAM_list = []
     PARAM = Parameter()
+
     PARAM.active_HO = True  # 主动切换 或 被动切换
+    PARAM.AHO.ideal_pred = True
     PARAM.AHO.add_noise = False
+
+
     PARAM.scene = 1
     # PARAM.sigma2 = PARAM.sigma_c
     PARAM.nUE = 240
@@ -267,7 +282,7 @@ if __name__ == '__main__':
     HOM_list = [0, 3]
     # PARAM.HOM = 0
     # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
-    TTT_list = [32,48,64]
+    TTT_list = [32, 48, 64]
 
     for _HOM in HOM_list:
         PARAM.HOM = _HOM
@@ -303,7 +318,7 @@ if __name__ == '__main__':
         for i in range(len(PARAM_list)):
             PARAM = PARAM_list[i]
             print('Simulation of Parameter Set:{} Start.'.format(i+1))
-            if PARAM.active_HO:
+            if PARAM.active_HO and not PARAM.AHO.ideal_pred:
                 obs_len = PARAM.AHO.obs_len
                 pred_len = PARAM.AHO.pred_len
                 nBS = PARAM.nCell

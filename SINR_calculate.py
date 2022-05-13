@@ -131,12 +131,12 @@ if __name__ == '__main__':
         UE_list.append(UE(i, UE_posi[0,i], True))
 
     shadow = ShadowMap(shadowFad_dB[0])
-    large_fading = LargeScaleFadingMap(PARAM.Macro.nBS, PARAM.nUE)
+    large_fading = LargeScaleChannelMap(PARAM.Macro.nBS, PARAM.nUE)
     small_fading = SmallScaleFadingMap(PARAM.Macro.nBS, PARAM.nUE, PARAM.Macro.nNt)
     instant_channel = InstantChannelMap(PARAM.Macro.nBS, PARAM.nUE, PARAM.Macro.nNt)
     serving_map = ServingMap(PARAM.Macro.nBS, PARAM.nUE)
 
-    large_h = large_scale_fading(PARAM, Macro_BS_list, UE_posi[0, :], shadow)
+    large_h = large_scale_channel(PARAM, Macro_BS_list, UE_posi[0, :], shadow)
     large_fading.update(large_h)
     # print(_large_h[2, 4:6], large_fading.map[2, 4:6])  # 看更新后一不一致
     small_h = small_scale_fading(PARAM.nUE, len(Macro_BS_list), PARAM.Macro.nNt)

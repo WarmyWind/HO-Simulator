@@ -9,7 +9,7 @@
 '''
 
 import numpy as np
-
+import channel_fading
 
 def delete_target_from_arr(arr, target):
     '''
@@ -28,7 +28,7 @@ class ShadowMap:
         self.map = shadow_data  # 单位是dB
 
 
-class LargeScaleFadingMap:
+class LargeScaleChannelMap:
     '''
     大尺度衰落=路径衰落+阴影衰落
     '''
@@ -60,7 +60,7 @@ class InstantChannelMap:
     def __init__(self, nBS, nUE, nNt):
         self.map = np.zeros((nNt, nBS, nUE))  # 单位不是dB
 
-    def calculate_by_fading(self, large_h:LargeScaleFadingMap, small_h:SmallScaleFadingMap):
+    def calculate_by_fading(self, large_h:LargeScaleChannelMap, small_h:SmallScaleFadingMap):
         self.map = large_h.map * np.rollaxis(small_h.map, 2)
 
     def update(self, new_channel):
@@ -172,6 +172,7 @@ class UE:
         self.record_len = record_len
         self.posi = posi
         self.posi_record = [posi for _ in range(record_len)]
+        self.future_posi = [posi for _ in range(record_len)]
         self.type = type
         self.type_no = type_no  # 对应类型中的UE编号
         self.active = active
@@ -189,9 +190,22 @@ class UE:
         self.neighbour_BS = []
         self.neighbour_BS_L3_h = []  # 邻基站的信道功率L3测量值
         self.all_BS_L3_h_record = []
+        # self.serv_BS_future_large_h = []
+        # self.target_BS_future_large_h = []
 
         self.RL_state = RL_state()
 
+    def update_future_posi(self, future_posi_arr):
+        self.future_posi = future_posi_arr
+
+    def cal_future_large_h(self, PARAM, BS, shadow_map):
+        future_large_fading_dB = []
+        for _future_posi in self.future_posi:
+            _future_large_fading_dB = channel_fading.get_large_fading_dB_from_posi(PARAM, _future_posi, BS.posi, BS.no, shadow_map, BS.type, PARAM.scene)
+
+            future_large_fading_dB.append(_future_large_fading_dB)
+
+        return 10 ** (-np.array(future_large_fading_dB) / 20)
 
     def quit_handover(self, HO_result, new_state, HOF_type = None):
         if self.state == 'handovering':

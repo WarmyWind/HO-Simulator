@@ -28,6 +28,7 @@ class Parameter:  # 仿真场景参数
     posi_resolution = 8
 
     class AHO:
+        ideal_pred = True
         obs_len = 15
         pred_len = 15
         add_noise = True

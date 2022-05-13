@@ -9,14 +9,14 @@ from resource_allocation import equal_RB_allocate
 import numpy as np
 
 
-def find_and_update_neighbour_BS(BS_list, UE_list, num_neibour, large_fading: LargeScaleFadingMap,
-                                 instant_channel: InstantChannelMap, L3_coe=4):
+def find_and_update_neighbour_BS(BS_list, UE_list, num_neibour, large_channel: LargeScaleChannelMap,
+                                 instant_channel: InstantChannelMap, L3_coe=4, ideal_meassure=True):
     BS_no_list = []
     for _BS in BS_list:
         BS_no_list.append(_BS.no)  # 获得BS序号
     BS_no_list = np.array(BS_no_list)
 
-    large_h = large_fading.map[BS_no_list]  # BS对应的大尺度信道
+    large_h = large_channel.map[BS_no_list]  # BS对应的大尺度信道
     for _UE in UE_list:
         _UE_no = _UE.no
         # Offset = np.ones((1, nBS)) * (PARAMS.Macro.PtmaxdBm - PARAMS.Micro.PtmaxdBm - PARAMS.Micro.ABS)
@@ -27,21 +27,27 @@ def find_and_update_neighbour_BS(BS_list, UE_list, num_neibour, large_fading: La
         _neighbour_idx_before = _UE.neighbour_BS
         _UE.update_neighbour_BS(_neighbour_idx)
 
-        instant_h = instant_channel.map[:, _neighbour_idx, _UE_no]
-        instant_h_power = np.square(np.abs(instant_h))
-        instant_h_power_mean = np.mean(instant_h_power, axis=0)
-        instant_h_mean = np.sqrt(instant_h_power_mean)
+        if ideal_meassure:
+            L3_h = []
+            for _BS_no in range(len(_UE.neighbour_BS)):
+                L3_h.append(large_channel.map[_BS_no, _UE_no])
 
-        k = (1 / 2) ** (L3_coe / 4)
-        L3_h = []
-        for i in range(len(_UE.neighbour_BS)):
-            n_idx = _UE.neighbour_BS[i]
-            if n_idx not in _neighbour_idx_before:
-                L3_h.append(instant_h_mean[i])
-            else:
-                _neignour_BS_L3_h_arr = np.array(_UE.neighbour_BS_L3_h)
-                _L3_h_before = _neignour_BS_L3_h_arr[np.where(_neighbour_idx_before == n_idx)][0]
-                L3_h.append((1 - k) * _L3_h_before + k * instant_h_mean[i])
+        else:
+            instant_h = instant_channel.map[:, _neighbour_idx, _UE_no]
+            instant_h_power = np.square(np.abs(instant_h))
+            instant_h_power_mean = np.mean(instant_h_power, axis=0)
+            instant_h_mean = np.sqrt(instant_h_power_mean)
+
+            k = (1 / 2) ** (L3_coe / 4)
+            L3_h = []
+            for i in range(len(_UE.neighbour_BS)):
+                n_idx = _UE.neighbour_BS[i]
+                if n_idx not in _neighbour_idx_before:
+                    L3_h.append(instant_h_mean[i])
+                else:
+                    _neignour_BS_L3_h_arr = np.array(_UE.neighbour_BS_L3_h)
+                    _L3_h_before = _neignour_BS_L3_h_arr[np.where(_neighbour_idx_before == n_idx)][0]
+                    L3_h.append((1 - k) * _L3_h_before + k * instant_h_mean[i])
         _UE.update_neighbour_BS_L3_h(L3_h)
 
 
@@ -129,10 +135,10 @@ if __name__ == '__main__':
         UE_list.append(UE(i, UE_posi[0, i], True))
 
     shadow = ShadowMap(shadowFad_dB[0])
-    large_fading = LargeScaleFadingMap(PARAM.Macro.nBS, PARAM.nUE)
+    large_fading = LargeScaleChannelMap(PARAM.Macro.nBS, PARAM.nUE)
     serving_map = ServingMap(PARAM.Macro.nBS, PARAM.nUE)
 
-    _large_h = large_scale_fading(PARAM, Macro_BS_list, UE_posi[0, :], shadow, large_fading)
+    _large_h = large_scale_channel(PARAM, Macro_BS_list, UE_posi[0, :], shadow, large_fading)
     print(_large_h[2, 4:6], large_fading.map[2, 4:6])  # 看更新后一不一致
 
     small_h = small_scale_fading(PARAM.nUE, len(Macro_BS_list), PARAM.Macro.nNt)

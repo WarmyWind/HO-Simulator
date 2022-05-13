@@ -13,9 +13,9 @@ import torch
 
 
 
-def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFadingMap,
+def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleChannelMap,
                            instant_channel: InstantChannelMap,
-                        serving_map: ServingMap, measure_criteria='L3', allocate_method=equal_RB_allocate):
+                           serving_map: ServingMap, measure_criteria='L3', allocate_method=equal_RB_allocate):
     TTT_list = PARAMS.TTT
     HOM = PARAMS.HOM
     for _UE in UE_list:
@@ -170,13 +170,13 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleFad
                     continue
 
 
-def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_list, large_fading: LargeScaleFadingMap,
-                           instant_channel: InstantChannelMap, serving_map: ServingMap, measure_criteria='L3', allocate_method=equal_RB_allocate):
+def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_list, shadow_map:ShadowMap, large_fading: LargeScaleChannelMap,
+                   instant_channel: InstantChannelMap, serving_map: ServingMap, measure_criteria='L3', allocate_method=equal_RB_allocate):
     TTT_list = PARAMS.TTT
     HOM = PARAMS.HOM
     for _UE in UE_list:
-        # if _UE.no == 106:
-        #     _ = _UE.no
+        if _UE.no == 202:
+            _ = 202
 
         if isinstance(TTT_list, list):
             TTT = TTT_list[_UE.type]
@@ -230,27 +230,39 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                 _target_BS = search_object_form_list_by_no(BS_list, _best_BS)
 
                 '''预测大尺度信道'''
-                _posi_record = np.array(_UE.posi_record)
-                posi_real = (np.real(_posi_record[:, np.newaxis])-normalize_para['mean2'])/normalize_para['sigma2']
-                posi_imag = (np.real(_posi_record[:, np.newaxis])-normalize_para['mean3'])/normalize_para['sigma3']
-                x_large_h = (10*np.log10(_UE.all_BS_L3_h_record) - normalize_para['mean1'])/normalize_para['sigma1']
-                x = np.float32(np.concatenate((x_large_h, posi_real, posi_imag), axis=1))
-                if PARAMS.AHO.add_noise:
-                    # x *= (1+PARAMS.AHO.noise * np.random.randn(x.shape[0], x.shape[1]))
-                    x *= (1+np.random.uniform(-PARAMS.AHO.noise,PARAMS.AHO.noise, size=x.shape))
-                x = torch.tensor(x)
-                _pred = np.array(NN.predict(x).detach().cpu())
-                _pred = _pred.reshape((_UE.record_len, len(BS_list)))
+                if PARAMS.AHO.ideal_pred:
+                    _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
+                    target_h_pred = _UE.cal_future_large_h(PARAMS, _target_BS, shadow_map)
+                    serv_h_pred = _UE.cal_future_large_h(PARAMS, _serv_BS, shadow_map)
 
-                pred_len = np.ceil(TTT/PARAMS.posi_resolution).astype(int)
-                target_h_pred = 10**(_pred[:pred_len, _best_BS]/10)
-                serv_h_pred = 10**(_pred[:pred_len, _UE.serv_BS]/10)
+                    pred_len = np.ceil(TTT / PARAMS.posi_resolution).astype(int)
+                    target_h_pred = target_h_pred[:pred_len]
+                    serv_h_pred = serv_h_pred[:pred_len]
+
+                else:
+                    _posi_record = np.array(_UE.posi_record)
+                    posi_real = (np.real(_posi_record[:, np.newaxis])-normalize_para['mean2'])/normalize_para['sigma2']
+                    posi_imag = (np.real(_posi_record[:, np.newaxis])-normalize_para['mean3'])/normalize_para['sigma3']
+                    x_large_h = (10*np.log10(_UE.all_BS_L3_h_record) - normalize_para['mean1'])/normalize_para['sigma1']
+                    x = np.float32(np.concatenate((x_large_h, posi_real, posi_imag), axis=1))
+                    if PARAMS.AHO.add_noise:
+                        # x *= (1+PARAMS.AHO.noise * np.random.randn(x.shape[0], x.shape[1]))
+                        x *= (1+np.random.uniform(-PARAMS.AHO.noise,PARAMS.AHO.noise, size=x.shape))
+
+                    x = torch.tensor(x)
+                    _pred = np.array(NN.predict(x).detach().cpu())
+                    _pred = _pred.reshape((_UE.record_len, len(BS_list)))
+
+                    pred_len = np.ceil(TTT/PARAMS.posi_resolution).astype(int)
+                    target_h_pred = 10**(_pred[:pred_len, _best_BS]/10)
+                    serv_h_pred = 10**(_pred[:pred_len, _UE.serv_BS]/10)
 
                 pred_meet_result = 20 * np.log10(target_h_pred) - 20 * np.log10(serv_h_pred) >= HOM
                 meet_ratio = np.count_nonzero(pred_meet_result) / len(pred_meet_result)
                 # if _UE.ToS > 120:
                 #     _ = _UE.no
-
+                if _UE.no == 202:
+                    _ = 202
                 if meet_ratio >= PARAMS.AHO.pred_allow_ratio:
                     '''主动切换，直接进行HO准备'''
                     if not _target_BS.if_full_load():
