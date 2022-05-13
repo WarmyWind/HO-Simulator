@@ -175,8 +175,8 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
     TTT_list = PARAMS.TTT
     HOM = PARAMS.HOM
     for _UE in UE_list:
-        if _UE.no == 202:
-            _ = 202
+        if _UE.no == 176:
+            _ = 176
 
         if isinstance(TTT_list, list):
             TTT = TTT_list[_UE.type]
@@ -212,11 +212,15 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                     _best_large_h = large_fading.map[_best_BS, _UE.no]
 
             elif measure_criteria == 'L3':
+
                 _serv_large_h = _UE.serv_BS_L3_h
                 if _UE.neighbour_BS[0] != _UE.serv_BS:
+                    if _UE.no == 176:
+                        _ = 176
                     _best_BS = _UE.neighbour_BS[0]
                     _best_large_h = _UE.neighbour_BS_L3_h[0]
                 else:
+
                     _best_BS = _UE.neighbour_BS[1]
                     _best_large_h = _UE.neighbour_BS_L3_h[1]
 
@@ -226,7 +230,8 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
 
             '''若目标BS信道超过服务BS一定阈值HOM，触发hanover条件'''
             if 20 * np.log10(_best_large_h) - 20 * np.log10(_serv_large_h) >= HOM:
-
+                if _UE.no == 176:
+                    _ = 176
                 _target_BS = search_object_form_list_by_no(BS_list, _best_BS)
 
                 '''预测大尺度信道'''

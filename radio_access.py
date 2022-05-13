@@ -29,7 +29,7 @@ def find_and_update_neighbour_BS(BS_list, UE_list, num_neibour, large_channel: L
 
         if ideal_meassure:
             L3_h = []
-            for _BS_no in range(len(_UE.neighbour_BS)):
+            for _BS_no in _neighbour_idx:
                 L3_h.append(large_channel.map[_BS_no, _UE_no])
 
         else:
@@ -48,6 +48,7 @@ def find_and_update_neighbour_BS(BS_list, UE_list, num_neibour, large_channel: L
                     _neignour_BS_L3_h_arr = np.array(_UE.neighbour_BS_L3_h)
                     _L3_h_before = _neignour_BS_L3_h_arr[np.where(_neighbour_idx_before == n_idx)][0]
                     L3_h.append((1 - k) * _L3_h_before + k * instant_h_mean[i])
+
         _UE.update_neighbour_BS_L3_h(L3_h)
 
 
