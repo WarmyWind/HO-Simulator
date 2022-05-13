@@ -313,7 +313,7 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
 
-    root_path = 'result/0512_AHO_fixSS_SINR_scene1_sigma_c'
+    root_path = 'result/0512_PHO_fixSS_SINR_scene1_sigma_c'
     data_num = 0
     rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
     # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
@@ -323,7 +323,7 @@ if __name__ == '__main__':
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
 
     '''从文件读取UE位置'''
-    UE_posi_filepath = ['0511_v{}_500.npy'.format(i) for i in range(3)]
+    UE_posi_filepath = ['UE_tra/0513_scene0/Set_UE_posi_100s_500user_v{}.mat'.format(i+1) for i in range(3)]
     index = 'Set_UE_posi'
     UE_posi = get_UE_posi_from_file(UE_posi_filepath, index)
     # UE_posi = UE_posi[2, :, :]
@@ -372,17 +372,17 @@ if __name__ == '__main__':
     plt.legend()
     plt.show()
 
-    # '''从文件读取阴影衰落'''
-    # shadow_filepath = '0511new_shadowFad_dB_8sigma_100dcov.mat'
-    # index = 'shadowFad_dB'
-    # shadowFad_dB = get_shadow_from_mat(shadow_filepath, index)
-    #
-    # '''初始化信道、服务信息'''
-    # shadow = ShadowMap(shadowFad_dB)
-    #
-    # '''绘制大尺度信道信息'''
-    # BS_no_list = [3,4,5,6,7,8]
-    # plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
+    '''从文件读取阴影衰落'''
+    shadow_filepath = '0513_scene0_shadowFad_dB_8sigma_100dcov.mat'
+    index = 'shadowFad_dB'
+    shadowFad_dB = get_shadow_from_mat(shadow_filepath, index)
+
+    '''初始化信道、服务信息'''
+    shadow = ShadowMap(shadowFad_dB)
+
+    '''绘制大尺度信道信息'''
+    BS_no_list = [i for i in range(15)]
+    plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
 
 
     # '''绘制UE例子的HO地图'''
