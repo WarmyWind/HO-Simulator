@@ -304,7 +304,7 @@ if __name__ == '__main__':
         if _PARAM.scene == 0:
             Macro_Posi = road_cell_struct(_PARAM.nCell, _PARAM.Dist)
         else:
-            Macro_Posi = cross_road_struction(200)
+            Macro_Posi = cross_road_struction(_PARAM.Dist)
 
         '''开始仿真'''
         rate_list = []

@@ -223,7 +223,7 @@ def plot_HO_map(UE_list, BS_posi, UE_tra, label_list=None):
 
     plt.legend()
     # plt.show()
-
+    return ax
 
 def plot_large_channel(PARAM, BS_posi, BS_no_list, shadow_map, UE_posi, UE_HOF_posi = None, L3=True):
     antGain = PARAM.pathloss.Macro.antGaindB
@@ -330,55 +330,59 @@ if __name__ == '__main__':
     UE_posi = process_posi_data(UE_posi)
 
     '''生成BS位置'''
-    Macro_Posi = cross_road_struction(200)
+    Macro_Posi = road_cell_struct(15, 150)
 
     ax = plot_BS_location(Macro_Posi)
     dist = np.abs(Macro_Posi[0] - Macro_Posi[1])
     ax = plot_hexgon(ax, Macro_Posi, dist)
 
     '''绘制道路'''
+    def plot_road(ax, scene, Dist, RoadWidth):
+        if scene == 0:
+            origin_y_point = (Dist / 2 * np.sqrt(3) - RoadWidth) / 2
+            ax.axhline(origin_y_point, c='black', ls='-', lw=1)
+            ax.axhline(origin_y_point+RoadWidth, c='black', label='road', ls='-', lw=1)
+        else:
+            ax.hlines(y=-15, xmin=-15, xmax=415, colors='black', ls='-', lw=1)
+            ax.hlines(y=15, xmin=-15, xmax=185, colors='black', ls='-', lw=1)
+            ax.hlines(y=15, xmin=215, xmax=385, colors='black', ls='-', lw=1)
+            ax.hlines(y=185, xmin=215, xmax=385, colors='black', ls='-', lw=1)
+            ax.hlines(y=215, xmin=215, xmax=385, colors='black', ls='-', lw=1)
+            ax.hlines(y=385, xmin=215, xmax=385, colors='black', ls='-', lw=1)
+            ax.hlines(y=385, xmin=415, xmax=615, colors='black', ls='-', lw=1)
+            ax.hlines(y=415, xmin=185, xmax=615, colors='black', ls='-', lw=1)
 
-    ax.hlines(y=-15, xmin=-15, xmax=415, colors='black', ls='-', lw=1)
-    ax.hlines(y=15, xmin=-15, xmax=185, colors='black', ls='-', lw=1)
-    ax.hlines(y=15, xmin=215, xmax=385, colors='black', ls='-', lw=1)
-    ax.hlines(y=185, xmin=215, xmax=385, colors='black', ls='-', lw=1)
-    ax.hlines(y=215, xmin=215, xmax=385, colors='black', ls='-', lw=1)
-    ax.hlines(y=385, xmin=215, xmax=385, colors='black', ls='-', lw=1)
-    ax.hlines(y=385, xmin=415, xmax=615, colors='black', ls='-', lw=1)
-    ax.hlines(y=415, xmin=185, xmax=615, colors='black', ls='-', lw=1)
+            ax.vlines(x=185, ymin=15, ymax=415, colors='black', ls='-', lw=1)
+            ax.vlines(x=215, ymin=15, ymax=185, colors='black', ls='-', lw=1)
+            ax.vlines(x=215, ymin=215, ymax=385, colors='black', ls='-', lw=1)
+            ax.vlines(x=385, ymin=15, ymax=185, colors='black', ls='-', lw=1)
+            ax.vlines(x=385, ymin=215, ymax=385, colors='black', ls='-', lw=1)
+            ax.vlines(x=415, ymin=-15, ymax=385, colors='black', ls='-', lw=1, label='road')
+        return ax
 
-
-
-    ax.vlines(x=185, ymin=15, ymax=415, colors='black', ls='-', lw=1)
-    ax.vlines(x=215, ymin=15, ymax=185, colors='black', ls='-', lw=1)
-    ax.vlines(x=215, ymin=215, ymax=385, colors='black', ls='-', lw=1)
-    ax.vlines(x=385, ymin=15, ymax=185, colors='black', ls='-', lw=1)
-    ax.vlines(x=385, ymin=215, ymax=385, colors='black', ls='-', lw=1)
-    ax.vlines(x=415, ymin=-15, ymax=385, colors='black', ls='-', lw=1)
-    # ax.axhline(dist/2/np.sqrt(3), c='black')
-    # ax.axhline(dist/np.sqrt(3), c='black', label='road')
-
-
+    ax = plot_road(ax,PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
     # plt.grid()
     plt.axis('square')
     # plt.xlim(-10, 1100)
     # plt.ylim(-210, 426.5)
-    plt.xlim(-30, 630)
-    plt.ylim(-30, 430)
+    # plt.xlim(-30, 630)
+    # plt.ylim(-30, 430)
+    plt.xlim(-10, 1100)
+    plt.ylim(-110, 300)
     plt.legend()
     plt.show()
 
-    '''从文件读取阴影衰落'''
-    shadow_filepath = '0511new_shadowFad_dB_8sigma_100dcov.mat'
-    index = 'shadowFad_dB'
-    shadowFad_dB = get_shadow_from_mat(shadow_filepath, index)
-
-    '''初始化信道、服务信息'''
-    shadow = ShadowMap(shadowFad_dB)
-
-    '''绘制大尺度信道信息'''
-    BS_no_list = [3,4,5,6,7,8]
-    plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
+    # '''从文件读取阴影衰落'''
+    # shadow_filepath = '0511new_shadowFad_dB_8sigma_100dcov.mat'
+    # index = 'shadowFad_dB'
+    # shadowFad_dB = get_shadow_from_mat(shadow_filepath, index)
+    #
+    # '''初始化信道、服务信息'''
+    # shadow = ShadowMap(shadowFad_dB)
+    #
+    # '''绘制大尺度信道信息'''
+    # BS_no_list = [3,4,5,6,7,8]
+    # plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
 
 
     # '''绘制UE例子的HO地图'''
@@ -460,27 +464,29 @@ if __name__ == '__main__':
     UE_type_no = _UE.type_no
     _UE_posi = UE_posi[UE_type][:, UE_type_no]
 
-    '''绘制大尺度信道'''
-    _ = plot_large_channel(PARAM, Macro_Posi, [0,1,2,3,4,5,6,7,8], shadow, _UE_posi, _UE.HO_state.failure_posi)
+    # '''绘制大尺度信道'''
+    # _ = plot_large_channel(PARAM, Macro_Posi, [0,1,2,3,4,5,6,7,8], shadow, _UE_posi, _UE.HO_state.failure_posi)
+
+
+    # '''绘制SINR'''
+    # _ = plot_SINR(_UE_posi, _UE, _UE.HO_state.failure_posi)
 
 
 
-    '''绘制SINR'''
-    _ = plot_SINR(_UE_posi, _UE, _UE.HO_state.failure_posi)
-
-
-
-    '''绘制UE例子的HO地图'''
-    plot_HO_map([_UE], Macro_Posi, np.transpose([_UE_posi]), label_list=['example car'])
-    # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
-    # plt.legend()
-    plt.grid()
-    plt.axis('square')
-    # plt.xlim(-10, 1100)
-    # plt.ylim(-210, 426.5)
-    plt.xlim(-30, 630)
-    plt.ylim(-30, 430)
-    plt.show()
+    # '''绘制UE例子的HO地图'''
+    # ax = plot_HO_map([_UE], Macro_Posi, np.transpose([_UE_posi]), label_list=['example car'])
+    # ax = plot_road(ax,PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
+    # # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
+    # # plt.legend()
+    # # plt.grid()
+    # plt.axis('square')
+    # # plt.xlim(-10, 1100)
+    # # plt.ylim(-210, 426.5)
+    # # plt.xlim(-30, 630)
+    # # plt.ylim(-30, 430)
+    # # plt.xlim(-30, 630)
+    # # plt.ylim(-30, 430)
+    # plt.show()
 
 
 

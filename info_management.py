@@ -9,7 +9,7 @@
 '''
 
 import numpy as np
-import channel_fading
+# import channel_fading
 
 def delete_target_from_arr(arr, target):
     '''
@@ -199,6 +199,7 @@ class UE:
         self.future_posi = future_posi_arr
 
     def cal_future_large_h(self, PARAM, BS, shadow_map):
+        import channel_fading
         future_large_fading_dB = []
         for _future_posi in self.future_posi:
             _future_large_fading_dB = channel_fading.get_large_fading_dB_from_posi(PARAM, _future_posi, BS.posi, BS.no, shadow_map, BS.type, PARAM.scene)

@@ -2,9 +2,23 @@ import numpy as np
 
 
 class Parameter:  # 仿真场景参数
-    scene = 1
-    nCell = 9  # 小区个数
-    Dist = 200  # 小区间距
+    def __init__(self):
+        self.scene = 0
+        self.nCell = 15  # 小区个数
+        self.Dist = 150  # 小区间距
+        self.RoadWidth = self.Dist / 2 * np.sqrt(3) - 40
+
+        self.Macro.nBS = self.nCell * 1  # 宏基站个数
+        # self.Macro.BS_flag = np.ones((1, self.Macro.nBS))
+        self.Macro.MaxUE_per_RB = np.floor(self.Macro.nNt * 0.75)  # 宏基站每个RB的最大服务用户数
+        # self.RB_per_UE = int(np.floor(1 * self.Macro.nBS * self.Macro.MaxUE_per_RB * self.nRB / self.nUE))
+        self.RB_per_UE = 4
+        self.Micro.MaxUE_per_RB = np.floor(self.Micro.nNt)  # 微基站每个RB的最大服务用户
+        self.active_HO = True
+
+
+
+
     sigma2dBm = -95  # 接收噪声功率
     sigma2 = 10 ** (sigma2dBm / 10) / 1000
     sigma = 1.5011e-09
@@ -63,14 +77,7 @@ class Parameter:  # 仿真场景参数
         RB = 180 * 1e3  # 180kHz
         # CBR = 3 * 1024 * 1024  # 3Mbps;恒定比特率、固定码率，形容通信服务质量
 
-    def __init__(self):
-        self.Macro.nBS = self.nCell * 1  # 宏基站个数
-        # self.Macro.BS_flag = np.ones((1, self.Macro.nBS))
-        self.Macro.MaxUE_per_RB = np.floor(self.Macro.nNt * 0.75)  # 宏基站每个RB的最大服务用户数
-        # self.RB_per_UE = int(np.floor(1 * self.Macro.nBS * self.Macro.MaxUE_per_RB * self.nRB / self.nUE))
-        self.RB_per_UE = 4
-        self.Micro.MaxUE_per_RB = np.floor(self.Micro.nNt)  # 微基站每个RB的最大服务用户
-        self.active_HO = True
+
 
 if __name__ == '__main__':
     '''

@@ -25,8 +25,9 @@ def get_large_channel(PARAMS, BS_list, UE_posi, shadowFad_dB):
 
     # 根据阴影衰落地图产生阴影衰落
     if PARAMS.scene == 0:
+        origin_y_point = (PARAMS.Dist / 2 * np.sqrt(3) - PARAMS.RoadWidth)/2
         x_temp = np.floor(np.ceil(np.real(UE_posi) / 0.5)).astype(int)  # shape = [nDrop, nUE]
-        y_temp = np.floor(np.ceil((np.imag(UE_posi) - PARAMS.Dist / 2 / np.sqrt(3)) / 0.5)).astype(int)
+        y_temp = np.floor(np.ceil((np.imag(UE_posi) - origin_y_point) / 0.5)).astype(int)
         x_temp[x_temp > (shadowFad_dB.shape[2] - 1)] = shadowFad_dB.shape[2] - 1
         y_temp[y_temp > (shadowFad_dB.shape[1] - 1)] = shadowFad_dB.shape[1] - 1
     else:
@@ -67,6 +68,8 @@ def handle_data(large_channel, UE_posi, obs_len=15, pred_len=15, dB=True):
     x_posi_real = []
     x_posi_imag = []
     y_large_h = []
+    y_posi_real = []
+    y_posi_imag = []
 
     for iUE in range(large_channel.shape[1]):
         _posi = UE_posi[:, iUE]
@@ -75,17 +78,20 @@ def handle_data(large_channel, UE_posi, obs_len=15, pred_len=15, dB=True):
         _large_channel_data = np.squeeze(large_channel[_useful_idx,iUE,:])
         for i in np.arange(0,len(_posi)-obs_len-pred_len,obs_len):
             x_large_h.append(_large_channel_data[i:i+obs_len])
-            x_posi_real.append(np.real(_posi[i:i+obs_len]))
+            x_posi_real.append(np.real(_posi[i:i + obs_len]))
             x_posi_imag.append(np.imag(_posi[i:i + obs_len]))
             y_large_h.append(_large_channel_data[i+obs_len:i+obs_len+pred_len])
+            y_posi_real.append(np.real(_posi[i+obs_len:i+obs_len+pred_len]))
+            y_posi_imag.append(np.imag(_posi[i+obs_len:i+obs_len+pred_len]))
 
     if dB:
         x_large_h, y_large_h = 10 * np.log10(x_large_h), 10 * np.log10(y_large_h)
 
-    return np.array(x_large_h), np.array(x_posi_real), np.array(x_posi_imag), np.array(y_large_h).astype(float)
+    return np.array(x_large_h).astype(float), np.array(x_posi_real).astype(float), np.array(x_posi_imag).astype(float),\
+           np.array(y_large_h).astype(float), np.array(y_posi_real).astype(float), np.array(y_posi_imag).astype(float)
 
 
-def generate_dataset(shadow_filepath, UE_posi_filepath_list):
+def generate_dataset(shadow_filepath, UE_posi_filepath_list, PARAM):
     '''生成数据集'''
 
     '''从文件读取阴影衰落'''
@@ -95,7 +101,11 @@ def generate_dataset(shadow_filepath, UE_posi_filepath_list):
     # probe = shadowFad_dB[0][1]
 
     '''生成BS位置和BS对象列表'''
-    Macro_Posi = road_cell_struct(PARAM.nCell, PARAM.Dist)
+    if PARAM.scene == 0:
+        Macro_Posi = road_cell_struct(PARAM.nCell, PARAM.Dist)
+    else:
+        Macro_Posi = cross_road_struction(PARAM.Dist)
+
     Macro_BS_list = create_Macro_BS_list(PARAM, Macro_Posi)
 
     trainset_num_per_type = 200
