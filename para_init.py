@@ -43,9 +43,10 @@ class Parameter:  # 仿真场景参数
 
     class AHO:
         ideal_pred = True
-        obs_len = 15
-        pred_len = 15
-        add_noise = True
+        obs_len = 10
+        pred_len = 10
+        pred_allow_ratio = 1
+        add_noise = False
         noise = 0.1
 
     class Macro:

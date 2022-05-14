@@ -62,7 +62,7 @@ def get_large_channel(PARAMS, BS_list, UE_posi, shadowFad_dB):
     return large_scale_channel
 
 
-def handle_data(large_channel, UE_posi, obs_len=15, pred_len=15, dB=True):
+def handle_data(large_channel, UE_posi, obs_len, pred_len, dB=True):
     '''根据大尺度信道数据，处理为可用于训练的数据集形式'''
     x_large_h = []
     x_posi_real = []
@@ -126,4 +126,4 @@ def generate_dataset(shadow_filepath, UE_posi_filepath_list, PARAM):
             large_channel = np.concatenate((large_channel, _large_channel), axis=1)
             UE_posi = np.concatenate((UE_posi, _UE_posi), axis=1)
 
-    return handle_data(large_channel, UE_posi)
+    return handle_data(large_channel, UE_posi, PARAM.AHO.obs_len, PARAM.AHO.pred_len)

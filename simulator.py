@@ -247,18 +247,18 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0513_ideal_AHO_fixSS_SINR_scene1_sigma2'
-        nDrop = 10000 - 16*8 # 时间步进长度
+        root_path = 'result/0514_ideal_AHO_scene0'
+        nDrop = 10000 - 10*8 # 时间步进长度
 
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
-        shadow_filepath = '0511new_shadowFad_dB_8sigma_100dcov.mat'
+        shadow_filepath = '0513_scene0_shadowFad_dB_8sigma_100dcov.mat'
         shadow_index = 'shadowFad_dB'
         # UE_posi_filepath = ['Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
-        UE_posi_filepath = ['0511_v{}_500.npy'.format(i) for i in range(3)]
+        UE_posi_filepath = ['UE_tra/0514_scene0/Set_UE_posi_100s_500user_v{}.mat'.format(i+1) for i in range(3)]
         # UE_posi_filepath = ['0511_v0_500.npy']
         posi_index = 'Set_UE_posi'
 
-        model_name = 'scene1_DNN_0512'
+        model_name = 'scene0_large_h_DNN_0514'
         # model_name = 'DNN_0508'
         NN_path = 'Model/large_h_predict/'+model_name+'/'+model_name+'.dat'
         normalize_para_filename = 'Model/large_h_predict/'+model_name+'/normalize_para.npy'
@@ -271,7 +271,7 @@ if __name__ == '__main__':
     PARAM.AHO.add_noise = False
 
 
-    PARAM.scene = 1
+    PARAM.scene = 0
     # PARAM.sigma2 = PARAM.sigma_c
     PARAM.nUE = 240
     PARAM.nUE_per_type = 80
@@ -322,7 +322,7 @@ if __name__ == '__main__':
                 obs_len = PARAM.AHO.obs_len
                 pred_len = PARAM.AHO.pred_len
                 nBS = PARAM.nCell
-                NN = DNN_Model_Wrapper(input_dim=obs_len*nBS+obs_len*2, output_dim=pred_len*nBS, no_units=100, learn_rate=0.001,
+                NN = DNN_Model_Wrapper(input_dim=obs_len, output_dim=pred_len, no_units=100, learn_rate=0.001,
                                           batch_size=1000)
                 NN.load(SimConfig.NN_path)
 

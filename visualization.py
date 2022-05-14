@@ -56,7 +56,7 @@ def plot_UE_trajectory(Macro_Posi, UE_tra, label_list=None):
 
     plt.legend()
     # plt.show()
-    return fig, ax
+    return ax
 
 
 def plot_cdf(data, xlabel, ylabel, label_list, cumulative=True, normed=1, loc='lower right'):
@@ -313,7 +313,7 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
 
-    root_path = 'result/0512_PHO_fixSS_SINR_scene1_sigma_c'
+    root_path = 'result/0512_AHO_fixSS_SINR_scene1_sigma_c'
     data_num = 0
     rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
     # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
@@ -330,7 +330,7 @@ if __name__ == '__main__':
     UE_posi = process_posi_data(UE_posi)
 
     '''生成BS位置'''
-    Macro_Posi = road_cell_struct(15, 150)
+    Macro_Posi = road_cell_struct(PARAM.nCell, PARAM.Dist)
 
     ax = plot_BS_location(Macro_Posi)
     dist = np.abs(Macro_Posi[0] - Macro_Posi[1])
@@ -362,6 +362,19 @@ if __name__ == '__main__':
 
     ax = plot_road(ax,PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
     # plt.grid()
+    plt.axis('square')
+    # plt.xlim(-10, 1100)
+    # plt.ylim(-210, 426.5)
+    # plt.xlim(-30, 630)
+    # plt.ylim(-30, 430)
+    plt.xlim(-10, 1100)
+    plt.ylim(-110, 300)
+    plt.legend()
+    plt.show()
+
+    example_car_tra = UE_posi[2][:, 5]
+    ax = plot_UE_trajectory(Macro_Posi, example_car_tra)
+    ax = plot_road(ax, PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
     plt.axis('square')
     # plt.xlim(-10, 1100)
     # plt.ylim(-210, 426.5)
