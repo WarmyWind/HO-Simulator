@@ -18,7 +18,7 @@ def get_shadow_from_mat(filepath, index):
     return shadow_data
 
 
-def large_scale_channel(PARAMS, BS_list, UE_list, shadow_map:ShadowMap, scene=1):
+def large_scale_channel(PARAMS, BS_list, UE_list, shadow_map:ShadowMap):
     '''
     大尺度信道衰落=路径衰落+阴影衰落
     :param PARAMS: 仿真参数
@@ -35,7 +35,9 @@ def large_scale_channel(PARAMS, BS_list, UE_list, shadow_map:ShadowMap, scene=1)
     large_scale_fading_dB = np.zeros((nBS, nUE))
     for iUE in range(nUE):
         for iBS in range(nBS):
-            large_fading_dB = get_large_fading_dB(PARAMS, BS_list[iBS], UE_list[iUE], shadow_map, scene)
+            # if iBS == 7 and iUE == 77:
+            #     _ = iBS
+            large_fading_dB = get_large_fading_dB(PARAMS, BS_list[iBS], UE_list[iUE], shadow_map, PARAMS.scene)
             large_scale_fading_dB[iBS, iUE] = large_fading_dB
 
     large_scale_channel = 10 ** (-large_scale_fading_dB / 20)
@@ -46,7 +48,7 @@ def large_scale_channel(PARAMS, BS_list, UE_list, shadow_map:ShadowMap, scene=1)
 
 def get_large_fading_dB(PARAMS, BS, UE, shadow_map:ShadowMap, scene):
     if not UE.active:
-        large_fading_dB = -np.Inf
+        large_fading_dB = np.Inf
     else:
         large_fading_dB = get_large_fading_dB_from_posi(PARAMS, UE.posi, BS.posi, BS.no, shadow_map, BS.type, scene)
 
@@ -63,6 +65,7 @@ def get_large_fading_dB_from_posi(PARAMS, UE_posi, BS_posi, BS_no, shadow_map:Sh
         dFactor = PARAMS.pathloss.Micro.dFactordB
         pLoss1m = PARAMS.pathloss.Micro.pLoss1mdB
         # shadow  = PARAMS.pathloss.Micro.shadowdB
+
     distServer = np.abs(UE_posi - BS_posi)  # 用户-基站距离
     '''
     下面的x_temp和y_temp后加的常数与数据有关

@@ -202,11 +202,15 @@ class UE:
         import channel_fading
         future_large_fading_dB = []
         for _future_posi in self.future_posi:
-            _future_large_fading_dB = channel_fading.get_large_fading_dB_from_posi(PARAM, _future_posi, BS.posi, BS.no, shadow_map, BS.type, PARAM.scene)
+            if _future_posi == None:
+                _future_large_fading_dB = np.Inf
+            else:
+                _future_large_fading_dB = channel_fading.get_large_fading_dB_from_posi(PARAM, _future_posi, BS.posi, BS.no, shadow_map, BS.type, PARAM.scene)
 
             future_large_fading_dB.append(_future_large_fading_dB)
 
-        return 10 ** (-np.array(future_large_fading_dB) / 20)
+        future_large_h = 10 ** (-np.array(future_large_fading_dB) / 20)
+        return future_large_h
 
     def quit_handover(self, HO_result, new_state, HOF_type = None):
         if self.state == 'handovering':

@@ -19,6 +19,8 @@ def find_and_update_neighbour_BS(BS_list, UE_list, num_neibour, large_channel: L
     large_h = large_channel.map[BS_no_list]  # BS对应的大尺度信道
     for _UE in UE_list:
         _UE_no = _UE.no
+        # if _UE_no == 77:
+        #     _ = 77
         # Offset = np.ones((1, nBS)) * (PARAMS.Macro.PtmaxdBm - PARAMS.Micro.PtmaxdBm - PARAMS.Micro.ABS)
         # RecivePowerdBm = large_h[:, _UE_no] - Offset
         _h = large_h[:, _UE_no]  # 所有基站到该用户的大尺度信道

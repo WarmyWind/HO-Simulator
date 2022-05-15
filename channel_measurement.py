@@ -15,7 +15,7 @@ def update_all_BS_L3_h_record(UE_list, large_channel: LargeScaleChannelMap, inst
         # if _UE.state == 'unserved':  continue  # 如果UE不被服务，则跳过
         if ideal_meassure:
             _large_h = large_channel.map[:, _UE.no]
-            _UE.update_all_BS_L3_h_record(_large_h)
+            _UE.update_all_BS_L3_h_record(_large_h, 1)
         else:
             _instant_h = instant_h[:, :, _UE.no]
             _instant_h_power = np.square(np.abs(_instant_h))
@@ -31,7 +31,8 @@ def update_serv_BS_L3_h(UE_list, large_channel: LargeScaleChannelMap, instant_ch
         if _UE.state == 'unserved':  continue  # 如果UE不被服务，则跳过
         if ideal_meassure:
             _large_h = large_channel.map[_UE.serv_BS, _UE.no]
-            _UE.update_serv_BS_L3_h(_large_h)
+            _UE.serv_BS_L3_h = _large_h
+            # _UE.update_serv_BS_L3_h(_large_h, 1)
         else:
             _instant_h = instant_h[:, _UE.serv_BS, _UE.no]
             _instant_h_power = np.square(np.abs(_instant_h))

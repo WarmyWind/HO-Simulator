@@ -65,7 +65,7 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleCha
 
 
             '''若目标BS信道超过服务BS一定阈值HOM，触发hanover条件'''
-            if 20 * np.log10(_best_large_h) - 20 * np.log10(_serv_large_h) >= HOM:
+            if 20 * np.log10(_best_large_h) - 20 * np.log10(_serv_large_h) > HOM:
                 _target_BS = search_object_form_list_by_no(BS_list, _best_BS)
                 if not _target_BS.if_full_load():
                     _UE.update_state('handovering')
@@ -229,9 +229,9 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
 
 
             '''若目标BS信道超过服务BS一定阈值HOM，触发hanover条件'''
-            if 20 * np.log10(_best_large_h) - 20 * np.log10(_serv_large_h) >= HOM:
-                # if _UE.no == 176:
-                #     _ = 176
+            if 20 * np.log10(_best_large_h) - 20 * np.log10(_serv_large_h) > HOM:
+                if _UE.no == 77:
+                    _ = 77
                 _target_BS = search_object_form_list_by_no(BS_list, _best_BS)
 
                 '''预测大尺度信道'''
@@ -245,22 +245,34 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                     serv_h_pred = serv_h_pred[:pred_len]
 
                 else:
-                    _posi_record = np.array(_UE.posi_record)
-                    posi_real = (np.real(_posi_record[:, np.newaxis])-normalize_para['mean2'])/normalize_para['sigma2']
-                    posi_imag = (np.real(_posi_record[:, np.newaxis])-normalize_para['mean3'])/normalize_para['sigma3']
-                    x_large_h = (10*np.log10(_UE.all_BS_L3_h_record) - normalize_para['mean1'])/normalize_para['sigma1']
-                    x = np.float32(np.concatenate((x_large_h, posi_real, posi_imag), axis=1))
-                    if PARAMS.AHO.add_noise:
-                        # x *= (1+PARAMS.AHO.noise * np.random.randn(x.shape[0], x.shape[1]))
-                        x *= (1+np.random.uniform(-PARAMS.AHO.noise,PARAMS.AHO.noise, size=x.shape))
+                    # _posi_record = np.array(_UE.posi_record)
+                    # posi_real = (np.real(_posi_record[:, np.newaxis])-normalize_para['mean2'])/normalize_para['sigma2']
+                    # posi_imag = (np.real(_posi_record[:, np.newaxis])-normalize_para['mean3'])/normalize_para['sigma3']
+                    # x_large_h = (10*np.log10(_UE.all_BS_L3_h_record) - normalize_para['mean1'])/normalize_para['sigma1']
+                    # x = np.float32(np.concatenate((x_large_h, posi_real, posi_imag), axis=1))
+                    # if PARAMS.AHO.add_noise:
+                    #     # x *= (1+PARAMS.AHO.noise * np.random.randn(x.shape[0], x.shape[1]))
+                    #     x *= (1+np.random.uniform(-PARAMS.AHO.noise,PARAMS.AHO.noise, size=x.shape))
+                    # x = torch.tensor(x)
+                    # _pred = np.array(NN.predict(x).detach().cpu())
+                    # _pred = _pred.reshape((_UE.record_len, len(BS_list)))
+                    # pred_len = np.ceil(TTT/PARAMS.posi_resolution).astype(int)
+                    # target_h_pred = 10**(_pred[:pred_len, _best_BS]/10)
+                    # serv_h_pred = 10**(_pred[:pred_len, _UE.serv_BS]/10)
 
-                    x = torch.tensor(x)
-                    _pred = np.array(NN.predict(x).detach().cpu())
-                    _pred = _pred.reshape((_UE.record_len, len(BS_list)))
+                    x_large_h = np.float32((10 * np.log10(_UE.all_BS_L3_h_record) - normalize_para['mean1']) / normalize_para[
+                        'sigma1'])
+                    x_serv = torch.tensor(x_large_h[:, _UE.serv_BS])
+                    serv_h_pred_dB = np.array(NN.predict(x_serv).detach().cpu())
+                    serv_h_pred = 10 ** (serv_h_pred_dB / 10)
+                    x_target = torch.tensor(x_large_h[:, _best_BS])
+                    target_h_pred_dB = np.array(NN.predict(x_target).detach().cpu())
+                    target_h_pred = 10 ** (target_h_pred_dB / 10)
 
-                    pred_len = np.ceil(TTT/PARAMS.posi_resolution).astype(int)
-                    target_h_pred = 10**(_pred[:pred_len, _best_BS]/10)
-                    serv_h_pred = 10**(_pred[:pred_len, _UE.serv_BS]/10)
+                    pred_len = np.ceil(TTT / PARAMS.posi_resolution).astype(int)
+                    serv_h_pred = serv_h_pred.reshape(-1)[:pred_len]
+                    target_h_pred = target_h_pred.reshape(-1)[:pred_len]
+
 
                 pred_meet_result = 20 * np.log10(target_h_pred) - 20 * np.log10(serv_h_pred) >= HOM
                 meet_ratio = np.count_nonzero(pred_meet_result) / len(pred_meet_result)

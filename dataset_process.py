@@ -91,7 +91,7 @@ def handle_data(large_channel, UE_posi, obs_len, pred_len, dB=True):
            np.array(y_large_h).astype(float), np.array(y_posi_real).astype(float), np.array(y_posi_imag).astype(float)
 
 
-def generate_dataset(shadow_filepath, UE_posi_filepath_list, PARAM):
+def generate_dataset(shadow_filepath, UE_posi_filepath_list, PARAM, num_per_type):
     '''生成数据集'''
 
     '''从文件读取阴影衰落'''
@@ -108,7 +108,8 @@ def generate_dataset(shadow_filepath, UE_posi_filepath_list, PARAM):
 
     Macro_BS_list = create_Macro_BS_list(PARAM, Macro_Posi)
 
-    trainset_num_per_type = 200
+    trainset_num_per_type = num_per_type
+
     large_channel = []
     UE_posi = []
     for filepath in UE_posi_filepath_list:
