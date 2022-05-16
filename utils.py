@@ -32,7 +32,7 @@ if __name__ == '__main__':
     from user_mobility import get_UE_posi_from_file
     from network_deployment import cellStructPPP
 
-    root_path = 'result/0512_AHO_fixSS_SINR_scene1_sigma2'
+    root_path = 'result/0516_AHO_noise0.05_scene0'
 
 
     '''从文件读取UE位置'''

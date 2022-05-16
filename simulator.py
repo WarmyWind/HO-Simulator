@@ -247,7 +247,7 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0515_AHO_scene0'
+        root_path = 'result/0516_AHO_noise0.05_HOM=1or2_scene0'
         nDrop = 10000 - 10*8 # 时间步进长度
 
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
@@ -258,7 +258,7 @@ if __name__ == '__main__':
         # UE_posi_filepath = ['0511_v0_500.npy']
         posi_index = 'Set_UE_posi'
 
-        model_name = 'scene0_large_h_DNN_0515'
+        model_name = 'scene0_noise0.05_large_h_DNN_0515'
         # model_name = 'DNN_0508'
         NN_path = 'Model/large_h_predict/'+model_name+'/'+model_name+'.dat'
         normalize_para_filename = 'Model/large_h_predict/'+model_name+'/normalize_para.npy'
@@ -268,7 +268,7 @@ if __name__ == '__main__':
 
     PARAM.active_HO = True  # 主动切换 或 被动切换
     PARAM.AHO.ideal_pred = False
-    PARAM.AHO.add_noise = False
+    PARAM.AHO.add_noise = True
 
 
     PARAM.scene = 0
@@ -279,7 +279,7 @@ if __name__ == '__main__':
     # PARAM.TTT = [32, 16, 16]
     # PARAM_list.append(PARAM)
     # noise_list = [0.5, 0.2]
-    HOM_list = [0, 3]
+    HOM_list = [1, 2]
     # PARAM.HOM = 0
     # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
     TTT_list = [32, 48, 64]

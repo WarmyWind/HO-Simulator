@@ -262,10 +262,18 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
 
                     x_large_h = np.float32((10 * np.log10(_UE.all_BS_L3_h_record) - normalize_para['mean1']) / normalize_para[
                         'sigma1'])
-                    x_serv = torch.tensor(x_large_h[:, _UE.serv_BS])
+                    x_serv = x_large_h[:, _UE.serv_BS]
+                    x_target = x_large_h[:, _best_BS]
+                    if PARAMS.AHO.add_noise:
+                        # x *= (1+PARAMS.AHO.noise * np.random.randn(x.shape[0], x.shape[1]))
+                        x_serv *= (1+np.random.uniform(-PARAMS.AHO.noise, PARAMS.AHO.noise, size=x_serv.shape))
+                        x_target *= (1 + np.random.uniform(-PARAMS.AHO.noise, PARAMS.AHO.noise, size=x_target.shape))
+
+                    x_serv = torch.tensor(x_serv)
                     serv_h_pred_dB = np.array(NN.predict(x_serv).detach().cpu())
                     serv_h_pred = 10 ** (serv_h_pred_dB / 10)
-                    x_target = torch.tensor(x_large_h[:, _best_BS])
+
+                    x_target = torch.tensor(x_target)
                     target_h_pred_dB = np.array(NN.predict(x_target).detach().cpu())
                     target_h_pred = 10 ** (target_h_pred_dB / 10)
 

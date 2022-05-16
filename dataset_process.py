@@ -62,7 +62,7 @@ def get_large_channel(PARAMS, BS_list, UE_posi, shadowFad_dB):
     return large_scale_channel
 
 
-def handle_data(large_channel, UE_posi, obs_len, pred_len, dB=True):
+def handle_data(large_channel, UE_posi, obs_len, pred_len, noise, dB=True):
     '''根据大尺度信道数据，处理为可用于训练的数据集形式'''
     x_large_h = []
     x_posi_real = []
@@ -87,11 +87,15 @@ def handle_data(large_channel, UE_posi, obs_len, pred_len, dB=True):
     if dB:
         x_large_h, y_large_h = 10 * np.log10(x_large_h), 10 * np.log10(y_large_h)
 
+    if noise != 0:
+        x_large_h *= (1 + np.random.uniform(-noise, noise, size=x_large_h.shape))
+        y_large_h *= (1 + np.random.uniform(-noise, noise, size=y_large_h.shape))
+
     return np.array(x_large_h).astype(float), np.array(x_posi_real).astype(float), np.array(x_posi_imag).astype(float),\
            np.array(y_large_h).astype(float), np.array(y_posi_real).astype(float), np.array(y_posi_imag).astype(float)
 
 
-def generate_dataset(shadow_filepath, UE_posi_filepath_list, PARAM, num_per_type):
+def generate_dataset(shadow_filepath, UE_posi_filepath_list, PARAM, num_per_type, noise):
     '''生成数据集'''
 
     '''从文件读取阴影衰落'''
@@ -127,4 +131,4 @@ def generate_dataset(shadow_filepath, UE_posi_filepath_list, PARAM, num_per_type
             large_channel = np.concatenate((large_channel, _large_channel), axis=1)
             UE_posi = np.concatenate((UE_posi, _UE_posi), axis=1)
 
-    return handle_data(large_channel, UE_posi, PARAM.AHO.obs_len, PARAM.AHO.pred_len)
+    return handle_data(large_channel, UE_posi, PARAM.AHO.obs_len, PARAM.AHO.pred_len, noise)

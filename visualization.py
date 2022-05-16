@@ -313,7 +313,7 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
 
-    root_path = 'result/0512_AHO_fixSS_SINR_scene1_sigma_c'
+    root_path = 'result/0516_AHO_noise0.05_scene0'
     data_num = 0
     rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
     # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
@@ -323,7 +323,7 @@ if __name__ == '__main__':
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
 
     '''从文件读取UE位置'''
-    UE_posi_filepath = ['UE_tra/0513_scene0/Set_UE_posi_100s_500user_v{}.mat'.format(i+1) for i in range(3)]
+    UE_posi_filepath = ['UE_tra/0514_scene0/Set_UE_posi_100s_500user_v{}.mat'.format(i+1) for i in range(3)]
     index = 'Set_UE_posi'
     UE_posi = get_UE_posi_from_file(UE_posi_filepath, index)
     # UE_posi = UE_posi[2, :, :]

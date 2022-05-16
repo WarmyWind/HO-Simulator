@@ -47,7 +47,7 @@ class Parameter:  # 仿真场景参数
         pred_len = 10
         pred_allow_ratio = 1
         add_noise = False
-        noise = 0.1
+        noise = 0.05
 
     class Macro:
         nBS = 9   # 宏基站个数
