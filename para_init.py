@@ -19,7 +19,7 @@ class Parameter:  # 仿真场景参数
 
 
 
-    sigma2dBm = -95  # 接收噪声功率
+    sigma2dBm = -95
     sigma2 = 10 ** (sigma2dBm / 10) / 1000
     sigma = 1.5011e-09
     sigma_IC = 5.0035e-10
@@ -48,6 +48,9 @@ class Parameter:  # 仿真场景参数
         pred_allow_ratio = 1
         add_noise = False
         noise = 0.05
+
+    class PHO:
+        ideal_HO = True
 
     class Macro:
         nBS = 9   # 宏基站个数

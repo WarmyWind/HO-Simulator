@@ -37,14 +37,16 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
     '''更新UE的服务基站L3测量'''
     update_serv_BS_L3_h(UE_list, large_fading, instant_channel, PARAM.L3_coe)
 
-    '''更新预编码信息'''
+    '''更新预编码信息和服务记录'''
     for _BS in BS_list:
         _BS.update_precoding_matrix(instant_channel, ZF_precoding)
+        _BS.serv_UE_list_record.append(_BS.resource_map.serv_UE_list)
+        _BS.RB_ocp_num_record.append(_BS.resource_map.RB_ocp_num)
 
     '''接入时SINR和速率'''
     rec_P = get_receive_power(BS_list, instant_channel)
     inter_P = get_interference(BS_list, UE_list, instant_channel)
-    SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
+    SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma2)
     UE_rate = user_rate(PARAM.MLB.RB, SINR_dB, UE_list)
     # print(np.mean(UE_rate))
     rate_list = [UE_rate]
@@ -120,14 +122,16 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
         update_SS_SINR(UE_list, PARAM.sigma2, PARAM.L1_filter_length)
 
 
-        '''更新预编码信息'''
+        '''更新预编码信息和服务记录'''
         for _BS in BS_list:
             _BS.update_precoding_matrix(instant_channel, ZF_precoding)
+            _BS.serv_UE_list_record.append(_BS.resource_map.serv_UE_list)
+            _BS.RB_ocp_num_record.append(_BS.resource_map.RB_ocp_num)
 
         '''统计性能'''
         rec_P = get_receive_power(BS_list, instant_channel)
         inter_P = get_interference(BS_list, UE_list, instant_channel)
-        SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
+        SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma2)
         # SNR_dB = calculate_SNR_dB(rec_P, PARAM.sigma2)
 
 
@@ -173,7 +177,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
     print('HO results: HO success count: {}, HO failure count: {}, failure_type_count:{}'.format(HO_success, HO_failure, HO_failure_type_count))
     # return np.array(rate_list), np.array([HO_success, HO_failure, HO_failure_type_count])
 
-    return np.array(rate_list), UE_list
+    return np.array(rate_list), UE_list, BS_list
 
 
 def create_Macro_BS_list(PARAM, Macro_Posi):
@@ -247,7 +251,7 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0516_AHO_noise0.05_HOM=1or2_scene0'
+        root_path = 'result/0518_PHO_scene0_sigma2'
         nDrop = 10000 - 10*8 # 时间步进长度
 
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
@@ -258,7 +262,7 @@ if __name__ == '__main__':
         # UE_posi_filepath = ['0511_v0_500.npy']
         posi_index = 'Set_UE_posi'
 
-        model_name = 'scene0_noise0.05_large_h_DNN_0515'
+        model_name = 'scene0_large_h_DNN_0515'
         # model_name = 'DNN_0508'
         NN_path = 'Model/large_h_predict/'+model_name+'/'+model_name+'.dat'
         normalize_para_filename = 'Model/large_h_predict/'+model_name+'/normalize_para.npy'
@@ -266,9 +270,9 @@ if __name__ == '__main__':
     PARAM_list = []
     PARAM = Parameter()
 
-    PARAM.active_HO = True  # 主动切换 或 被动切换
+    PARAM.active_HO = False  # 主动切换 或 被动切换
     PARAM.AHO.ideal_pred = False
-    PARAM.AHO.add_noise = True
+    PARAM.AHO.add_noise = False
 
 
     PARAM.scene = 0
@@ -279,7 +283,7 @@ if __name__ == '__main__':
     # PARAM.TTT = [32, 16, 16]
     # PARAM_list.append(PARAM)
     # noise_list = [0.5, 0.2]
-    HOM_list = [1, 2]
+    HOM_list = [0, 1, 2, 3]
     # PARAM.HOM = 0
     # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
     TTT_list = [32, 48, 64]
@@ -312,7 +316,7 @@ if __name__ == '__main__':
         start_time = time.time()
         print('Simulation Start.\n')
         print('Important Parameters:')
-        # print('Sigma: sigma_c')
+        # print('Sigma: sigma2')
         print('Active HO: {}\n'.format(_PARAM.active_HO))
 
         for i in range(len(PARAM_list)):
@@ -334,7 +338,7 @@ if __name__ == '__main__':
 
             Macro_BS_list, UE_list, shadow, large_fading, small_fading, instant_channel, serving_map = init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB)
             _start_time = time.time()
-            _rate_arr, _UE_list = start_simulation(PARAM, Macro_BS_list, UE_list, shadow, large_fading, small_fading, instant_channel, serving_map, NN, normalize_para)
+            _rate_arr, _UE_list, _BS_list = start_simulation(PARAM, Macro_BS_list, UE_list, shadow, large_fading, small_fading, instant_channel, serving_map, NN, normalize_para)
             _end_time = time.time()
             print('Simulation of Parameter Set:{} Complete.'.format(i+1))
             print('Mean Rate:{:.2f} Mbps'.format(np.mean(_rate_arr[_rate_arr != 0])/1e6))
@@ -345,6 +349,7 @@ if __name__ == '__main__':
                     os.makedirs(SimConfig.root_path+'/{}'.format(i))
                 np.save(SimConfig.root_path+'/{}/rate_arr.npy'.format(i), _rate_arr)
                 np.save(SimConfig.root_path+'/{}/UE_list.npy'.format(i), _UE_list)
+                np.save(SimConfig.root_path + '/{}/UE_list.npy'.format(i), _BS_list)
             # HO_result_list.append(_HO_result)
 
         end_time = time.time()

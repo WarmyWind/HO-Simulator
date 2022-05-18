@@ -59,7 +59,7 @@ def plot_UE_trajectory(Macro_Posi, UE_tra, label_list=None):
     return ax
 
 
-def plot_cdf(data, xlabel, ylabel, label_list, cumulative=True, normed=1, loc='lower right'):
+def plot_cdf(data, xlabel, ylabel, label_list, cumulative=True, normed=1):
     # data is a list of array
     fig, ax = plt.subplots()
     for i in range(len(data)):
@@ -73,8 +73,9 @@ def plot_cdf(data, xlabel, ylabel, label_list, cumulative=True, normed=1, loc='l
     if cumulative:
         ax.set_ybound(0, 1)
         fix_hist_step_vertical_line_at_end(ax)
-    plt.legend(loc=loc)
-    plt.show()
+    # plt.legend(loc=loc)
+    # plt.show()
+    return ax
 
 
 def fix_hist_step_vertical_line_at_end(ax):
@@ -103,6 +104,20 @@ def plot_bar(data, xlabel, ylabel, para_list, label_list, loc='upper left'):
     plt.legend(loc=loc)
     # plt.show()
 
+def plot_HO_count_bar(ax, para_list, HOS, HOF, tick_label, width, xtick_bias):
+    bar = []
+    xticks = np.arange(len(para_list))
+    # for q in range(len(para_list)):
+    #     # _HOF = np.sum(HOF, axis=0)
+    bar1 = ax.bar(xticks+xtick_bias, HOS, width=width, color='green', tick_label=tick_label)
+    bar.append(bar1)
+    bar2 = ax.bar(xticks+xtick_bias, HOF[:,1], width=width, bottom=HOS, color='red', tick_label=tick_label)
+    bar.append(bar2)
+    bottom = []
+
+    bar3 = ax.bar(xticks, HOF[:,3], width=width, bottom=HOF[:,1]+HOS, color='yellow', tick_label=tick_label)
+    bar.append(bar3)
+    return ax, bar
 
 def plot_rate_map(BS_posi, UE_posi, rate_data, title_list, fineness=20, loc='upper right'):
     x = np.real(UE_posi)
@@ -200,7 +215,7 @@ def add_scalr_bar(ax, x_start, x_end, y, length, fineness, orientation='vertical
                 rotation=270)
 
 def plot_HO_map(UE_list, BS_posi, UE_tra, label_list=None):
-    fig, ax = plot_UE_trajectory(BS_posi, UE_tra, label_list)
+    ax = plot_UE_trajectory(BS_posi, UE_tra, label_list)
 
     for idx in range(len(UE_list)):
         UE = UE_list[idx]
@@ -273,8 +288,9 @@ def plot_large_channel(PARAM, BS_posi, BS_no_list, shadow_map, UE_posi, UE_HOF_p
     plt.show()
     return ax
 
-def plot_SINR(UE_posi, UE, UE_HOF_posi = None, Qout = -8):
-    fig, ax = plt.subplots()
+def plot_SINR(UE_posi, UE, UE_HOF_posi = None, Qout = -8, ax=None):
+    if ax == None:
+        fig, ax = plt.subplots()
 
     # inactive_drop = np.where(UE_posi != None)[0][0] * PARAM.posi_resolution
     # _failure_posi = UE.HO_state.failure_posi[HOF_type][0]
@@ -305,6 +321,29 @@ def plot_SINR(UE_posi, UE, UE_HOF_posi = None, Qout = -8):
     plt.show()
     return ax
 
+def plot_road(ax, scene, Dist, RoadWidth):
+    if scene == 0:
+        origin_y_point = (Dist / 2 * np.sqrt(3) - RoadWidth) / 2
+        ax.axhline(origin_y_point, c='black', ls='-', lw=1)
+        ax.axhline(origin_y_point+RoadWidth, c='black', label='road', ls='-', lw=1)
+    else:
+        ax.hlines(y=-15, xmin=-15, xmax=415, colors='black', ls='-', lw=1)
+        ax.hlines(y=15, xmin=-15, xmax=185, colors='black', ls='-', lw=1)
+        ax.hlines(y=15, xmin=215, xmax=385, colors='black', ls='-', lw=1)
+        ax.hlines(y=185, xmin=215, xmax=385, colors='black', ls='-', lw=1)
+        ax.hlines(y=215, xmin=215, xmax=385, colors='black', ls='-', lw=1)
+        ax.hlines(y=385, xmin=215, xmax=385, colors='black', ls='-', lw=1)
+        ax.hlines(y=385, xmin=415, xmax=615, colors='black', ls='-', lw=1)
+        ax.hlines(y=415, xmin=185, xmax=615, colors='black', ls='-', lw=1)
+
+        ax.vlines(x=185, ymin=15, ymax=415, colors='black', ls='-', lw=1)
+        ax.vlines(x=215, ymin=15, ymax=185, colors='black', ls='-', lw=1)
+        ax.vlines(x=215, ymin=215, ymax=385, colors='black', ls='-', lw=1)
+        ax.vlines(x=385, ymin=15, ymax=185, colors='black', ls='-', lw=1)
+        ax.vlines(x=385, ymin=215, ymax=385, colors='black', ls='-', lw=1)
+        ax.vlines(x=415, ymin=-15, ymax=385, colors='black', ls='-', lw=1, label='road')
+    return ax
+
 if __name__ == '__main__':
     from simulator import *
     from channel_fading import get_shadow_from_mat
@@ -312,9 +351,15 @@ if __name__ == '__main__':
     from network_deployment import cellStructPPP
 
     PARAM = Parameter()
+    '''从文件读取UE位置'''
+    UE_posi_filepath = ['UE_tra/0514_scene0/Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
+    index = 'Set_UE_posi'
+    UE_posi = get_UE_posi_from_file(UE_posi_filepath, index)
+    # UE_posi = UE_posi[2, :, :]
+    UE_posi = process_posi_data(UE_posi)
 
-    root_path = 'result/0516_AHO_noise0.05_scene0'
-    data_num = 0
+    root_path = 'result/0515_PHO_scene0'
+    data_num = 2
     rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
     # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
     UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
@@ -322,12 +367,6 @@ if __name__ == '__main__':
     label_list = ['Para Set 1']
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
 
-    '''从文件读取UE位置'''
-    UE_posi_filepath = ['UE_tra/0514_scene0/Set_UE_posi_100s_500user_v{}.mat'.format(i+1) for i in range(3)]
-    index = 'Set_UE_posi'
-    UE_posi = get_UE_posi_from_file(UE_posi_filepath, index)
-    # UE_posi = UE_posi[2, :, :]
-    UE_posi = process_posi_data(UE_posi)
 
     '''生成BS位置'''
     Macro_Posi = road_cell_struct(PARAM.nCell, PARAM.Dist)
@@ -337,36 +376,8 @@ if __name__ == '__main__':
     ax = plot_hexgon(ax, Macro_Posi, dist)
 
     '''绘制道路'''
-    def plot_road(ax, scene, Dist, RoadWidth):
-        if scene == 0:
-            origin_y_point = (Dist / 2 * np.sqrt(3) - RoadWidth) / 2
-            ax.axhline(origin_y_point, c='black', ls='-', lw=1)
-            ax.axhline(origin_y_point+RoadWidth, c='black', label='road', ls='-', lw=1)
-        else:
-            ax.hlines(y=-15, xmin=-15, xmax=415, colors='black', ls='-', lw=1)
-            ax.hlines(y=15, xmin=-15, xmax=185, colors='black', ls='-', lw=1)
-            ax.hlines(y=15, xmin=215, xmax=385, colors='black', ls='-', lw=1)
-            ax.hlines(y=185, xmin=215, xmax=385, colors='black', ls='-', lw=1)
-            ax.hlines(y=215, xmin=215, xmax=385, colors='black', ls='-', lw=1)
-            ax.hlines(y=385, xmin=215, xmax=385, colors='black', ls='-', lw=1)
-            ax.hlines(y=385, xmin=415, xmax=615, colors='black', ls='-', lw=1)
-            ax.hlines(y=415, xmin=185, xmax=615, colors='black', ls='-', lw=1)
-
-            ax.vlines(x=185, ymin=15, ymax=415, colors='black', ls='-', lw=1)
-            ax.vlines(x=215, ymin=15, ymax=185, colors='black', ls='-', lw=1)
-            ax.vlines(x=215, ymin=215, ymax=385, colors='black', ls='-', lw=1)
-            ax.vlines(x=385, ymin=15, ymax=185, colors='black', ls='-', lw=1)
-            ax.vlines(x=385, ymin=215, ymax=385, colors='black', ls='-', lw=1)
-            ax.vlines(x=415, ymin=-15, ymax=385, colors='black', ls='-', lw=1, label='road')
-        return ax
-
     ax = plot_road(ax,PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
-    # plt.grid()
     plt.axis('square')
-    # plt.xlim(-10, 1100)
-    # plt.ylim(-210, 426.5)
-    # plt.xlim(-30, 630)
-    # plt.ylim(-30, 430)
     plt.xlim(-10, 1100)
     plt.ylim(-110, 300)
     plt.legend()
@@ -398,84 +409,140 @@ if __name__ == '__main__':
     plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
 
 
-    # '''绘制UE例子的HO地图'''
-    # example_UE_posi=[]
-    # example_UE_list = []
-    # type_no = [14,13,0]  # 选取三个不同种类的UE编号
-    # for i in range(3):
-    #     example_UE_posi.append(UE_posi[i][:,type_no[i]])
-    #     example_UE_list.append(UE_list[i*50+type_no[i]])
-    #
-    # example_UE_posi = np.transpose(example_UE_posi)
-    # label = ['pedestrian','bike','car']
-    # plot_HO_map(example_UE_list, Macro_Posi, np.array(example_UE_posi), label_list=label)
-    # # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
-    # # plt.legend()
-    # plt.grid()
-    # plt.axis('square')
-    # plt.xlim(-10, 1100)
-    # plt.ylim(-210, 426.5)
-    # plt.show()
+    '''绘制UE例子的HO地图'''
+    example_UE_posi=[]
+    example_UE_list = []
+    type_no = [14,13,0]  # 选取三个不同种类的UE编号
+    for i in range(3):
+        example_UE_posi.append(UE_posi[i][:,type_no[i]])
+        example_UE_list.append(UE_list[i*50+type_no[i]])
+
+    example_UE_posi = np.transpose(example_UE_posi)
+    label = ['pedestrian','bike','car']
+    plot_HO_map(example_UE_list, Macro_Posi, np.array(example_UE_posi), label_list=label)
+    # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
+    # plt.legend()
+    plt.grid()
+    plt.axis('square')
+    plt.xlim(-10, 1100)
+    plt.ylim(-210, 426.5)
+    plt.show()
 
 
-    '''绘制HO前的速率cdf'''
-    observe_length = 8
-    HO_duration_rate = [[] for _ in range(4+1)]
-    for i in range(len(UE_list)):
-        _UE = UE_list[i]
-        _UE_posi = UE_posi[_UE.type][:,_UE.type_no]
-        for j in range(len(_UE.HO_state.failure_posi)):
-            for _failure_posi in _UE.HO_state.failure_posi[j]:
-                _posi_idx = np.where(_UE_posi == _failure_posi)[0][0]
-                _drop_idx = _posi_idx*PARAM.posi_resolution
-                _rate_arr = rate_arr[_drop_idx-observe_length:_drop_idx, i]
+    def handle_HO_rate(observe_length, PARAM, UE_list, UE_posi):
+        # observe_length = 8
+        HO_duration_rate = [[] for _ in range(4+1)]
+        for i in range(len(UE_list)):
+            _UE = UE_list[i]
+            _UE_posi = UE_posi[_UE.type][:,_UE.type_no]
+            for j in range(len(_UE.HO_state.failure_posi)):
+                for _failure_posi in _UE.HO_state.failure_posi[j]:
+                    _posi_idx = np.where(_UE_posi == _failure_posi)[0][0]
+                    _drop_idx = _posi_idx*PARAM.posi_resolution
+                    _rate_arr = rate_arr[_drop_idx-observe_length:_drop_idx, i]
+                    if len(_rate_arr) != 0:
+                        HO_duration_rate[j].append(_rate_arr)
+
+            for _success_posi in _UE.HO_state.success_posi:
+                _posi_idx = np.where(_UE_posi == _success_posi)[0][0]
+                _drop_idx = _posi_idx * PARAM.posi_resolution
+                _rate_arr = rate_arr[_drop_idx - observe_length-9:_drop_idx-9, i]
                 if len(_rate_arr) != 0:
-                    HO_duration_rate[j].append(_rate_arr)
+                    HO_duration_rate[4].append(_rate_arr)
 
-        for _success_posi in _UE.HO_state.success_posi:
-            _posi_idx = np.where(_UE_posi == _success_posi)[0][0]
-            _drop_idx = _posi_idx * PARAM.posi_resolution
-            _rate_arr = rate_arr[_drop_idx - observe_length-9:_drop_idx-9, i]
-            if len(_rate_arr) != 0:
-                HO_duration_rate[4].append(_rate_arr)
+        HO_duration_rate.append(rate_arr[rate_arr != 0])
+        HO_duration_rate_all = np.array([])
+        for i in range(5):
+            if len(HO_duration_rate[i]) == 0:
+                continue
+            else:
+                if len(HO_duration_rate_all) == 0:
+                    HO_duration_rate_all = np.array(HO_duration_rate[i])
+                else:
+                    HO_duration_rate_all = np.concatenate((HO_duration_rate_all, np.array(HO_duration_rate[i])), axis=0)
 
-    HO_duration_rate.append(rate_arr[rate_arr != 0])
+        return HO_duration_rate_all.reshape(-1)
 
-    label_list = ['HOF type {}'.format(n+1) for n in range(4)]
-    label_list.append('HO success')
-    label_list.append('Total')
-    plot_cdf(HO_duration_rate, 'bit rate', 'cdf', label_list)
+    def plot_all_HO_posi(UE_list, UE_posi, consider_HOF, consider_HOS=True, ax=None):
+        if ax == None:
+            fig, ax = plt.subplots()
 
-    avg_rate = []
-    HO_rate = []
-    for _rate_arr in HO_duration_rate:
+        HOF_posi = [[] for _ in range(4)]
+        HOS_posi = []
+        for i in range(len(UE_list)):
+            _UE = UE_list[i]
+            _UE_posi = UE_posi[_UE.type][:,_UE.type_no]
+            for j in range(len(_UE.HO_state.failure_posi)):
+                if j+1 in consider_HOF:
+                    for _failure_posi in _UE.HO_state.failure_posi[j]:
+                        HOF_posi[j].append(_failure_posi)
 
-        HO_rate.append(np.array(_rate_arr).reshape(-1,8))
-        avg_rate.append(np.mean(_rate_arr))
+            if consider_HOS:
+                for _success_posi in _UE.HO_state.success_posi:
+                    _posi_idx = np.where(_UE_posi == _success_posi)[0][0]
+                    HOS_posi.append(_success_posi)
+
+        for i in range(4):
+            if len(HOF_posi[i]) != 0:
+                ax.scatter(np.real(HOF_posi[i]), np.imag(HOF_posi[i]), marker='o', s=10, label='HOF{}'.format(i+1))
+        ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d', s=10, color='darkgreen', label='HOS')
+        return ax
+
+
+    '''绘制BS和道路'''
+    ax = plot_BS_location(Macro_Posi)
+    dist = np.abs(Macro_Posi[0] - Macro_Posi[1])
+    ax = plot_hexgon(ax, Macro_Posi, dist)
+
+    ax = plot_road(ax, PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
+
+    consider_HOF = [1,2,3,4]
+    ax = plot_all_HO_posi(UE_list, UE_posi, consider_HOF, ax=ax)
+    # plt.axis('square')
+    plt.xlim(-10, 1100)
+    plt.ylim(-110, 300)
+    # plt.ylim(10, 110)
+    plt.show()
+    # observe_length = 8
+    # # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+    # # rate_data = [HO_duration_rate_all]
+    # rate_data = []
+    #
+    # root_path = 'result/0515_PHO_scene0'
+    # data_num = 3
+    # rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    # # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    # UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+    # rate_data.append(HO_duration_rate_all)
+    #
+    # root_path = 'result/0514_ideal_AHO_scene0'
+    # data_num = 3
+    # rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    # # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    # UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+    # rate_data.append(HO_duration_rate_all)
+    #
+    # '''绘制HO前的速率cdf'''
+    # label_list=['Passive','Ideal Active']
+    # ax = plot_cdf(rate_data, 'bit rate', 'cdf', label_list)
+    # plt.legend(loc='lower right')
+    # plt.show()
+    # print(np.mean(rate_data[0]),np.mean(rate_data[1]))
 
 
 
-    HO_rate_arr = HO_rate[1:5]
-    _HO_rate = []
-    for _rate in HO_rate_arr:
-        if len(_HO_rate) == 0:
-            _HO_rate = _rate
-        else:
-            _HO_rate = np.append(_HO_rate, _rate, axis=0)
-    print('HO Total Average rate:{}'.format(np.mean(_HO_rate)))
-    print('Average rate: {}'.format(avg_rate))
-
-    plot_cdf(HO_duration_rate, 'bit rate', 'cdf', label_list, cumulative=False)
 
 
-    '''选择UE'''
-    HOF_type = 2
-    for _UE in UE_list:
-        if _UE.HO_state.failure_posi[HOF_type] and _UE.HO_state.failure_posi[HOF_type-1] and _UE.type == 2:
-            break
-    UE_type = _UE.type
-    UE_type_no = _UE.type_no
-    _UE_posi = UE_posi[UE_type][:, UE_type_no]
+    # '''选择UE'''
+    # HOF_type = 2
+    # for _UE in UE_list:
+    #     if _UE.HO_state.failure_posi[HOF_type] and _UE.HO_state.failure_posi[HOF_type-1] and _UE.type == 2:
+    #         break
+    # UE_type = _UE.type
+    # UE_type_no = _UE.type_no
+    # _UE_posi = UE_posi[UE_type][:, UE_type_no]
 
     # '''绘制大尺度信道'''
     # _ = plot_large_channel(PARAM, Macro_Posi, [0,1,2,3,4,5,6,7,8], shadow, _UE_posi, _UE.HO_state.failure_posi)
@@ -483,24 +550,6 @@ if __name__ == '__main__':
 
     # '''绘制SINR'''
     # _ = plot_SINR(_UE_posi, _UE, _UE.HO_state.failure_posi)
-
-
-
-    # '''绘制UE例子的HO地图'''
-    # ax = plot_HO_map([_UE], Macro_Posi, np.transpose([_UE_posi]), label_list=['example car'])
-    # ax = plot_road(ax,PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
-    # # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
-    # # plt.legend()
-    # # plt.grid()
-    # plt.axis('square')
-    # # plt.xlim(-10, 1100)
-    # # plt.ylim(-210, 426.5)
-    # # plt.xlim(-30, 630)
-    # # plt.ylim(-30, 430)
-    # # plt.xlim(-30, 630)
-    # # plt.ylim(-30, 430)
-    # plt.show()
-
 
 
     # HO_result = np.array(HO_result_list).transpose()

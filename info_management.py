@@ -313,6 +313,7 @@ class ResourceMap:
         self.RB_idle = [np.array(range(nNt)) for _ in range(nRB)]  # 记录各个RB在哪些天线上空闲
         self.RB_ocp_num = np.zeros((nRB,))  # 记录各个RB在多少天线上服务
         self.RB_sorted_idx = np.array(range(nRB))  # 由少到多排列占用最少的RB，以序号表示对应的RB
+        self.serv_UE_list = np.array([])
 
     def update_map(self, new_resourse_map):
         self.map = new_resourse_map
@@ -351,6 +352,7 @@ class ResourceMap:
             '''RL state由UE管理'''
             # UE.RL_state.update_active(True)
         UE.update_RB_Nt_ocp(RB_Nt_list)
+        self.serv_UE_list = np.append(self.serv_UE_list, UE.no)
 
         return True
 
@@ -370,6 +372,7 @@ class ResourceMap:
             '''RL state由UE管理'''
             # UE.RL_state.update_active(False)
         UE.update_RB_Nt_ocp([])
+        self.serv_UE_list = self.serv_UE_list[self.serv_UE_list != UE.no]
 
         return True
 
@@ -420,6 +423,9 @@ class BS:
         self.active = active
         self.resource_map = ResourceMap(nRB, nNt)
         self.precoding_info = [PrecodingInfo() for _ in range(nRB)]
+
+        self.serv_UE_list_record = []
+        self.RB_ocp_num_record = []
 
     def update_active(self, new_active: bool):
         self.active = new_active

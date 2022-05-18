@@ -3,6 +3,7 @@ import time
 import scipy.io as scio
 import numpy as np
 from visualization import *
+import matplotlib.pyplot as plt
 
 def search_object_form_list_by_no(object_list, no):
     for _obj in object_list:
@@ -32,7 +33,7 @@ if __name__ == '__main__':
     from user_mobility import get_UE_posi_from_file
     from network_deployment import cellStructPPP
 
-    root_path = 'result/0516_AHO_noise0.05_scene0'
+    root_path = 'result/0516_AHO_noise0.05_HOM=1or2_scene0'
 
 
     '''从文件读取UE位置'''
@@ -68,6 +69,36 @@ if __name__ == '__main__':
             _HOF = np.sum(HOF[j,:])
             _success_rate = (_HOS) / (_HOS+_HOF)
             print('UE type: {}, HOS num: {}, _success_rate: {:.3f}, HOF: {}'.format(j+1, _HOS, _success_rate, HOF[j,:]))
+
+        # if np.mod(i,3) == 0:
+        #     fig, ax = plt.subplots()
+        # para_list = ['320ms','480ms','640ms']
+        # xticks = np.arange(len(para_list))
+        # tick_label = 'Active'
+        # for q in range(len(para_list)):
+        #     _HOF = np.sum(HOF, axis=0)
+        #     ax.bar(xticks, np.sum(HOS), width=0.2, color='green', tick_label=tick_label)
+        #     ax.bar(xticks, _HOF[1], width=0.2, bottom=np.sum(HOS), color='red', tick_label=tick_label)
+        #     if _HOF[1] == 0:
+        #         bottom = np.sum(HOS)
+        #     else:
+        #         bottom = _HOF[1]
+        #     ax.bar(xticks, _HOF[3], width=0.2, bottom=bottom, color='yellow', tick_label=tick_label)
+        # if np.mod(i,3) == 2:
+        #     # plt.legend()
+        #     plt.show()
+
+    para_list = ['320ms', '480ms', '640ms']
+    HOS = np.array([630,678,623])
+    HOF = np.array([[0,22,0,1],[0,0,0,5],[0,21,0,0]])
+    tick_label = ['Passive','Active','Active(noisy)']
+    width = 0.4
+    xtick_bias = 0
+    fig, ax = plt.subplots()
+    ax, bar_list = plot_HO_count_bar(ax, para_list, HOS, HOF, tick_label, width, xtick_bias)
+    plt.legend(bar_list, ['HOS','late','ping-pong'], loc='best')
+    plt.ylim(600,700)
+    plt.show()
 
     # Macro_Posi = cross_road_struction(200)
     # ax = plot_BS_location(Macro_Posi)

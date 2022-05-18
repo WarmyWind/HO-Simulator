@@ -68,11 +68,30 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleCha
             if 20 * np.log10(_best_large_h) - 20 * np.log10(_serv_large_h) > HOM:
                 _target_BS = search_object_form_list_by_no(BS_list, _best_BS)
                 if not _target_BS.if_full_load():
-                    _UE.update_state('handovering')
-                    _UE.HO_state.update_target_BS(_best_BS)
-                    _UE.HO_state.update_duration(0)
-                    _UE.HO_state.update_target_h(_best_large_h)
-                    _UE.HO_state.update_h_before(_serv_large_h)
+                    if PARAMS.PHO.ideal_HO:  # 理想切换，哪个基站好就接入哪个
+                        '''UE尝试接入目标BS'''
+                        _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
+                        _serv_BS.unserve_UE(_UE, serving_map)  # 断开原服务，释放资源
+
+                        _target_BS = search_object_form_list_by_no(BS_list, _UE.HO_state.target_BS)
+                        if allocate_method == equal_RB_allocate:
+                            _result = allocate_method([_UE], _target_BS, PARAMS.RB_per_UE, serving_map)
+                        else:
+                            raise Exception("Invalid allocate method!", allocate_method)
+                        if _result:
+                            _UE.HO_happen()  # 更新RL state
+                        elif not _result:
+                            '''不进行记录，接入原BS'''
+                            # _UE.quit_handover(None, 'unserved')
+                            # _UE.update_state('unserved')
+                            _ = allocate_method([_UE], _serv_BS, PARAMS.RB_per_UE, serving_map)
+                            continue
+                    else:
+                        _UE.update_state('handovering')
+                        _UE.HO_state.update_target_BS(_best_BS)
+                        _UE.HO_state.update_duration(0)
+                        _UE.HO_state.update_target_h(_best_large_h)
+                        _UE.HO_state.update_h_before(_serv_large_h)
 
         elif _UE.state == 'handovering':
             '''若在handovering过程，判断是否退出'''

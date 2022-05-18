@@ -1,4 +1,4 @@
-from large_channel_predict_train import My_posi_dataset, get_normalize_para
+from large_channel_predict_train import My_large_h_dataset, get_normalize_para
 import os
 import numpy as np
 from utils import *
@@ -34,12 +34,12 @@ if __name__ == '__main__':
     train_set_path = train_set_root_path + '/' + train_set_name
     valid_set_path = valid_set_root_path + '/' + valid_set_name
 
-    model_name = 'scene0_noise0.05_large_h_DNN_0515'
+    model_name = 'scene0_large_h_DNN_0515'
     save_filepath = 'Model/large_h_predict/{}'.format(model_name)
     normalize_para_filename = 'Model/large_h_predict/' + model_name + '/normalize_para.npy'
 
-    train_loss_path = 'Model/large_h_predict/scene0_noise0.05_large_h_DNN_0515/DNN_loss_train_scene0_noise0.05_large_h_DNN_0515.npy'
-    valid_loss_path = 'Model/large_h_predict/scene0_noise0.05_large_h_DNN_0515/DNN_loss_valid_scene0_noise0.05_large_h_DNN_0515.npy'
+    train_loss_path = 'Model/large_h_predict/scene0_noise0.05_large_h_DNN_0515/DNN_loss_train_noise0.05_scene0_large_h_DNN_0515.npy'
+    valid_loss_path = 'Model/large_h_predict/scene0_noise0.05_large_h_DNN_0515/DNN_loss_valid_noise0.05_scene0_large_h_DNN_0515.npy'
 
     net = DNN_Model_Wrapper(input_dim=10, output_dim=10, no_units=100, learn_rate=lr,
                             batch_size=batch_size)
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     y_posi_real = (y_posi_real - mean2) / sigma2
     x_posi_imag = (x_posi_imag - mean3) / sigma3
     y_posi_imag = (y_posi_imag - mean3) / sigma3
-    train_set = My_posi_dataset(x_posi_real, x_posi_imag, y_posi_real, y_posi_imag)
+    train_set = My_large_h_dataset(x_large_h, y_large_h)
 
     if os.path.isfile(valid_set_path):
         dataset = np.load(valid_set_path, allow_pickle=True).tolist()
@@ -96,32 +96,39 @@ if __name__ == '__main__':
     y_posi_real = (y_posi_real - mean2) / sigma2
     x_posi_imag = (x_posi_imag - mean3) / sigma3
     y_posi_imag = (y_posi_imag - mean3) / sigma3
-    valid_set = My_posi_dataset(x_posi_real, x_posi_imag, y_posi_real, y_posi_imag)
+    valid_set = My_large_h_dataset(x_large_h, y_large_h)
 
-    # prediction = []
-    # ground_truth = []
-    # count = 0
-    # for _data in valid_set:
-    #     x = _data[0]
-    #     y = _data[1]
-    #     x = torch.tensor(x)
-    #     _pred = np.array(net.predict(x).detach().cpu())
-    #     # _denorm_pred = (_pred * sigma1) + mean1
-    #     _pred = _pred.reshape(y.shape)
-    #     prediction.append(_pred)
-    #     ground_truth.append(y)
-    #     count += 1
-    #     if count >= 10000:
-    #         break
-    #
-    # prediction = np.array(prediction)
-    # ground_truth = np.array(ground_truth)
-    #
-    # MSE = np.mean(np.square(prediction - ground_truth), axis=2)
+    prediction = []
+    ground_truth = []
+    count = 0
+    for _data in valid_set:
+        x = _data[0]
+        y = _data[1]
+        x = torch.tensor(x)
+        _pred = np.array(net.predict(x).detach().cpu())
+        # _denorm_pred = (_pred * sigma1) + mean1
+        _pred = _pred.reshape(y.shape)
+        prediction.append(_pred)
+        ground_truth.append(y)
+        count += 1
+        if count >= 10000:
+            break
+
+    prediction = np.array(prediction)
+    ground_truth = np.array(ground_truth)
+
+    MSE = np.mean(np.square(prediction - ground_truth), axis=0)
     # MSE = np.mean(MSE, axis=0)
-    # RMSE = np.sqrt(MSE)
-    # print('MSE', MSE)
-    # print('RMSE', RMSE)
+    RMSE = np.sqrt(MSE)
+    print('MSE', MSE)
+    print('RMSE', RMSE)
+
+    plt.plot(RMSE, label='pred n step forward')
+    plt.grid()
+    plt.legend()
+    plt.ylabel('RMSE')
+    plt.ylim(0.1,0.4)
+    plt.show()
 
 
     # fig, ax = plt.subplots()
@@ -133,27 +140,18 @@ if __name__ == '__main__':
 
     train_loss = np.load(train_loss_path, allow_pickle=True).tolist()
     valid_loss = np.load(valid_loss_path, allow_pickle=True).tolist()
-    fig, ax = plt.subplots()
-    plt.yscale('log')
-    ax.plot(train_loss, label='Train Loss')
-    ax.plot(valid_loss, label='valid Loss')
+    # fig, ax = plt.subplots()
+    # plt.yscale('log')
+    # ax.plot(train_loss, label='Train Loss')
+    # ax.plot(valid_loss, label='valid Loss')
     print(train_loss[-1], valid_loss[-1])
     print(np.sqrt(train_loss[-1]),np.sqrt(valid_loss[-1]))
-    plt.grid()
-    plt.legend()
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
+    # plt.grid()
+    # plt.legend()
+    # plt.xlabel('Epoch')
+    # plt.ylabel('Loss')
+    #
+    # plt.show()
 
-    plt.show()
 
-    UE_posi_filepath = ['0511_v{}_500.npy'.format(i) for i in range(3)]
-    # UE_posi_filepath = ['0511_v0_500.npy']
-    posi_index = 'Set_UE_posi'
-    UE_posi = get_UE_posi_from_file(UE_posi_filepath, posi_index)
-    # UE_posi = UE_posi[2, :, :]
-    UE_posi = process_posi_data(UE_posi)
-
-    # example_car_posi = UE_posi[2][:, 0]
-    # for idrop in range(len(example_car_posi)):
-    #     x =
 
