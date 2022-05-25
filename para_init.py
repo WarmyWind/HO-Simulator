@@ -11,9 +11,10 @@ class Parameter:  # 仿真场景参数
         self.Macro.nBS = self.nCell * 1  # 宏基站个数
         # self.Macro.BS_flag = np.ones((1, self.Macro.nBS))
         self.Macro.MaxUE_per_RB = np.floor(self.Macro.nNt * 0.75)  # 宏基站每个RB的最大服务用户数
+        self.Micro.MaxUE_per_RB = np.floor(self.Micro.nNt)  # 微基站每个RB的最大服务用户
         # self.RB_per_UE = int(np.floor(1 * self.Macro.nBS * self.Macro.MaxUE_per_RB * self.nRB / self.nUE))
         self.RB_per_UE = 3
-        self.Micro.MaxUE_per_RB = np.floor(self.Micro.nNt)  # 微基站每个RB的最大服务用户
+
         self.active_HO = True
 
 
