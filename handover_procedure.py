@@ -73,7 +73,7 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleCha
                         _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
                         _serv_BS.unserve_UE(_UE, serving_map)  # 断开原服务，释放资源
 
-                        _target_BS = search_object_form_list_by_no(BS_list, _UE.HO_state.target_BS)
+                        # _target_BS = search_object_form_list_by_no(BS_list, _UE.HO_state.target_BS)
                         if allocate_method == equal_RB_allocate:
                             _result = allocate_method([_UE], _target_BS, PARAMS.RB_per_UE, serving_map)
                         else:

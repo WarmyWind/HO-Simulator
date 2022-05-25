@@ -12,6 +12,7 @@ import numpy as np
 import scipy.io as scio
 from info_management import *
 from network_deployment import *
+import scipy.io as sio
 
 def plot_hexgon(ax, center, dist):
     radius = dist/np.sqrt(3)
@@ -27,8 +28,9 @@ def plot_hexgon(ax, center, dist):
 
     return ax
 
-def plot_BS_location(Macro_Posi, Micro_Posi = None):
-    fig, ax = plt.subplots()
+def plot_BS_location(Macro_Posi, Micro_Posi = None, ax=None):
+    if ax == None:
+        fig, ax = plt.subplots()
     ax.scatter(np.real(Macro_Posi), np.imag(Macro_Posi), label='Macro BS')
     if Micro_Posi != None:
         ax.scatter(np.real(Micro_Posi), np.imag(Micro_Posi), label='Micro BS')
@@ -37,8 +39,9 @@ def plot_BS_location(Macro_Posi, Micro_Posi = None):
     return ax
 
 
-def plot_UE_trajectory(Macro_Posi, UE_tra, label_list=None):
-    fig, ax = plt.subplots()
+def plot_UE_trajectory(Macro_Posi, UE_tra, label_list=None, ax=None):
+    if ax == None:
+        fig, ax = plt.subplots()
     ax.scatter(np.real(Macro_Posi), np.imag(Macro_Posi), label='Macro BS')
     dist = np.abs(Macro_Posi[0]-Macro_Posi[1])
     ax = plot_hexgon(ax, Macro_Posi, dist)
@@ -358,11 +361,12 @@ if __name__ == '__main__':
     # UE_posi = UE_posi[2, :, :]
     UE_posi = process_posi_data(UE_posi)
 
-    root_path = 'result/0515_PHO_scene0'
-    data_num = 2
+    root_path = 'result/0519_RB=8_PHO_scene0_sigma2'
+    data_num = 5
     rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
     # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
     UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    BS_list = np.load(root_path + '/{}/BS_list.npy'.format(data_num), allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
     label_list = ['Para Set 1']
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
@@ -485,8 +489,9 @@ if __name__ == '__main__':
         for i in range(4):
             if len(HOF_posi[i]) != 0:
                 ax.scatter(np.real(HOF_posi[i]), np.imag(HOF_posi[i]), marker='o', s=10, label='HOF{}'.format(i+1))
-        ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d', s=10, color='darkgreen', label='HOS')
-        return ax
+        if consider_HOS:
+            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d', s=10, color='darkgreen', label='HOS')
+        return ax, HOF_posi
 
 
     '''绘制BS和道路'''
@@ -497,12 +502,50 @@ if __name__ == '__main__':
     ax = plot_road(ax, PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
 
     consider_HOF = [1,2,3,4]
-    ax = plot_all_HO_posi(UE_list, UE_posi, consider_HOF, ax=ax)
-    # plt.axis('square')
+    ax, HOF_posi = plot_all_HO_posi(UE_list, UE_posi, consider_HOF,consider_HOS=True, ax=ax)
+    plt.axis('square')
     plt.xlim(-10, 1100)
-    plt.ylim(-110, 300)
+    plt.ylim(-110, 400)
     # plt.ylim(10, 110)
+    plt.legend()
     plt.show()
+    # sio.savemat(root_path + '/{}/HOM=0_TTT=0_pingpong_posi.mat'.format(data_num),{'Set_pingpong_posi':HOF_posi[3]})
+
+    fig, ax = plt.subplots()
+
+    for BS_no in range(2, 13):
+        example_BS = BS_list[BS_no]
+        serv_UE_list = example_BS.serv_UE_list_record
+        serv_UE_num = []
+        for _serv_UE in serv_UE_list:
+            serv_UE_num.append(len(_serv_UE))
+
+        ax.plot(serv_UE_num, label='BS{}'.format(BS_no))
+
+    plt.legend()
+    plt.show()
+
+    SINR_dB_record = []
+    _temp_SINR_dB = np.array([])
+    for _UE in UE_list:
+
+        # _temp_SINR_dB = _UE.RL_state.SINR_dB_record_all[::8]
+        if len(_temp_SINR_dB) < 1240:
+            if len(_temp_SINR_dB) + len(_UE.RL_state.SINR_dB_record_all[::8]) <= 1240:
+                _temp_SINR_dB = np.append(_temp_SINR_dB, _UE.RL_state.SINR_dB_record_all[::8])
+                if len(_temp_SINR_dB) == 1240:
+                    SINR_dB_record.append(_temp_SINR_dB)
+                    _temp_SINR_dB = np.array([])
+            elif len(_temp_SINR_dB) + len(_UE.RL_state.SINR_dB_record_all[::8]) > 1240:
+                _temp_SINR_dB = np.array(_UE.RL_state.SINR_dB_record_all[::8])
+
+        print('UEtype:{}  record_len:{}'.format(_UE.type, len(SINR_dB_record)))
+
+
+
+    # sio.savemat(root_path + '/{}/76v1_55v2_43v3_HOM=3_TTT=640_SINR_dB.mat'.format(data_num), {'SINR_dB': np.array(SINR_dB_record)})
+
+
     # observe_length = 8
     # # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
     # # rate_data = [HO_duration_rate_all]

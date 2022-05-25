@@ -251,7 +251,7 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0518_PHO_scene0_sigma2'
+        root_path = 'result/0520_TTT0HOM0_RB=8_PHO_scene0_sigma2'
         nDrop = 10000 - 10*8 # 时间步进长度
 
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
@@ -271,6 +271,7 @@ if __name__ == '__main__':
     PARAM = Parameter()
 
     PARAM.active_HO = False  # 主动切换 或 被动切换
+    PARAM.PHO.ideal_HO = False
     PARAM.AHO.ideal_pred = False
     PARAM.AHO.add_noise = False
 
@@ -283,10 +284,10 @@ if __name__ == '__main__':
     # PARAM.TTT = [32, 16, 16]
     # PARAM_list.append(PARAM)
     # noise_list = [0.5, 0.2]
-    HOM_list = [0, 1, 2, 3]
+    HOM_list = [0]
     # PARAM.HOM = 0
     # TTT_list = [8, 16, 24, 32, 48] #  [48, 64, 96, 128]
-    TTT_list = [32, 48, 64]
+    TTT_list = [0]
 
     for _HOM in HOM_list:
         PARAM.HOM = _HOM
@@ -349,7 +350,7 @@ if __name__ == '__main__':
                     os.makedirs(SimConfig.root_path+'/{}'.format(i))
                 np.save(SimConfig.root_path+'/{}/rate_arr.npy'.format(i), _rate_arr)
                 np.save(SimConfig.root_path+'/{}/UE_list.npy'.format(i), _UE_list)
-                np.save(SimConfig.root_path + '/{}/UE_list.npy'.format(i), _BS_list)
+                np.save(SimConfig.root_path + '/{}/BS_list.npy'.format(i), _BS_list)
             # HO_result_list.append(_HO_result)
 
         end_time = time.time()

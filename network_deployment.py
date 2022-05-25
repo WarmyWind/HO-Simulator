@@ -46,8 +46,11 @@ def cellStructPPP(nCell, Dist, nMicro):
 
 def road_cell_struct(nCell, Dist):
     # first_BS = 0 + 0j
-    Macro_Posi = np.array([i*Dist/2 for i in range(nCell)], dtype=np.complex_)
-    Macro_Posi[np.arange(1,nCell,2)] += 1j*np.sqrt(3)*Dist/2
+    if np.mod(nCell, 2) == 1:
+        Macro_Posi = np.array([i*Dist/2 for i in range(nCell)], dtype=np.complex_)
+        Macro_Posi[np.arange(1,nCell,2)] += 1j*np.sqrt(3)*Dist/2
+    else:
+        Macro_Posi = np.array([i * Dist for i in range(nCell)], dtype=np.complex_)
     return Macro_Posi
 
 def cross_road_struction(Dist):
