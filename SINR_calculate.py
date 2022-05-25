@@ -73,7 +73,7 @@ def calculate_SINR_dB(receive_power, interference_power, noise):
 #     SS_SINR = receive_power_sum / (interference_power_sum + noise)
 #     return SS_SINR
 
-def update_SS_SINR(UE_list, noise, L1_filter_length):
+def update_SS_SINR(UE_list, noise, mean_filter_length):
     for _UE in UE_list:
         if not _UE.active: continue
         if _UE.state == 'unserved': continue
@@ -82,7 +82,7 @@ def update_SS_SINR(UE_list, noise, L1_filter_length):
         neighbour_BS_L3_h = _UE.neighbour_BS_L3_h
         interf = np.sum(np.square(neighbour_BS_L3_h)) - rec_power
         SS_SINR = rec_power / (interf + noise)
-        _UE.update_RL_state_by_SINR(SS_SINR, L1_filter_length)
+        _UE.update_RL_state_by_SINR(SS_SINR, mean_filter_length)
 
 
 def user_rate(RB_width, SINR_dB, UE_list):

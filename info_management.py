@@ -167,7 +167,7 @@ class RL_state:
 
 
 class UE:
-    def __init__(self, no, type_no, posi=None, type=None, active:bool = True, record_len=15):
+    def __init__(self, no, type_no, posi=None, type=None, active:bool = True, record_len=10):
         self.no = no  # UE编号
         self.record_len = record_len
         self.posi = posi
@@ -187,6 +187,7 @@ class UE:
         self.HO_state = HO_state()
 
 
+
         self.neighbour_BS = []
         self.neighbour_BS_L3_h = []  # 邻基站的信道功率L3测量值
         self.all_BS_L3_h_record = []
@@ -194,6 +195,7 @@ class UE:
         # self.target_BS_future_large_h = []
 
         self.RL_state = RL_state()
+        self.posi_type = None
 
     def update_future_posi(self, future_posi_arr):
         self.future_posi = future_posi_arr
@@ -231,8 +233,8 @@ class UE:
     def record_HOS(self):
         self.HO_state.add_success_count(self.posi)
 
-    def update_RL_state_by_SINR(self, SINR, L1_filter_length):
-        return self.RL_state.update_by_SINR(SINR, L1_filter_length)
+    def update_RL_state_by_SINR(self, SINR, mean_filter_length):
+        return self.RL_state.update_by_SINR(SINR, mean_filter_length)
 
 
     def RLF_happen(self):
@@ -305,15 +307,25 @@ class UE:
     def reset_ToS(self):
         self.ToS = -1
 
+    def update_posi_type_by_SINR(self, SINR_th):
+        if self.RL_state.filtered_SINR_dB > SINR_th:
+            self.posi_type = 'center'
+        else:
+            self.posi_type = 'edge'
+
+
 
 class ResourceMap:
-    def __init__(self, nRB, nNt):
+    def __init__(self, nRB, nNt, center_RB_idx, edge_RB_idx):
         self.map = np.zeros((nRB, nNt)) - 1
         self.RB_ocp = [np.array([]) for _ in range(nRB)]  # 记录各个RB在哪些天线上服务
-        self.RB_idle = [np.array(range(nNt)) for _ in range(nRB)]  # 记录各个RB在哪些天线上空闲
+        self.RB_idle_antenna = [np.array(range(nNt)) for _ in range(nRB)]  # 记录各个RB在哪些天线上空闲
         self.RB_ocp_num = np.zeros((nRB,))  # 记录各个RB在多少天线上服务
         self.RB_sorted_idx = np.array(range(nRB))  # 由少到多排列占用最少的RB，以序号表示对应的RB
         self.serv_UE_list = np.array([])
+
+        self.center_RB_sorted_idx = center_RB_idx
+        self.edge_RB_sorted_idx = edge_RB_idx
 
     def update_map(self, new_resourse_map):
         self.map = new_resourse_map
@@ -345,6 +357,10 @@ class ResourceMap:
 
         # 更新RB_sorted_idx
         self.RB_sorted_idx = np.argsort(self.RB_ocp_num)
+        if len(self.center_RB_sorted_idx) != 0:
+            self.center_RB_sorted_idx = self.center_RB_sorted_idx[np.argsort(self.RB_ocp_num[self.center_RB_sorted_idx])]
+        if len(self.edge_RB_sorted_idx) != 0:
+            self.edge_RB_sorted_idx = self.edge_RB_sorted_idx[np.argsort(self.RB_ocp_num[self.edge_RB_sorted_idx])]
 
         # 改变UE对象状态
         if UE.state == 'unserved':
@@ -412,7 +428,7 @@ class PrecodingInfo():
 
 
 class BS:
-    def __init__(self, no, type: str, nNt, nRB, Ptmax, posi, active: bool, MaxUE_per_RB):
+    def __init__(self, no, type: str, nNt, nRB, Ptmax, posi, active: bool, MaxUE_per_RB, center_RB_idx, edge_RB_idx):
         self.no = no
         self.type = type
         self.nNt = nNt
@@ -422,6 +438,8 @@ class BS:
         self.MaxUE_per_RB = MaxUE_per_RB
         self.active = active
         self.resource_map = ResourceMap(nRB, nNt)
+        self.center_RB_idx = center_RB_idx
+        self.edge_RB_idx = edge_RB_idx
         self.precoding_info = [PrecodingInfo() for _ in range(nRB)]
 
         self.serv_UE_list_record = []

@@ -52,7 +52,12 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
     rate_list = [UE_rate]
 
     '''接入时RL state'''
-    update_SS_SINR(UE_list, PARAM.sigma2, PARAM.L1_filter_length)
+    update_SS_SINR(UE_list, PARAM.sigma2, PARAM.filter_length_for_SINR)
+
+    '''若考虑干扰协调，划分边缘用户'''
+    if PARAM.ICIC.flag:
+        for _UE in UE_list:
+            _UE.update_posi_type_by_SINR(PARAM.ICIC.SINR_th)
     # SS_SINR_list = []
     # SS_SINR = calculate_SS_SINR(rec_P, inter_P, PARAM.sigma2)
     # # SS_SINR_list.append(SS_SINR)
@@ -97,7 +102,6 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
         '''更新所有基站的L3测量（预测大尺度信道时需要）'''
         if drop_idx % PARAM.posi_resolution == 0:
             if PARAM.active_HO:
-
                 update_all_BS_L3_h_record(UE_list, large_fading, instant_channel, PARAM.L3_coe)
 
         '''更新UE的邻基站及其的L3测量'''
@@ -119,8 +123,12 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
         update_serv_BS_L3_h(UE_list, large_fading, instant_channel, PARAM.L3_coe)
 
         '''更新RL state'''
-        update_SS_SINR(UE_list, PARAM.sigma2, PARAM.L1_filter_length)
+        update_SS_SINR(UE_list, PARAM.sigma2, PARAM.filter_length_for_SINR)
 
+        '''若考虑干扰协调，划分边缘用户'''
+        if PARAM.ICIC.flag:
+            for _UE in UE_list:
+                _UE.update_posi_type_by_SINR(PARAM.ICIC.SINR_th)
 
         '''更新预编码信息和服务记录'''
         for _BS in BS_list:
@@ -182,8 +190,23 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
 
 def create_Macro_BS_list(PARAM, Macro_Posi):
     macro_BS_list = []
+    if PARAM.ICIC.flag:
+        center_RB_idx = np.arange(PARAM.nRB * (1 - PARAM.ICIC.RB_for_edge_ratio))
+    else:
+        center_RB_idx = np.array([])
+
+
     for i in range(PARAM.Macro.nBS):
-        macro_BS_list.append(BS(i, 'Macro', PARAM.Macro.nNt, PARAM.nRB, PARAM.Macro.Ptmax, Macro_Posi[i], True, PARAM.Macro.MaxUE_per_RB))
+        if PARAM.ICIC.flag:
+            _edge_RB_per_partition = PARAM.nRB * PARAM.ICIC.RB_for_edge_ratio / PARAM.ICIC.RB_partition_num
+            _RB_start_idx = PARAM.nRB * (1 - PARAM.ICIC.RB_for_edge_ratio) + np.mod(i, PARAM.ICIC.RB_partition_num) * _edge_RB_per_partition
+            _RB_end_idx = _RB_start_idx + _edge_RB_per_partition
+            edge_RB_idx = np.arange(_RB_start_idx, _RB_end_idx)
+        else:
+            edge_RB_idx = np.array([])
+
+        macro_BS_list.append(BS(i, 'Macro', PARAM.Macro.nNt, PARAM.nRB, PARAM.Macro.Ptmax,
+                                Macro_Posi[i], True, PARAM.Macro.MaxUE_per_RB, center_RB_idx, edge_RB_idx))
     return macro_BS_list
 
 

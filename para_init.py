@@ -12,7 +12,7 @@ class Parameter:  # 仿真场景参数
         # self.Macro.BS_flag = np.ones((1, self.Macro.nBS))
         self.Macro.MaxUE_per_RB = np.floor(self.Macro.nNt * 0.75)  # 宏基站每个RB的最大服务用户数
         # self.RB_per_UE = int(np.floor(1 * self.Macro.nBS * self.Macro.MaxUE_per_RB * self.nRB / self.nUE))
-        self.RB_per_UE = 8
+        self.RB_per_UE = 3
         self.Micro.MaxUE_per_RB = np.floor(self.Micro.nNt)  # 微基站每个RB的最大服务用户
         self.active_HO = True
 
@@ -26,9 +26,9 @@ class Parameter:  # 仿真场景参数
     sigma_c = sigma2 + sigma
     sigma_e = sigma2 + sigma_IC
 
-    nRB = 50  # RB数
-    nUE = 150  # 用户设备总数
-    nUE_per_type = 50  # 每种用户的数量
+    nRB = 10  # RB数
+    nUE = 240  # 用户设备总数
+    nUE_per_type = 80  # 每种用户的数量
     num_neibour_BS_of_UE = 5
 
     HOM = 3  # dB
@@ -37,7 +37,7 @@ class Parameter:  # 仿真场景参数
     HO_Exec_Time = 5
 
     L3_coe = 4  # k = (1/2)^(k/4)
-    L1_filter_length = 20
+    filter_length_for_SINR = 1
 
     posi_resolution = 8
 
@@ -52,8 +52,14 @@ class Parameter:  # 仿真场景参数
     class PHO:
         ideal_HO = False
 
+    class ICIC:
+        flag = True
+        RB_for_edge_ratio = 0.6
+        RB_partition_num = 2
+        SINR_th = 0
+
     class Macro:
-        nBS = 9   # 宏基站个数
+        nBS = 8   # 宏基站个数
         nNt = 16  # 宏基站天线个数
         PtmaxdBm = 46  # 宏基站最大发射功率
         Ptmax = 10 ** (PtmaxdBm / 10) / 1000
