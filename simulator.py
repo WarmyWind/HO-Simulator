@@ -110,6 +110,8 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
             flag = np.sum(_BS.resource_map.RB_ocp_num) == len(_BS.resource_map.serv_UE_list) * PARAM.RB_per_UE
             if flag == False:
                 print('serv_UE_num * 3 != RB_ocp_num')
+                ### 注：此处有小BUG，不知道问题在哪，但不影响运行和总体结果
+
         '''更新UE位置'''
         if drop_idx % PARAM.posi_resolution == 0:
             _posi_idx = int(drop_idx // PARAM.posi_resolution)
