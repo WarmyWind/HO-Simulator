@@ -68,6 +68,7 @@ class InstantChannelMap:
 
 class HO_state:
     def __init__(self):
+        self.handovering = False
         self.stage = None  # 'TTT' or 'HO_prep' or 'HO_exec'
 
         self.failure_type = 4  # 考虑的HOF有多少类型
@@ -112,7 +113,7 @@ class HO_state:
 
 
 class RL_state:
-    def __init__(self, active=False, Qin=-6, Qout=-8, max_period=100):
+    def __init__(self, active=True, Qin=-6, Qout=-8, max_period=100):
         self.active = active
         self.duration = -1
         self.Qin = Qin
@@ -167,7 +168,7 @@ class RL_state:
 
 
 class UE:
-    def __init__(self, no, type_no, posi=None, type=None, active:bool = True, record_len=10):
+    def __init__(self, no, type_no, posi, type, active:bool, record_len=10):
         self.no = no  # UE编号
         self.record_len = record_len
         self.posi = posi
@@ -177,8 +178,8 @@ class UE:
         self.type_no = type_no  # 对应类型中的UE编号
         self.active = active
         self.Rreq = 0
-        self.state = 'unserved'  # 'served', 'unserved' or 'handovering'. 'handovering' includes 'HO_Prep' and 'HO_Exec'
-        self.state_list = ['served', 'unserved', 'handovering']
+        self.state = 'unserved'  # 'served', 'unserved'
+        # self.state_list = ['served', 'unserved']
         self.serv_BS = -1
         self.serv_BS_L3_h = None  # 服务基站的信道功率L3测量值
         self.ToS = -1  # 在当前服务小区的停留时间
@@ -196,6 +197,34 @@ class UE:
 
         self.RL_state = RL_state()
         self.posi_type = None
+        self.RB_type = None
+
+    def is_in_invalid_RB(self, _BS, ICIC_flag:bool):
+        if ICIC_flag:
+            for _RB_Nt in self.RB_Nt_ocp:
+                _RB = _RB_Nt[0]
+                if not _RB in _BS.center_RB_idx and not _RB in _BS.edge_RB_idx:
+                    return True
+        else:
+            for _RB_Nt in self.RB_Nt_ocp:
+                _RB = _RB_Nt[0]
+                if not _RB in _BS.resourse_map.RB_sorted_idx:
+                    return True
+        return False
+
+
+    def update_posi_type(self, SINR_th, noise):
+        if self.RL_state.filtered_SINR_dB != None:
+            self.update_posi_type_by_SINR(SINR_th)
+        else:
+            e_receive_power = np.square(self.neighbour_BS_L3_h[0])
+            e_interf_power = np.sum(np.square(self.neighbour_BS_L3_h[1:]))
+            e_SINR = e_receive_power / (e_interf_power + noise)
+            e_SINR_dB = 10 * np.log10(e_SINR)
+            if e_SINR_dB > SINR_th:
+                self.posi_type = 'center'
+            else:
+                self.posi_type = 'edge'
 
     def update_future_posi(self, future_posi_arr):
         self.future_posi = future_posi_arr
@@ -215,7 +244,8 @@ class UE:
         return future_large_h
 
     def quit_handover(self, HO_result, new_state, HOF_type = None):
-        if self.state == 'handovering':
+        # if self.state == 'handovering':
+        if self.HO_state.handovering:
             self.update_state(new_state)
             # self.serv_BS = -1
             # self.RB_Nt_ocp = []
@@ -224,8 +254,11 @@ class UE:
                     self.record_HOF(HOF_type)  # 记录一次HO失败
             elif HO_result == True and self.HO_state.HOF_flag == 0:
                 self.record_HOS()  # 记录一次HO成功
-            if new_state != 'handovering':
-                self.HO_state.reset()
+
+            self.HO_state.reset()
+            self.HO_state.handovering = False
+            # if new_state != 'handovering':
+            #     self.HO_state.reset()
 
     def record_HOF(self, HOF_type):
         self.HO_state.add_failure_count(HOF_type, self.posi)
@@ -237,17 +270,17 @@ class UE:
         return self.RL_state.update_by_SINR(SINR, mean_filter_length)
 
 
-    def RLF_happen(self):
+    def reset_duration_and_SINR(self):
         self.RL_state.reset_duration()
         self.RL_state.reset_SINR()
-        self.RL_state.update_active(False)
+        # self.RL_state.update_active(False)
         '''其余状态由BS管理'''
         # self.update_serv_BS(-1)
         # self.update_state('unserved')
 
-    def HO_happen(self):
-        self.RL_state.reset_duration()
-        self.RL_state.reset_SINR()
+    # def HO_happen(self):
+    #     self.RL_state.reset_duration()
+    #     self.RL_state.reset_SINR()
 
 
     def update_posi(self, new_posi):
@@ -308,6 +341,7 @@ class UE:
         self.ToS = -1
 
     def update_posi_type_by_SINR(self, SINR_th):
+        if self.RL_state.filtered_SINR_dB == None: return
         if self.RL_state.filtered_SINR_dB > SINR_th:
             self.posi_type = 'center'
         else:
@@ -317,15 +351,28 @@ class UE:
 
 class ResourceMap:
     def __init__(self, nRB, nNt, center_RB_idx, edge_RB_idx):
-        self.map = np.zeros((nRB, nNt)) - 1
+        self.map = np.zeros((nRB, nNt)) - 1  # 记录各个资源块上服务的UE序号
         self.RB_ocp = [np.array([]) for _ in range(nRB)]  # 记录各个RB在哪些天线上服务
         self.RB_idle_antenna = [np.array(range(nNt)) for _ in range(nRB)]  # 记录各个RB在哪些天线上空闲
         self.RB_ocp_num = np.zeros((nRB,))  # 记录各个RB在多少天线上服务
         self.RB_sorted_idx = np.array(range(nRB))  # 由少到多排列占用最少的RB，以序号表示对应的RB
         self.serv_UE_list = np.array([])
+        self.extra_edge_RB_serv_list = np.array([])
+        self.extra_center_RB_serv_list = np.array([])
 
         self.center_RB_sorted_idx = center_RB_idx
         self.edge_RB_sorted_idx = edge_RB_idx
+
+    def add_new_extra_UE_to_list(self, UE_no, RB_type):
+        if RB_type == 'center':
+            self.extra_center_RB_serv_list = np.append(self.extra_center_RB_serv_list, UE_no)
+        elif RB_type == 'edge':
+            self.extra_edge_RB_serv_list = np.append(self.extra_edge_RB_serv_list, UE_no)
+
+
+    def delete_extra_UE_from_list(self, UE_no):
+        self.extra_center_RB_serv_list = self.extra_center_RB_serv_list[self.extra_center_RB_serv_list!=UE_no]
+        self.extra_edge_RB_serv_list = self.extra_edge_RB_serv_list[self.extra_edge_RB_serv_list!=UE_no]
 
     def update_map(self, new_resourse_map):
         self.map = new_resourse_map
@@ -351,16 +398,16 @@ class ResourceMap:
             # 更新ResourceMap
             self.map[_RB, _Nt] = UE.no
             self.RB_ocp[_RB] = np.append(self.RB_ocp[_RB], _Nt)
-            self.RB_idle[_RB] = delete_target_from_arr(self.RB_idle[_RB], _Nt)
+            self.RB_idle_antenna[_RB] = delete_target_from_arr(self.RB_idle_antenna[_RB], _Nt)
             self.RB_ocp_num[_RB] = self.RB_ocp_num[_RB] + 1
             RB_Nt_list.append((_RB, _Nt))
 
         # 更新RB_sorted_idx
-        self.RB_sorted_idx = np.argsort(self.RB_ocp_num)
+        self.RB_sorted_idx = np.argsort(self.RB_ocp_num).astype(int)
         if len(self.center_RB_sorted_idx) != 0:
-            self.center_RB_sorted_idx = self.center_RB_sorted_idx[np.argsort(self.RB_ocp_num[self.center_RB_sorted_idx])]
+            self.center_RB_sorted_idx = self.center_RB_sorted_idx[np.argsort(self.RB_ocp_num[self.center_RB_sorted_idx.astype(int)])].astype(int)
         if len(self.edge_RB_sorted_idx) != 0:
-            self.edge_RB_sorted_idx = self.edge_RB_sorted_idx[np.argsort(self.RB_ocp_num[self.edge_RB_sorted_idx])]
+            self.edge_RB_sorted_idx = self.edge_RB_sorted_idx[np.argsort(self.RB_ocp_num[self.edge_RB_sorted_idx.astype(int)])].astype(int)
 
         # 改变UE对象状态
         if UE.state == 'unserved':
@@ -368,6 +415,8 @@ class ResourceMap:
             '''RL state由UE管理'''
             # UE.RL_state.update_active(True)
         UE.update_RB_Nt_ocp(RB_Nt_list)
+        if UE.no in self.serv_UE_list:
+            raise Exception('Have same UE!')
         self.serv_UE_list = np.append(self.serv_UE_list, UE.no)
 
         return True
@@ -379,7 +428,7 @@ class ResourceMap:
             _RB, _Nt = RB_Nt
             self.map[RB_Nt] = -1
             self.RB_ocp[_RB] = delete_target_from_arr(self.RB_ocp[_RB], _Nt)
-            self.RB_idle[_RB] = np.append(self.RB_idle[_RB], _Nt)
+            self.RB_idle_antenna[_RB] = np.append(self.RB_idle_antenna[_RB], _Nt)
             self.RB_ocp_num[_RB] = self.RB_ocp_num[_RB] - 1
 
         # 改变UE对象状态
@@ -389,6 +438,7 @@ class ResourceMap:
             # UE.RL_state.update_active(False)
         UE.update_RB_Nt_ocp([])
         self.serv_UE_list = self.serv_UE_list[self.serv_UE_list != UE.no]
+        self.delete_extra_UE_from_list(UE.no)
 
         return True
 
@@ -428,16 +478,23 @@ class PrecodingInfo():
 
 
 class BS:
-    def __init__(self, no, type: str, nNt, nRB, Ptmax, posi, active: bool, MaxUE_per_RB, center_RB_idx, edge_RB_idx):
+    def __init__(self, no, type: str, nNt, nRB, Ptmax, posi, active: bool, opt_UE_per_RB, MaxUE_per_RB, center_RB_idx, edge_RB_idx):
         self.no = no
         self.type = type
         self.nNt = nNt
         self.nRB = nRB
         self.Ptmax = Ptmax
         self.posi = posi
+        self.opt_UE_per_RB = opt_UE_per_RB
         self.MaxUE_per_RB = MaxUE_per_RB
         self.active = active
-        self.resource_map = ResourceMap(nRB, nNt)
+        self.resource_map = ResourceMap(nRB, nNt, center_RB_idx, edge_RB_idx)
+        self.max_edge_UE_num = 0  # 小区的最大边缘UE数
+        # self.edge_UE_num = 0  # 小区范围内的边缘UE数（包括未服务的）
+        self.nUE_in_range = 0  # 小区范围内的UE数（包括未服务的）
+        self.UE_in_range = []
+        self.edge_UE_in_range = []  # 小区范围内的边缘UE（包括未服务的）,以SINR由小到大排序
+        self.center_UE_in_range = []  # 小区范围内的中心UE（包括未服务的）,以SINR由小到大排序
         self.center_RB_idx = center_RB_idx
         self.edge_RB_idx = edge_RB_idx
         self.precoding_info = [PrecodingInfo() for _ in range(nRB)]
@@ -460,11 +517,27 @@ class BS:
             self.precoding_info[_RB].update(_W, _coe)
 
 
-    def if_full_load(self):
-        most_idle_RB = self.resource_map.RB_sorted_idx[0]
-        if self.resource_map.RB_ocp_num[most_idle_RB] == self.MaxUE_per_RB:
-            return True
+    def if_RB_full_load(self, needed_nRB, max_UE_per_RB, RB_type=None):
+        if RB_type == 'center':
+            most_idle_RB_arr = self.resource_map.center_RB_sorted_idx[0:needed_nRB]
+        elif RB_type == 'edge':
+            most_idle_RB_arr = self.resource_map.edge_RB_sorted_idx[0:needed_nRB]
+        else:
+            most_idle_RB_arr = self.resource_map.RB_sorted_idx[0:needed_nRB]
+
+        for most_idle_RB in most_idle_RB_arr:
+            if self.resource_map.RB_ocp_num[int(most_idle_RB)] >= max_UE_per_RB:
+                return True
         return False
+
+    def is_full_load(self, needed_nRB, ICIC_flag):
+        if ICIC_flag:
+            result = self.if_RB_full_load(needed_nRB, self.MaxUE_per_RB, 'center') and self.if_RB_full_load(needed_nRB, self.MaxUE_per_RB, 'edge')
+        else:
+            result = self.if_RB_full_load(needed_nRB, self.MaxUE_per_RB)
+
+        return result
+
 
     def serve_UE(self, UE: UE, RB_arr, Nt_arr, serving_map: ServingMap):
         """
@@ -475,6 +548,10 @@ class BS:
         :param serving_map: BS-UE服务映射表
         :return: True（成功）
         """
+        # for _RB in RB_arr:
+        #     if not _RB in self.center_RB_idx and not _RB in self.edge_RB_idx:
+        #         print('Wrong')
+
         self.resource_map.add_new_UE(UE, RB_arr, Nt_arr)
 
         # 更新UE状态
@@ -495,7 +572,7 @@ class BS:
         return True
 
     def RLF_happen(self, UE: UE, serving_map: ServingMap):
-        UE.RLF_happen()
+        UE.reset_duration_and_SINR()
         self.unserve_UE(UE, serving_map)
 
 

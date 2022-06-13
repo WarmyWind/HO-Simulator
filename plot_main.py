@@ -25,7 +25,7 @@ if __name__ == '__main__':
     resolution = 0.5
 
     sigmaX = 6
-    dCov = 100
+    dCov = 10
     large_h_path = 'large_h_normed_{}sigma_{}dCov_map.npy'.format(sigmaX, dCov)
 
     '''从文件读取阴影衰落'''
@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
     '''plot hot map'''
     # hot_map_data = 10 * np.log10(_signal_power[::2, ::2])
-    hot_map_data = SNR_dB_map[::2, ::2]
+    hot_map_data = SINR_dB_map[::2, ::2]
 
     # map_max = np.max(hot_map_data)
     # map_max = -20
@@ -143,14 +143,16 @@ if __name__ == '__main__':
     ax = plot_BS_location(Macro_Posi, ax=ax)
     dist = np.abs(Macro_Posi[0] - Macro_Posi[1])
     ax = plot_hexgon(ax, Macro_Posi, dist)
-    ax.axhline(20-origin_y, c='black', ls='-', lw=1)
-    ax.axhline(20-origin_y + PARAM.RoadWidth, c='black', label='road', ls='-', lw=1)
+    # ax.axhline(20-origin_y, c='black', ls='-', lw=1)
+    # ax.axhline(20-origin_y + PARAM.RoadWidth, c='black', label='road', ls='-', lw=1)
     ax.set_xlim(0,width)
     ax.set_ylim(0,height)
     ax = axes[1]
     plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap),
-                 cax=ax, orientation='horizontal')
+                 cax=ax, orientation='horizontal', label='SINR(dB)')
     plt.tight_layout()
+    # plt.xlabel('SINR(dB)')
+    plt.legend()
     plt.show()
 
     # for i in range(num_plot):

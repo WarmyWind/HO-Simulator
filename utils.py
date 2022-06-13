@@ -5,10 +5,7 @@ import numpy as np
 from visualization import *
 import matplotlib.pyplot as plt
 
-def search_object_form_list_by_no(object_list, no):
-    for _obj in object_list:
-        if _obj.no == no:
-            return _obj
+
 
 
 def progress_bar(pct):
@@ -20,11 +17,6 @@ def progress_bar(pct):
         print('\n')
 
 
-def get_data_from_mat(filepath, index):
-    data = scio.loadmat(filepath)
-    data = data.get(index)  # 取出字典里的label
-
-    return data
 
 
 if __name__ == '__main__':
@@ -33,7 +25,7 @@ if __name__ == '__main__':
     from user_mobility import get_UE_posi_from_file
     from network_deployment import cellStructPPP
 
-    root_path = 'result/0516_AHO_noise0.05_HOM=1or2_scene0'
+    root_path = 'result/0609_scene0_test_AHO'
 
 
     '''从文件读取UE位置'''
@@ -41,9 +33,11 @@ if __name__ == '__main__':
     # index = 'Set_UE_posi'
     # UE_posi = get_UE_posi_from_file(filepath, index)
 
-    for i in range(12):
+    for i in range(2):
         rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(i), allow_pickle=True)
         UE_list = np.load(root_path + '/{}/UE_list.npy'.format(i), allow_pickle=True)
+        UE_offline = np.load(root_path + '/{}/UE_offline_dict.npy'.format(i), allow_pickle=True).tolist()
+
         HOS = [0,0,0]
         HOF = [np.array([0,0,0,0]) for _ in range(3)]
         # HOF_posi = [[] for _ in range(4)]
@@ -88,17 +82,17 @@ if __name__ == '__main__':
         #     # plt.legend()
         #     plt.show()
 
-    para_list = ['320ms', '480ms', '640ms']
-    HOS = np.array([630,678,623])
-    HOF = np.array([[0,22,0,1],[0,0,0,5],[0,21,0,0]])
-    tick_label = ['Passive','Active','Active(noisy)']
-    width = 0.4
-    xtick_bias = 0
-    fig, ax = plt.subplots()
-    ax, bar_list = plot_HO_count_bar(ax, para_list, HOS, HOF, tick_label, width, xtick_bias)
-    plt.legend(bar_list, ['HOS','late','ping-pong'], loc='best')
-    plt.ylim(600,700)
-    plt.show()
+    # para_list = ['320ms', '480ms', '640ms']
+    # HOS = np.array([630,678,623])
+    # HOF = np.array([[0,22,0,1],[0,0,0,5],[0,21,0,0]])
+    # tick_label = ['Passive','Active','Active(noisy)']
+    # width = 0.4
+    # xtick_bias = 0
+    # fig, ax = plt.subplots()
+    # ax, bar_list = plot_HO_count_bar(ax, para_list, HOS, HOF, tick_label, width, xtick_bias)
+    # plt.legend(bar_list, ['HOS','late','ping-pong'], loc='best')
+    # plt.ylim(600,700)
+    # plt.show()
 
     # Macro_Posi = cross_road_struction(200)
     # ax = plot_BS_location(Macro_Posi)

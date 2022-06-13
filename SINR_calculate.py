@@ -42,14 +42,15 @@ def get_interference(BS_list, UE_list, channel: InstantChannelMap, precoding_met
             if _UE.serv_BS == _BS.no: continue  # 如果是服务基站，不计算干扰
             if _BS.no not in _UE.neighbour_BS: continue  # 如果不在邻基站列表内，忽略干扰
             '''找到有干扰的频段'''
-            _inter_RB = np.where(_BS.resource_map.RB_ocp_num[RB_serv_arr] != 0)[0]
+            _inter_RB = RB_serv_arr[np.where(_BS.resource_map.RB_ocp_num[RB_serv_arr] != 0)[0]]
             _H_itf = H[:, _BS.no, :]
             for _RB in _inter_RB:
                 _W = _BS.precoding_info[_RB].matrix
+
                 _coe = _BS.precoding_info[_RB].coeffient  # 干扰基站预编码系数
 
                 _H = H[:, _BS.no, _UE.no]  # 干扰基站与当前用户信道
-                _itf = np.sum(_coe * np.square(np.linalg.norm(np.dot(_H, _W))))
+                _itf = np.square(np.linalg.norm(np.dot(_H, np.sqrt(_coe) *_W)))
                 interference_power[_UE.no, _RB] = interference_power[_UE.no, _RB] + _itf
 
     return interference_power
@@ -75,14 +76,18 @@ def calculate_SINR_dB(receive_power, interference_power, noise):
 
 def update_SS_SINR(UE_list, noise, mean_filter_length):
     for _UE in UE_list:
+
         if not _UE.active: continue
-        if _UE.state == 'unserved': continue
-        serv_BS_L3_h = _UE.serv_BS_L3_h
-        rec_power = np.square(serv_BS_L3_h)
+        if _UE.state == 'unserved':
+            BS_L3_h = _UE.neighbour_BS_L3_h[0]
+        else:
+            BS_L3_h = _UE.serv_BS_L3_h
+        rec_power = np.square(BS_L3_h)
         neighbour_BS_L3_h = _UE.neighbour_BS_L3_h
         interf = np.sum(np.square(neighbour_BS_L3_h)) - rec_power
         SS_SINR = rec_power / (interf + noise)
         _UE.update_RL_state_by_SINR(SS_SINR, mean_filter_length)
+
 
 
 def user_rate(RB_width, SINR_dB, UE_list):

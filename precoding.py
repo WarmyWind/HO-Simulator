@@ -12,7 +12,7 @@ def ZF_precoding(H, Ptmax, alloc = 'alloc_fair'):
     多用户ZF预编码
     :param H: KxNt信道矩阵，用户数K≤Nt
     :param Ptmax: 最大发射功率
-    :return:  W, cof
+    :return:  W, coe
     '''
     W = np.linalg.pinv(H)  # HW=I
     if np.square(np.linalg.norm(W)) == 0:

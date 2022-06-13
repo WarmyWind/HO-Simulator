@@ -5,7 +5,7 @@
 '''
 
 from info_management import *
-from resource_allocation import equal_RB_allocate
+from resource_allocation import equal_RB_allocate, ICIC_RB_allocate
 import numpy as np
 
 
@@ -55,7 +55,7 @@ def find_and_update_neighbour_BS(BS_list, UE_list, num_neibour, large_channel: L
 
 
 def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
-                serving_map: ServingMap, allocate_method=equal_RB_allocate):
+                serving_map: ServingMap):
     '''
     接入初始化
     :param PARAMS: 仿真参数
@@ -66,7 +66,10 @@ def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
     :param allocate_method : 分配方法，默认为equal_RB_allocate
     :return:
     '''
-
+    if PARAMS.ICIC.flag == 1:
+        allocate_method = ICIC_RB_allocate
+    else:
+        allocate_method = equal_RB_allocate
     # BS_no_list = []
     # for _BS in BS_list:
     #     BS_no_list.append(_BS.no)  # 获得BS序号
@@ -85,23 +88,32 @@ def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
         # NewBS_idx = _idx[-1]
         _idx = _UE.neighbour_BS
         NewBS_idx = _idx[0]  # 接入邻基站
-        while BS_list[NewBS_idx].if_full_load():
-            # 判断BS是否达到满载，若达到则接入下一个
-            _idx = _idx[:-1]
-            if len(_idx) == 0: return False  # no more BS to access
 
-            NewBS_idx = _idx[-1]
+        if BS_list[NewBS_idx].is_full_load(PARAMS.RB_per_UE, PARAMS.ICIC.flag):
+            # 判断BS是否达到满载，若达到则掉线
+            continue
+        # while BS_list[NewBS_idx].is_full_load(PARAMS.RB_per_UE, PARAMS.ICIC.flag):
+        #     # 判断BS是否达到满载，若达到则接入下一个
+        #     _idx = _idx[:-1]
+        #     if len(_idx) == 0: return False  # no more BS to access
+        #     NewBS_idx = _idx[-1]
 
-        if allocate_method == equal_RB_allocate:
+            # if PARAMS.ICIC.flag:
+            #     full_load_result = BS_list[NewBS_idx].if_RB_full_load(PARAMS.RB_per_UE, 'center') \
+            #                        and BS_list[NewBS_idx].if_RB_full_load(PARAMS.RB_per_UE, 'edge')
+            # else:
+            #     full_load_result = BS_list[NewBS_idx].if_RB_full_load(PARAMS.RB_per_UE)
+
+        if allocate_method == equal_RB_allocate or allocate_method == ICIC_RB_allocate:
             RB_per_UE = PARAMS.RB_per_UE
-            _allo_result = allocate_method([_UE], BS_list[NewBS_idx], int(RB_per_UE), serving_map)
+            _allo_result = allocate_method([_UE], UE_list, BS_list[NewBS_idx], int(RB_per_UE), serving_map)
             if _allo_result:
                 '''更新服务基站的L3测量 以及RL state'''
                 _instant_h = instant_h[:, NewBS_idx, _UE.no]
                 _instant_h_power = np.square(np.abs(_instant_h))
                 _instant_h_power_mean = np.mean(_instant_h_power, axis=0)
                 _UE.update_serv_BS_L3_h(np.sqrt(_instant_h_power_mean))
-                _UE.RL_state.update_active(True)
+                # _UE.RL_state.update_active(True)
                 _UE.reset_ToS()
         else:
             raise Exception("Invalid allocate method!", allocate_method)

@@ -13,6 +13,7 @@ import scipy.io as scio
 from info_management import *
 from network_deployment import *
 import scipy.io as sio
+import seaborn as sns
 
 def plot_hexgon(ax, center, dist):
     radius = dist/np.sqrt(3)
@@ -87,25 +88,32 @@ def fix_hist_step_vertical_line_at_end(ax):
         poly.set_xy(poly.get_xy()[:-1])
 
 
-def plot_bar(data, xlabel, ylabel, para_list, label_list, loc='upper left'):
+def plot_bar(data, xlabel, ylabel, para_list, label_list, ax=None):
+    if ax == None:
+        fig, ax = plt.subplots()
+
     # 创建分组柱状图，需要自己控制x轴坐标
     xticks = np.arange(len(para_list))
 
-    fig, ax = plt.subplots()
+
     # 注意控制柱子的宽度，这里选择0.25
     for i in range(len(label_list)):
         ax.bar(xticks + i * 0.25, data[i], width=0.25, label=label_list[i])
 
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
+    if xlabel != '':
+        ax.set_xlabel(xlabel)
+    if ylabel != '':
+        ax.set_ylabel(ylabel)
     ax.legend()
+
 
     # 最后调整x轴标签的位置
     ax.set_xticks(xticks + 0.25)
     ax.set_xticklabels(para_list)
 
-    plt.legend(loc=loc)
+    # plt.legend(loc=loc)
     # plt.show()
+    return ax
 
 def plot_HO_count_bar(ax, para_list, HOS, HOF, tick_label, width, xtick_bias):
     bar = []
@@ -355,82 +363,87 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
     '''从文件读取UE位置'''
-    UE_posi_filepath = ['UE_tra/0514_scene0/Set_UE_posi_100s_500user_v{}.mat'.format(i + 1) for i in range(3)]
+    UE_posi_filepath = 'UE_tra/0527_scene0/Set_UE_posi_240.mat'
     index = 'Set_UE_posi'
     UE_posi = get_UE_posi_from_file(UE_posi_filepath, index)
     # UE_posi = UE_posi[2, :, :]
+    if len(UE_posi.shape) != 3:
+        UE_posi = np.swapaxes(UE_posi, 0,1)
+        UE_posi = np.reshape(UE_posi, (PARAM.ntype, -1, UE_posi.shape[1]))
+        UE_posi = np.swapaxes(UE_posi, 1, 2)
     UE_posi = process_posi_data(UE_posi)
 
-    root_path = 'result/0519_RB=8_PHO_scene0_sigma2'
-    data_num = 5
-    rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
-    # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
-    UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
-    BS_list = np.load(root_path + '/{}/BS_list.npy'.format(data_num), allow_pickle=True)
+    # root_path = 'result/0527_ideal_AHO_scene0'
+    # data_num = 1
+    # rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    # # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    # UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    # BS_list = np.load(root_path + '/{}/BS_list.npy'.format(data_num), allow_pickle=True)
     # label_list = ['RB_per_UE={}'.format(n) for n in RB_per_UE_list]
-    label_list = ['Para Set 1']
+    # label_list = ['Para Set 1']
     # plot_cdf([rate_arr[rate_arr != 0]], 'bit rate', 'cdf', label_list)
+    # plt.show()
 
 
     '''生成BS位置'''
     Macro_Posi = road_cell_struct(PARAM.nCell, PARAM.Dist)
 
-    ax = plot_BS_location(Macro_Posi)
-    dist = np.abs(Macro_Posi[0] - Macro_Posi[1])
-    ax = plot_hexgon(ax, Macro_Posi, dist)
-
-    '''绘制道路'''
-    ax = plot_road(ax,PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
-    plt.axis('square')
-    plt.xlim(-10, 1100)
-    plt.ylim(-110, 300)
-    plt.legend()
-    plt.show()
-
-    example_car_tra = UE_posi[2][:, 5]
-    ax = plot_UE_trajectory(Macro_Posi, example_car_tra)
-    ax = plot_road(ax, PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
-    plt.axis('square')
+    # ax = plot_BS_location(Macro_Posi)
+    # dist = np.abs(Macro_Posi[0] - Macro_Posi[1])
+    # ax = plot_hexgon(ax, Macro_Posi, dist)
+    #
+    # '''绘制道路'''
+    # ax = plot_road(ax,PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
+    # plt.axis('square')
     # plt.xlim(-10, 1100)
-    # plt.ylim(-210, 426.5)
-    # plt.xlim(-30, 630)
-    # plt.ylim(-30, 430)
-    plt.xlim(-10, 1100)
-    plt.ylim(-110, 300)
-    plt.legend()
-    plt.show()
+    # plt.ylim(-110, 300)
+    # plt.legend()
+    # plt.show()
+    #
+    # example_car_tra = UE_posi[2][:, 5]
+    # ax = plot_UE_trajectory(Macro_Posi, example_car_tra)
+    # ax = plot_road(ax, PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
+    # plt.axis('square')
+    # # plt.xlim(-10, 1100)
+    # # plt.ylim(-210, 426.5)
+    # # plt.xlim(-30, 630)
+    # # plt.ylim(-30, 430)
+    # plt.xlim(-10, 1100)
+    # plt.ylim(-110, 300)
+    # plt.legend()
+    # plt.show()
 
     '''从文件读取阴影衰落'''
-    shadow_filepath = '0513_scene0_shadowFad_dB_8sigma_100dcov.mat'
+    shadow_filepath = 'ShadowFad/0523_ShadowFad_dB_normed_6sigmaX_10dCov.mat'
     index = 'shadowFad_dB'
     shadowFad_dB = get_shadow_from_mat(shadow_filepath, index)
 
     '''初始化信道、服务信息'''
     shadow = ShadowMap(shadowFad_dB)
 
-    '''绘制大尺度信道信息'''
-    BS_no_list = [i for i in range(15)]
-    plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
+    # '''绘制大尺度信道信息'''
+    # BS_no_list = [i for i in range(PARAM.nCell)]
+    # plot_large_channel(PARAM, Macro_Posi, BS_no_list, shadow, UE_posi[2][:,0])
 
 
-    '''绘制UE例子的HO地图'''
-    example_UE_posi=[]
-    example_UE_list = []
-    type_no = [14,13,0]  # 选取三个不同种类的UE编号
-    for i in range(3):
-        example_UE_posi.append(UE_posi[i][:,type_no[i]])
-        example_UE_list.append(UE_list[i*50+type_no[i]])
-
-    example_UE_posi = np.transpose(example_UE_posi)
-    label = ['pedestrian','bike','car']
-    plot_HO_map(example_UE_list, Macro_Posi, np.array(example_UE_posi), label_list=label)
-    # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
-    # plt.legend()
-    plt.grid()
-    plt.axis('square')
-    plt.xlim(-10, 1100)
-    plt.ylim(-210, 426.5)
-    plt.show()
+    # '''绘制UE例子的HO地图'''
+    # example_UE_posi=[]
+    # example_UE_list = []
+    # type_no = [14,13,0]  # 选取三个不同种类的UE编号
+    # for i in range(3):
+    #     example_UE_posi.append(UE_posi[i][:,type_no[i]])
+    #     example_UE_list.append(UE_list[i*50+type_no[i]])
+    #
+    # example_UE_posi = np.transpose(example_UE_posi)
+    # label = ['pedestrian','bike','car']
+    # plot_HO_map(example_UE_list, Macro_Posi, np.array(example_UE_posi), label_list=label)
+    # # fig, ax = plot_UE_trajectory(Macro_Posi, np.array(example_UE_posi), label_list=label)
+    # # plt.legend()
+    # plt.grid()
+    # plt.axis('square')
+    # plt.xlim(-10, 1100)
+    # plt.ylim(-210, 426.5)
+    # plt.show()
 
 
     def handle_HO_rate(observe_length, PARAM, UE_list, UE_posi):
@@ -494,85 +507,282 @@ if __name__ == '__main__':
         return ax, HOF_posi
 
 
-    '''绘制BS和道路'''
-    ax = plot_BS_location(Macro_Posi)
-    dist = np.abs(Macro_Posi[0] - Macro_Posi[1])
-    ax = plot_hexgon(ax, Macro_Posi, dist)
-
-    ax = plot_road(ax, PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
-
-    consider_HOF = [1,2,3,4]
-    ax, HOF_posi = plot_all_HO_posi(UE_list, UE_posi, consider_HOF,consider_HOS=True, ax=ax)
-    plt.axis('square')
-    plt.xlim(-10, 1100)
-    plt.ylim(-110, 400)
-    # plt.ylim(10, 110)
-    plt.legend()
-    plt.show()
-    # sio.savemat(root_path + '/{}/HOM=0_TTT=0_pingpong_posi.mat'.format(data_num),{'Set_pingpong_posi':HOF_posi[3]})
-
-    fig, ax = plt.subplots()
-
-    for BS_no in range(2, 13):
-        example_BS = BS_list[BS_no]
-        serv_UE_list = example_BS.serv_UE_list_record
-        serv_UE_num = []
-        for _serv_UE in serv_UE_list:
-            serv_UE_num.append(len(_serv_UE))
-
-        ax.plot(serv_UE_num, label='BS{}'.format(BS_no))
-
-    plt.legend()
-    plt.show()
-
-    SINR_dB_record = []
-    _temp_SINR_dB = np.array([])
-    for _UE in UE_list:
-
-        # _temp_SINR_dB = _UE.RL_state.SINR_dB_record_all[::8]
-        if len(_temp_SINR_dB) < 1240:
-            if len(_temp_SINR_dB) + len(_UE.RL_state.SINR_dB_record_all[::8]) <= 1240:
-                _temp_SINR_dB = np.append(_temp_SINR_dB, _UE.RL_state.SINR_dB_record_all[::8])
-                if len(_temp_SINR_dB) == 1240:
-                    SINR_dB_record.append(_temp_SINR_dB)
-                    _temp_SINR_dB = np.array([])
-            elif len(_temp_SINR_dB) + len(_UE.RL_state.SINR_dB_record_all[::8]) > 1240:
-                _temp_SINR_dB = np.array(_UE.RL_state.SINR_dB_record_all[::8])
-
-        print('UEtype:{}  record_len:{}'.format(_UE.type, len(SINR_dB_record)))
-
-
+    # '''绘制BS和道路'''
+    # ax = plot_BS_location(Macro_Posi)
+    # dist = np.abs(Macro_Posi[0] - Macro_Posi[1])
+    # ax = plot_hexgon(ax, Macro_Posi, dist)
+    #
+    # ax = plot_road(ax, PARAM.scene, PARAM.Dist, PARAM.RoadWidth)
+    #
+    # consider_HOF = [1,2,3,4]
+    # ax, HOF_posi = plot_all_HO_posi(UE_list, UE_posi, consider_HOF,consider_HOS=True, ax=ax)
+    # plt.axis('square')
+    # plt.xlim(-10, 1100)
+    # plt.ylim(-110, 400)
+    # # plt.ylim(10, 110)
+    # plt.legend()
+    # plt.show()
+    # # sio.savemat(root_path + '/{}/HOM=0_TTT=0_pingpong_posi.mat'.format(data_num),{'Set_pingpong_posi':HOF_posi[3]})
+    #
+    # fig, ax = plt.subplots()
+    #
+    # for BS_no in range(1, 6):
+    #     example_BS = BS_list[BS_no]
+    #     serv_UE_list = example_BS.serv_UE_list_record
+    #     serv_UE_num = []
+    #     for _serv_UE in serv_UE_list:
+    #         serv_UE_num.append(len(_serv_UE))
+    #
+    #     ax.plot(serv_UE_num, label='BS{}'.format(BS_no))
+    #
+    # plt.legend()
+    # plt.show()
+    #
+    # SINR_dB_record = []
+    # _temp_SINR_dB = np.array([])
+    # for _UE in UE_list:
+    #
+    #     # _temp_SINR_dB = _UE.RL_state.SINR_dB_record_all[::8]
+    #     if len(_temp_SINR_dB) < 1240:
+    #         if len(_temp_SINR_dB) + len(_UE.RL_state.SINR_dB_record_all[::8]) <= 1240:
+    #             _temp_SINR_dB = np.append(_temp_SINR_dB, _UE.RL_state.SINR_dB_record_all[::8])
+    #             if len(_temp_SINR_dB) == 1240:
+    #                 SINR_dB_record.append(_temp_SINR_dB)
+    #                 _temp_SINR_dB = np.array([])
+    #         elif len(_temp_SINR_dB) + len(_UE.RL_state.SINR_dB_record_all[::8]) > 1240:
+    #             _temp_SINR_dB = np.array(_UE.RL_state.SINR_dB_record_all[::8])
+    #
+    #     print('UEtype:{}  record_len:{}'.format(_UE.type, len(SINR_dB_record)))
 
     # sio.savemat(root_path + '/{}/76v1_55v2_43v3_HOM=3_TTT=640_SINR_dB.mat'.format(data_num), {'SINR_dB': np.array(SINR_dB_record)})
 
+    def handle_func(max_inter_arr, UE_offline_dict):
+        max_interf_edge_all = np.array([])
+        max_interf_center_all = np.array([])
+        # UE_on_edge_RB_num_list = []
+        for i in range(len(max_inter_arr)):
+            edge_UE_arr = np.array([])
+            center_UE_arr = np.array([])
+            _max_inter = max_inter_arr[i]
+            _edge_UE_all = UE_offline_dict['edge_UE'][i]
+            # UE_on_edge_RB_list = UE_offline_dict['UE_on_edge_RB'][i]
 
-    # observe_length = 8
-    # # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
-    # # rate_data = [HO_duration_rate_all]
-    # rate_data = []
-    #
-    # root_path = 'result/0515_PHO_scene0'
-    # data_num = 3
-    # rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
-    # # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
-    # UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+        #     _num = 0
+        #     for j in range(len(UE_on_edge_RB_list)):
+        #         _num = _num + len(UE_on_edge_RB_list[j])
+        #     UE_on_edge_RB_num_list.append(_num)
+
+            for _edge_UE_list in _edge_UE_all:
+                edge_UE_arr = np.concatenate((edge_UE_arr, np.array(_edge_UE_list)))
+            max_interf_edge_all = np.concatenate((max_interf_edge_all, _max_inter[edge_UE_arr.astype(int)]))
+
+            _center_UE_all = UE_offline_dict['center_UE'][i]
+            for _center_UE_list in _center_UE_all:
+                center_UE_arr = np.concatenate((center_UE_arr, np.array(_center_UE_list)))
+            max_interf_center_all = np.concatenate((max_interf_center_all, _max_inter[center_UE_arr.astype(int)]))
+
+        return max_interf_center_all, max_interf_edge_all
+
+    observe_length = 8
     # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
-    # rate_data.append(HO_duration_rate_all)
-    #
-    # root_path = 'result/0514_ideal_AHO_scene0'
-    # data_num = 3
-    # rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
-    # # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
-    # UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
-    # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
-    # rate_data.append(HO_duration_rate_all)
-    #
-    # '''绘制HO前的速率cdf'''
-    # label_list=['Passive','Ideal Active']
-    # ax = plot_cdf(rate_data, 'bit rate', 'cdf', label_list)
-    # plt.legend(loc='lower right')
+    # rate_data = [HO_duration_rate_all]
+    rate_data_all = []
+    rate_data = []
+
+
+    root_path = 'result/0609_scene0'
+    data_num = 0
+    # drop_idx = 500
+    rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    rate_data_all.append(rate_arr)
+
+    UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+    rate_data.append(HO_duration_rate_all)
+
+    UE_offline_dict = np.load(root_path + '/{}/UE_offline_dict.npy'.format(data_num), allow_pickle=True).tolist()
+    max_inter_arr = np.load(root_path + '/{}/max_inter_arr.npy'.format(data_num), allow_pickle=True)
+    # RB_for_edge_ratio_arr = np.load(root_path + '/{}/RB_for_edge_ratio_arr.npy'.format(data_num), allow_pickle=True)
+    # plt.plot(RB_for_edge_ratio_arr)
     # plt.show()
-    # print(np.mean(rate_data[0]),np.mean(rate_data[1]))
+    # edge_UE_list = UE_offline_dict['edge_UE'][drop_idx]
+    # UE_on_edge_RB_list = UE_offline_dict['UE_on_edge_RB'][drop_idx]
+
+    # fig, ax = plt.subplots()
+    # ax.plot(UE_on_edge_RB_num_list, label='30m')
+    # max_interf_center_all, max_interf_edge_all = handle_func(max_inter_arr, UE_offline_dict)
+    # max_interf_edge_all_list = [10*np.log10(copy.deepcopy(max_interf_edge_all+PARAM.sigma2))]
+    # max_interf_center_all_list = [10*np.log10(copy.deepcopy(max_interf_center_all+PARAM.sigma2))]
+
+
+    root_path = 'result/0609_scene0_test_AHO'
+    data_num = 0
+    rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    rate_data_all.append(rate_arr)
+
+    UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+    rate_data.append(HO_duration_rate_all)
+
+    UE_offline_dict = np.load(root_path + '/{}/UE_offline_dict.npy'.format(data_num), allow_pickle=True).tolist()
+    max_inter_arr = np.load(root_path + '/{}/max_inter_arr.npy'.format(data_num), allow_pickle=True)
+
+    # max_interf_center_all, max_interf_edge_all = handle_func(max_inter_arr, UE_offline_dict)
+    # max_interf_edge_all_list.append(10*np.log10(copy.deepcopy(max_interf_edge_all+PARAM.sigma2)))
+    # max_interf_center_all_list.append(10*np.log10(copy.deepcopy(max_interf_center_all+PARAM.sigma2)))
+
+
+
+
+    root_path = 'result/0609_scene0_test_AHO'
+    data_num = 1
+    rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    rate_data_all.append(rate_arr)
+
+    UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+    rate_data.append(HO_duration_rate_all)
+    # UE_offline_dict = np.load(root_path + '/{}/UE_offline_dict.npy'.format(data_num), allow_pickle=True).tolist()
+    # max_inter_arr = np.load(root_path + '/{}/max_inter_arr.npy'.format(data_num), allow_pickle=True)
+
+    # max_interf_center_all, max_interf_edge_all = handle_func(max_inter_arr, UE_offline_dict)
+    # max_interf_edge_all_list.append(10 * np.log10(copy.deepcopy(max_interf_edge_all + PARAM.sigma2)))
+    # max_interf_center_all_list.append(10 * np.log10(copy.deepcopy(max_interf_center_all + PARAM.sigma2)))
+
+    root_path = 'result/0609_scene0'
+    data_num = 1
+    rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    rate_data_all.append(rate_arr)
+
+    UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+    rate_data.append(HO_duration_rate_all)
+    # UE_offline_dict = np.load(root_path + '/{}/UE_offline_dict.npy'.format(data_num), allow_pickle=True).tolist()
+    # max_inter_arr = np.load(root_path + '/{}/max_inter_arr.npy'.format(data_num), allow_pickle=True)
+
+    root_path = 'result/0609_scene0'
+    data_num = 2
+    rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    rate_data_all.append(rate_arr)
+
+    UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+    rate_data.append(HO_duration_rate_all)
+
+    root_path = 'result/0609_scene0'
+    data_num = 4
+    rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    rate_data_all.append(rate_arr)
+
+    UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+    rate_data.append(HO_duration_rate_all)
+
+
+    # ax.plot(UE_on_edge_RB_num_list, label='75m')
+    # plt.xlim(1,10000)
+
+    # rate_arr_no_zero = rate_data_all[0]
+    # rate_arr_no_zero=rate_arr_no_zero[rate_arr_no_zero!=0]
+    # sns.kdeplot(rate_data[0], label='passive')
+    #
+    # # rate_arr_no_zero = rate_data_all[1]
+    # # rate_arr_no_zero = rate_arr_no_zero[rate_arr_no_zero != 0]
+    # sns.kdeplot(rate_data[1], label='ICIC passive')
+    #
+    # # rate_arr_no_zero = rate_data_all[2]
+    # # rate_arr_no_zero = rate_arr_no_zero[rate_arr_no_zero != 0]
+    # sns.kdeplot(rate_data[2], label='ICIC ideal active')
+    #
+    # # rate_arr_no_zero = rate_data_all[3]
+    # # rate_arr_no_zero = rate_arr_no_zero[rate_arr_no_zero != 0]
+    # sns.kdeplot(rate_data[3], label='ICIC active')
+    #
+    # plt.xlim((-1*1e6,8*1e6))
+    # plt.legend()
+    # plt.show()
+
+
+    # root_path = 'result/0530_ICIC_AHO_scene0'
+    # data_num = 4
+    # rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    # UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+    # rate_data.append(HO_duration_rate_all)
+
+
+    # '''绘制HO前的速率cdf'''
+    # label_list=['passive','ideal active', 'active', 'ICIC passive', 'ICIC ideal active', 'ICIC active']
+    # # label_list = ['nRB=13', 'nRB=15', 'nRB=17']
+    # ax = plot_cdf(np.array(rate_data)/1e6, 'bit rate(Mbps)', 'cdf', label_list)
+    # plt.legend(loc='lower right')
+    # plt.xlim(0, 6)
+    # plt.show()
+    # print(np.mean(rate_data[0]),np.mean(rate_data[1]),np.mean(rate_data[2]),
+    #       np.mean(rate_data[3]),np.mean(rate_data[4]),np.mean(rate_data[5]))
+
+    rate_data = np.array(rate_data_all)
+    sio.savemat('passive_rate.mat', {'passive_rate': rate_data[0][rate_data[0] != 0].reshape((-1))})
+    sio.savemat('ideal_active_rate.mat', {'ideal_active_rate':rate_data[1][rate_data[1] != 0].reshape((-1))})
+    sio.savemat('active_rate.mat', {'active_rate':rate_data[2][rate_data[2] != 0].reshape((-1))})
+    sio.savemat('ICIC_passive_rate.mat', {'ICIC_passive_rate':rate_data[3][rate_data[3] != 0].reshape((-1))})
+    sio.savemat('ICIC_ideal_active_rate.mat', {'ICIC_ideal_active_rate':rate_data[4][rate_data[4] != 0].reshape((-1))})
+    sio.savemat('ICIC_active_rate.mat', {'ICIC_active_rate':rate_data[5][rate_data[5] != 0].reshape((-1))})
+
+    # rate_data = np.array(rate_data_all)
+    # rate_data = np.array(rate_data)/1e6
+    # # rate_arr_no_zero = rate_data_all[0]
+    # # rate_arr_no_zero = rate_arr_no_zero[rate_arr_no_zero != 0]
+    # sns.kdeplot(rate_data[0][rate_data[0] != 0], label='passive')
+    #
+    # # rate_arr_no_zero = rate_data_all[1]
+    # # rate_arr_no_zero = rate_arr_no_zero[rate_arr_no_zero != 0]
+    # sns.kdeplot(rate_data[1][rate_data[1] != 0], label='ideal active')
+    #
+    # # rate_arr_no_zero = rate_data_all[2]
+    # # rate_arr_no_zero = rate_arr_no_zero[rate_arr_no_zero != 0]
+    # sns.kdeplot(rate_data[2][rate_data[2] != 0], label='active')
+    #
+    # # rate_arr_no_zero = rate_data_all[3]
+    # # rate_arr_no_zero = rate_arr_no_zero[rate_arr_no_zero != 0]
+    # sns.kdeplot(rate_data[3][rate_data[3] != 0], label='ICIC passive')
+    #
+    # # rate_arr_no_zero = rate_data_all[4]
+    # # rate_arr_no_zero = rate_arr_no_zero[rate_arr_no_zero != 0]
+    # sns.kdeplot(rate_data[4][rate_data[4] != 0], label='ICIC ideal active')
+    #
+    # # rate_arr_no_zero = rate_data_all[5]
+    # # rate_arr_no_zero = rate_arr_no_zero[rate_arr_no_zero != 0]
+    # sns.kdeplot(rate_data[5][rate_data[5] != 0], label='ICIC active')
+    # plt.xlim((0, 10))
+    # plt.xlabel('bit rate(Mbps)')
+    # plt.legend()
+    # plt.show()
+
+
+
+    # mean_rate = [2.741, 2.751, 2.747, 3.415, 3.433, 3.436]
+    # HO_mean_rate = [0.448, 0.737, 0.731, 1.837, 2.138, 2.126]
+    # data = [mean_rate, HO_mean_rate]
+    # xlabel = ''
+    # ylabel = 'Mean bit rate(Mbps)'
+    # label_list = ['mean bit rate', 'HO bit rate']
+    # para_list = ['passive','ideal AHO', 'AHO', 'ICIC passive', 'ICIC ideal AHO', 'ICIC AHO']
+    # plot_bar(data, xlabel, ylabel, para_list, label_list)
+    #
+    # plt.xticks(rotation=345)
+    # plt.legend()
+    # plt.show()
+
+
+
 
 
 
