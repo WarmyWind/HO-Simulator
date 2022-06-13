@@ -121,6 +121,7 @@ class RL_state:
         self.SINR_record = []  # 用于判定RLF
         self.SINR_dB_record_all = []  # 记录仿真中所有的SINR_dB，用于仿真分析
         self.filtered_SINR_dB = None
+        self.pred_SINR_dB = []  # 后几帧的预测值
         self.max_period = max_period
         self.state = 'in'
 
@@ -188,9 +189,8 @@ class UE:
         self.HO_state = HO_state()
 
 
-
-        self.neighbour_BS = []
-        self.neighbour_BS_L3_h = []  # 邻基站的信道功率L3测量值
+        self.neighbour_BS = []  # 邻基站列表,信道由好到差排序
+        self.neighbour_BS_L3_h = []  # 邻基站的信道功率L3测量值,由好到差
         self.all_BS_L3_h_record = []
         # self.serv_BS_future_large_h = []
         # self.target_BS_future_large_h = []

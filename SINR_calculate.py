@@ -3,13 +3,15 @@
     get_receive_power
     get_interference
     calculate_SINR_dB
-    calculate_SS_SINR_dB
+    update_SS_SINR
     user_rate
+    ...
 '''
 
 
 from info_management import *
 from precoding import ZF_precoding
+import torch
 
 
 def get_receive_power(BS_list, channel: InstantChannelMap, precoding_method=ZF_precoding):
@@ -74,10 +76,10 @@ def calculate_SINR_dB(receive_power, interference_power, noise):
 #     SS_SINR = receive_power_sum / (interference_power_sum + noise)
 #     return SS_SINR
 
-def update_SS_SINR(UE_list, noise, mean_filter_length):
+def update_SS_SINR(UE_list, noise, mean_filter_length, after_HO=False):
     for _UE in UE_list:
-
         if not _UE.active: continue
+        if after_HO and _UE.RL_state.filtered_SINR_dB != None: continue
         if _UE.state == 'unserved':
             BS_L3_h = _UE.neighbour_BS_L3_h[0]
         else:
@@ -87,6 +89,42 @@ def update_SS_SINR(UE_list, noise, mean_filter_length):
         interf = np.sum(np.square(neighbour_BS_L3_h)) - rec_power
         SS_SINR = rec_power / (interf + noise)
         _UE.update_RL_state_by_SINR(SS_SINR, mean_filter_length)
+
+
+def update_pred_SS_SINR(UE_list, noise, NN, normalize_para, pred_len):
+    for _UE in UE_list:
+
+        if not _UE.active: continue
+        if len(_UE.RL_state.pred_SINR_dB) != 0:
+            _UE.RL_state.pred_SINR_dB = _UE.RL_state.pred_SINR_dB[1:]
+            continue
+
+        x_large_h_dB = np.float32((10 * np.log10(_UE.all_BS_L3_h_record) - normalize_para['mean1']) / normalize_para[
+            'sigma1'])
+
+        if len(x_large_h_dB.shape) != 2:
+            raise Exception('len(x_large_h_dB.shape) != 2')
+        pred_large_h = []
+        for _BS_no in range(x_large_h_dB.shape[1]):
+            _x = x_large_h_dB[:, _BS_no]
+            # x_serv = x_large_h[:, _UE.serv_BS]
+            # x_target = x_large_h[:, _best_BS]
+            _x = torch.tensor(_x)
+            _h_pred_dB = np.array(NN.predict(_x).detach().cpu())
+            _h_pred = 10 ** (_h_pred_dB / 10)  # (1,...)
+            _h_pred = _h_pred[0][:pred_len]
+            pred_large_h.append(_h_pred)
+        pred_large_h = np.array(pred_large_h)  # (nBS, pred_len)
+
+        if _UE.state == 'unserved':
+            best_BS_no = _UE.neighbour_BS[0]
+        else:
+            best_BS_no = _UE.serv_BS
+
+        pred_rec_power = np.square(pred_large_h[best_BS_no])
+        pred_interf = np.sum(np.square(pred_large_h), axis=0) - pred_rec_power
+        pred_SS_SINR = pred_rec_power / (pred_interf + noise)
+        _UE.RL_state.pred_SINR_dB = 10*np.log10(pred_SS_SINR)
 
 
 

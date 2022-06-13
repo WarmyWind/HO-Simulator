@@ -18,8 +18,8 @@ class PHO:
 
 class ICIC:
     def __init__(self):
-        self.flag = False
-        self.dynamic = False
+        self.flag = True
+        self.dynamic = True
         self.allow_drop_rate = 0.05
 
         self.RB_for_edge_ratio = 0
@@ -31,6 +31,10 @@ class ICIC:
         self.edge_area_width = 30
 
         # edge_RB_reuse = False
+        self.ideal_RL_state = True
+        self.RL_state_pred_flag = False
+        self.RL_state_pred_len = 1  # max pred len refers to predictor
+        self.dynamic_period = 1  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
 
 
 class Macro:
@@ -96,7 +100,8 @@ class Parameter:  # 仿真场景参数
         self.posi_resolution = 8
 
 
-
+    # class RL_state:
+    #     ideal_flag = True
 
 
 

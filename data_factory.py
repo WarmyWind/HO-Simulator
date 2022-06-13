@@ -151,6 +151,8 @@ def count_UE_offline(PARAM, UE_list, SINR_th):
                 # if _UE.posi_type == 'center':
                 # if _UE.RL_state.filtered_SINR_dB == None:
                 #     print('wrong')
+                if _UE.RL_state.filtered_SINR_dB == None:
+                    raise Exception('RL_state.filtered_SINR_dB == None')
                 if _UE.RL_state.filtered_SINR_dB > SINR_th:
                     if _UE.serv_BS == -1:
                         center_UE_offline.append(_UE.no)

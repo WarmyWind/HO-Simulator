@@ -289,62 +289,25 @@ def ICIC_dynamic_edge_ratio(PARAM, BS_list, UE_list):
         _BS = search_object_form_list_by_no(BS_list, _BS_no)
         _BS.nUE_in_range = _BS.nUE_in_range + 1
 
-    '''确定各个BS的最大边缘UE数,并置零边缘UE'''
+    '''确定各个BS的最大边缘UE数'''
     all_RB_resourse = PARAM.Macro.opt_UE_per_RB * PARAM.nRB
     average_edge_UE = 0
     for _BS in BS_list:
         _UE_num = _BS.nUE_in_range
-        max_edge_UE = np.min([_UE_num, np.floor((all_RB_resourse/(1-PARAM.ICIC.allow_drop_rate)/PARAM.RB_per_UE)-_UE_num)])
+        max_edge_UE = np.floor((all_RB_resourse/(1-PARAM.ICIC.allow_drop_rate)/PARAM.RB_per_UE)-_UE_num)
+        # max_edge_UE = np.min([_UE_num, np.floor((all_RB_resourse/(1-PARAM.ICIC.allow_drop_rate)/PARAM.RB_per_UE)-_UE_num)])
         _BS.max_edge_UE_num = max_edge_UE
         if _BS.no != BS_list[0].no and _BS.no != BS_list[-1].no:
             average_edge_UE = average_edge_UE + max_edge_UE
         # _BS.edge_UE_num = 0
-        _BS.UE_in_range = []
-        _BS.edge_UE_in_range = []
-        _BS.center_UE_in_range = []
+
     average_edge_UE = average_edge_UE/(len(BS_list)-2)
-
-    '''根据SINR由小到大对UE进行排序'''
-    SINR_list = []
-    for _UE in UE_list:
-        if not _UE.active:
-            _SINR = np.Inf
-        else:
-            _SINR = _UE.RL_state.filtered_SINR_dB
-        SINR_list.append(_SINR)
-
-    '''根据排序结果，依次分类是否是边缘用户'''
-    sort_idx = np.argsort(SINR_list)
-    for _UE_no in sort_idx:
-        _UE = UE_list[_UE_no]
-        if not _UE.active: continue
-        if _UE.serv_BS != -1:
-            _BS_no = _UE.serv_BS
-        else:
-            _BS_no = _UE.neighbour_BS[0]
-        _BS = search_object_form_list_by_no(BS_list, _BS_no)
-
-        _BS.UE_in_range.append(_UE.no)
-        if len(_BS.edge_UE_in_range) <= _BS.max_edge_UE_num:
-            _UE.posi_type = 'edge'
-            # _BS.edge_UE_num = _BS.edge_UE_num + 1
-            _BS.edge_UE_in_range.append(_UE.no)
-        else:
-            _UE.posi_type = 'center'
-            _BS.center_UE_in_range.append(_UE.no)
-
-    '''check'''
-    for _BS in BS_list:
-        if len(_BS.center_UE_in_range) + len(_BS.edge_UE_in_range) != _BS.nUE_in_range:
-            raise Exception('center UE num + edge UE num != nUE in range')
 
     '''更新干扰协调的RB比例'''
     edge_RB_num = average_edge_UE * PARAM.RB_per_UE / PARAM.Macro.opt_UE_per_RB
     PARAM.ICIC.RB_for_edge_ratio = edge_RB_num * 2 / PARAM.nRB
     if PARAM.ICIC.RB_for_edge_ratio > 1:
         PARAM.ICIC.RB_for_edge_ratio = 1
-
-
 
     for _BS in BS_list:
         if PARAM.ICIC.flag:
@@ -373,4 +336,66 @@ def ICIC_dynamic_edge_ratio(PARAM, BS_list, UE_list):
 
         _BS.resource_map.center_RB_sorted_idx = np.array(center_RB_sorted_idx)
         _BS.resource_map.edge_RB_sorted_idx = np.array(edge_RB_sorted_idx)
+
+def ICIC_decide_edge_UE(PARAM, BS_list, UE_list, init_flag = False):
+    if not PARAM.ICIC.dynamic:  # 固定边缘RB比例和门限
+        for _UE in UE_list:
+            if not _UE.active: continue
+            if PARAM.ICIC.edge_divide_method == 'SINR':
+                _UE.update_posi_type(PARAM.ICIC.SINR_th, PARAM.sigma2)
+            else:
+                _UE.posi_type = 'center'
+                for edge_area_idx in range(PARAM.nCell - 1):
+                    if (edge_area_idx + 0.5) * PARAM.Dist - PARAM.ICIC.edge_area_width < np.real(_UE.posi) < (
+                            edge_area_idx + 0.5) * PARAM.Dist + PARAM.ICIC.edge_area_width:
+                        _UE.posi_type = 'edge'
+                        break
+    else:
+        '''先清空记录'''
+        for _BS in BS_list:
+            _BS.UE_in_range = []
+            _BS.edge_UE_in_range = []
+            _BS.center_UE_in_range = []
+        '''根据SINR由小到大对UE进行排序'''
+        SINR_list = []
+        for _UE in UE_list:
+            if not _UE.active:
+                _SINR = np.Inf
+            else:
+                if PARAM.ICIC.ideal_RL_state or init_flag or len(_UE.RL_state.pred_SINR_dB) == 0:
+                    _SINR = _UE.RL_state.filtered_SINR_dB
+                    if _SINR == None:
+                        raise Exception('SINR == None!')
+                else:
+                    _SINR = _UE.RL_state.pred_SINR_dB[0]
+            SINR_list.append(_SINR)
+
+        '''根据排序结果，依次分类是否是边缘用户'''
+        sort_idx = np.argsort(SINR_list)
+        for _UE_no in sort_idx:
+            _UE = UE_list[_UE_no]
+            if not _UE.active: continue
+            if _UE.serv_BS != -1:
+                _BS_no = _UE.serv_BS
+            else:
+                _BS_no = _UE.neighbour_BS[0]
+
+            _BS = search_object_form_list_by_no(BS_list, _BS_no)
+            # if _BS_no == 0:
+            #     probe = _BS_no
+            _BS.UE_in_range.append(_UE.no)
+            if len(_BS.edge_UE_in_range) < _BS.max_edge_UE_num:
+                _UE.posi_type = 'edge'
+                # _BS.edge_UE_num = _BS.edge_UE_num + 1
+                _BS.edge_UE_in_range.append(_UE.no)
+            else:
+                _UE.posi_type = 'center'
+                _BS.center_UE_in_range.append(_UE.no)
+
+        # '''check'''
+        # for _BS in BS_list:
+        #     if len(_BS.center_UE_in_range) + len(_BS.edge_UE_in_range) != _BS.nUE_in_range:
+        #         raise Exception('center UE num + edge UE num != nUE in range')
+
+
 

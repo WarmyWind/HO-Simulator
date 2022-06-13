@@ -28,31 +28,21 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
     '''更新UE的邻基站'''
     find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading, instant_channel, PARAM.L3_coe)
 
+
     '''初始RL state'''
     update_SS_SINR(UE_list, PARAM.sigma2, PARAM.filter_length_for_SINR)
 
     '''若考虑干扰协调，划分边缘用户'''
     if PARAM.ICIC.flag:
-        if not PARAM.ICIC.dynamic:  # 固定边缘RB比例和门限
-            for _UE in UE_list:
-                if not _UE.active: continue
-                if PARAM.ICIC.edge_divide_method == 'SINR':
-                    _UE.update_posi_type(PARAM.ICIC.SINR_th, PARAM.sigma2)
-                else:
-                    _UE.posi_type = 'center'
-                    for edge_area_idx in range(PARAM.nCell - 1):
-                        if (edge_area_idx + 0.5) * PARAM.Dist - PARAM.ICIC.edge_area_width < np.real(_UE.posi) < (
-                                edge_area_idx + 0.5) * PARAM.Dist + PARAM.ICIC.edge_area_width:
-                            _UE.posi_type = 'edge'
-                            break
-        else:  # 动态划分RB和边缘用户
+        if PARAM.ICIC.dynamic:
             ICIC_dynamic_edge_ratio(PARAM, BS_list, UE_list)
+        ICIC_decide_edge_UE(PARAM, BS_list, UE_list, init_flag=True)
 
     '''初始接入'''
     _ = access_init(PARAM, BS_list, UE_list, instant_channel, serving_map)
 
     '''更新所有基站的L3测量（预测大尺度信道时需要）'''
-    if PARAM.active_HO:
+    if PARAM.active_HO or PARAM.ICIC.RL_state_pred_flag:
         update_all_BS_L3_h_record(UE_list, large_fading, instant_channel, PARAM.L3_coe)
 
     '''更新UE的服务基站L3测量'''
@@ -112,8 +102,9 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
                 print('serv_UE_num * 3 != RB_ocp_num')
                 ### 注：此处有小BUG，不知道问题在哪，但不影响运行和总体结果
 
-        '''更新UE位置'''
+        '''以下操作均以80ms为步长'''
         if drop_idx % PARAM.posi_resolution == 0:
+            '''更新UE位置'''
             _posi_idx = int(drop_idx // PARAM.posi_resolution)
             for _UE in UE_list:
                 if isinstance(UE_posi, list):
@@ -132,74 +123,107 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
                     _future_posi = UE_posi[_UE.type][_posi_idx + 1:_posi_idx + 1 + _UE.record_len, _UE.type_no]
                     _UE.update_future_posi(_future_posi)
 
-        '''更新小尺度信道信息'''
-        small_h = small_scale_fading(PARAM.nUE, len(BS_list), PARAM.Macro.nNt)
-        small_fading.update(small_h)
+            '''更新小尺度信道信息'''
+            small_h = small_scale_fading(PARAM.nUE, len(BS_list), PARAM.Macro.nNt)
+            small_fading.update(small_h)
 
-        '''更新大尺度信道信息'''
-        if drop_idx % PARAM.posi_resolution == 0:
-            large_h = large_scale_channel(PARAM, BS_list, UE_list, shadow)
-            large_fading.update(large_h)
+            '''更新大尺度信道信息'''
+            if drop_idx % PARAM.posi_resolution == 0:
+                large_h = large_scale_channel(PARAM, BS_list, UE_list, shadow)
+                large_fading.update(large_h)
 
-        '''更新瞬时信道信息'''
-        instant_channel.calculate_by_fading(large_fading, small_fading)
+            '''更新瞬时信道信息'''
+            instant_channel.calculate_by_fading(large_fading, small_fading)
 
+            '''活动UE尝试进行接入，停止活动的UE断开,并初始化RL state'''
+            for _UE in UE_list:
+                if not _UE.active:
+                    if _UE.serv_BS != -1:
+                        _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
+                        _serv_BS.unserve_UE(_UE, serving_map)  # 断开原服务，释放资源
+                else:
+                    if _UE.serv_BS == -1:
+                        _ = access_init(PARAM, BS_list, [_UE], instant_channel, serving_map)
+            for _UE in UE_list:
+                if not _UE.active or len(_UE.all_BS_L3_h_record) != 0: continue
+                update_all_BS_L3_h_record([_UE], large_fading, instant_channel, PARAM.L3_coe)
+                find_and_update_neighbour_BS(BS_list, [_UE], PARAM.num_neibour_BS_of_UE, large_fading,
+                                             instant_channel, PARAM.L3_coe)
+                update_serv_BS_L3_h([_UE], large_fading, instant_channel, PARAM.L3_coe)
+                update_SS_SINR([_UE], PARAM.sigma2, PARAM.filter_length_for_SINR)
 
-        '''更新所有基站的L3测量（预测大尺度信道时需要）'''
-        if drop_idx % PARAM.posi_resolution == 0:
-            if PARAM.active_HO:
-                update_all_BS_L3_h_record(UE_list, large_fading, instant_channel, PARAM.L3_coe)
+            '''若假设RL state理想，更新RL state后再ICIC'''
+            if PARAM.ICIC.ideal_RL_state:
 
-        '''更新UE的邻基站及其的L3测量'''
-        find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading, instant_channel,
-                                     PARAM.L3_coe)
+                '''更新所有基站的L3测量（预测大尺度信道时需要）'''
+                if PARAM.active_HO:
+                    update_all_BS_L3_h_record(UE_list, large_fading, instant_channel, PARAM.L3_coe)
 
-        '''活动UE尝试进行接入，停止活动的UE断开'''
-        for _UE in UE_list:
-            if not _UE.active:
-                if _UE.serv_BS != -1:
-                    _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
-                    _serv_BS.unserve_UE(_UE, serving_map)  # 断开原服务，释放资源
-            else:
-                if _UE.serv_BS == -1:
-                    _ = access_init(PARAM, BS_list, [_UE], instant_channel, serving_map)
+                '''更新UE的邻基站及其的L3测量'''
+                find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading,
+                                             instant_channel, PARAM.L3_coe)
 
+                '''更新UE的服务基站L3测量'''
+                update_serv_BS_L3_h(UE_list, large_fading, instant_channel, PARAM.L3_coe)
 
-        '''更新UE的服务基站L3测量'''
-        update_serv_BS_L3_h(UE_list, large_fading, instant_channel, PARAM.L3_coe)
+                '''更新SS_SINR'''
+                update_SS_SINR(UE_list, PARAM.sigma2, PARAM.filter_length_for_SINR)
 
-        '''更新RL state'''
-        update_SS_SINR(UE_list, PARAM.sigma2, PARAM.filter_length_for_SINR)
-
-        '''若考虑干扰协调，划分边缘用户'''
-        if PARAM.ICIC.flag:
-            if not PARAM.ICIC.dynamic:  # 固定边缘RB比例和门限
-                for _UE in UE_list:
-                    if not _UE.active: continue
-                    if PARAM.ICIC.edge_divide_method == 'SINR':
-                        _UE.update_posi_type(PARAM.ICIC.SINR_th, PARAM.sigma2)
-                    else:
-                        _UE.posi_type = 'center'
-                        for edge_area_idx in range(PARAM.nCell - 1):
-                            if (edge_area_idx + 0.5) * PARAM.Dist - PARAM.ICIC.edge_area_width < np.real(_UE.posi) < (
-                                    edge_area_idx + 0.5) * PARAM.Dist + PARAM.ICIC.edge_area_width:
-                                _UE.posi_type = 'edge'
-                                break
-            else:  # 动态划分RB和边缘用户
-                ICIC_dynamic_edge_ratio(PARAM, BS_list, UE_list)
+            else:  # RL state只能用上一帧的值或预测值
+                if PARAM.ICIC.RL_state_pred_flag:
+                    update_pred_SS_SINR(UE_list, PARAM.sigma2, NN, normalize_para, PARAM.ICIC.RL_state_pred_len)
 
 
-        '''若考虑RB干扰协调，根据UE类型分配RB'''
-        if PARAM.ICIC.flag:
-            '''对BS内UE做RB分配'''
-            for _BS in BS_list:
-                # if _BS.no == 2:
-                #     probe = _BS.no
-                ICIC_BS_RB_allocate(UE_list, _BS, PARAM.RB_per_UE, serving_map)
 
-            '''针对额外使用RB的用户和RB类型不一致的用户，重新分配RB'''
-            ICIC_RB_reallocate(UE_list, BS_list, PARAM.RB_per_UE, serving_map)
+            '''若考虑干扰协调，划分边缘用户'''
+            if PARAM.ICIC.flag:
+                if PARAM.ICIC.dynamic and (drop_idx / PARAM.posi_resolution) % PARAM.ICIC.dynamic_period == 0:
+                    ICIC_dynamic_edge_ratio(PARAM, BS_list, UE_list)
+                ICIC_decide_edge_UE(PARAM, BS_list, UE_list)
+                # if not PARAM.ICIC.dynamic:  # 固定边缘RB比例和门限
+                #     for _UE in UE_list:
+                #         if not _UE.active: continue
+                #         if PARAM.ICIC.edge_divide_method == 'SINR':
+                #             _UE.update_posi_type(PARAM.ICIC.SINR_th, PARAM.sigma2)
+                #         else:
+                #             _UE.posi_type = 'center'
+                #             for edge_area_idx in range(PARAM.nCell - 1):
+                #                 if (edge_area_idx + 0.5) * PARAM.Dist - PARAM.ICIC.edge_area_width < np.real(_UE.posi) < (
+                #                         edge_area_idx + 0.5) * PARAM.Dist + PARAM.ICIC.edge_area_width:
+                #                     _UE.posi_type = 'edge'
+                #                     break
+                # else:  # 动态划分RB和边缘用户
+                #     ICIC_dynamic_edge_ratio(PARAM, BS_list, UE_list)
 
+
+            '''若考虑RB干扰协调，根据UE类型分配RB'''
+            if PARAM.ICIC.flag:
+                '''对BS内UE做RB分配'''
+                for _BS in BS_list:
+                    # if _BS.no == 2:
+                    #     probe = _BS.no
+                    ICIC_BS_RB_allocate(UE_list, _BS, PARAM.RB_per_UE, serving_map)
+
+                '''针对额外使用RB的用户和RB类型不一致的用户，重新分配RB'''
+                ICIC_RB_reallocate(UE_list, BS_list, PARAM.RB_per_UE, serving_map)
+
+            '''若假设RL state不理想，ICIC后再更新RL state'''
+            if not PARAM.ICIC.ideal_RL_state:
+
+                '''更新所有基站的L3测量（预测大尺度信道时需要）'''
+                if PARAM.active_HO or PARAM.ICIC.RL_state_pred_flag:
+                    update_all_BS_L3_h_record(UE_list, large_fading, instant_channel, PARAM.L3_coe)
+
+                '''更新UE的邻基站及其的L3测量'''
+                find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading,
+                                             instant_channel,
+                                             PARAM.L3_coe)
+
+                '''更新UE的服务基站L3测量'''
+                update_serv_BS_L3_h(UE_list, large_fading, instant_channel, PARAM.L3_coe)
+
+                '''更新SS_SINR'''
+                update_SS_SINR(UE_list, PARAM.sigma2, PARAM.filter_length_for_SINR)
 
             # for _UE in UE_list:
             #     if not _UE.active: continue
@@ -226,7 +250,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
         #             _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
         #             _ = ICIC_edge_RB_reuse([_UE], _serv_BS, PARAM.RB_per_UE, serving_map)
 
-        '''更新预编码信息和服务记录'''
+        '''更新预编码信息和服务记录，10ms更新一次'''
         for _BS in BS_list:
             _BS.update_precoding_matrix(instant_channel, ZF_precoding)
             _BS.serv_UE_list_record.append(_BS.resource_map.serv_UE_list)
@@ -243,22 +267,22 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
         max_inter_list.append(max_inter_P)
         rate_list.append(UE_rate)
 
+        '''每80ms做一次记录，保存数据'''
+        if drop_idx % PARAM.posi_resolution == 0:
+            if PARAM.ICIC.flag:
+                center_UE, center_UE_offline, edge_UE, edge_UE_offline, UE_on_edge_RB = count_UE_offline(PARAM, UE_list, SINR_th=PARAM.ICIC.SINR_th_for_stat)
+                center_UE_record.append(center_UE)
+                center_UE_offline_record.append(center_UE_offline)
+                edge_UE_record.append(edge_UE)
+                edge_UE_offline_record.append(edge_UE_offline)
+                UE_on_edge_RB_record.append(UE_on_edge_RB)
+            else:
+                active_UE, UE_offline = count_UE_offline(PARAM, UE_list, SINR_th=PARAM.ICIC.SINR_th_for_stat)
+                UE_record.append(active_UE)
+                UE_offline_record.append(UE_offline)
 
-
-        if PARAM.ICIC.flag:
-            center_UE, center_UE_offline, edge_UE, edge_UE_offline, UE_on_edge_RB = count_UE_offline(PARAM, UE_list, SINR_th=PARAM.ICIC.SINR_th_for_stat)
-            center_UE_record.append(center_UE)
-            center_UE_offline_record.append(center_UE_offline)
-            edge_UE_record.append(edge_UE)
-            edge_UE_offline_record.append(edge_UE_offline)
-            UE_on_edge_RB_record.append(UE_on_edge_RB)
-        else:
-            active_UE, UE_offline = count_UE_offline(PARAM, UE_list, SINR_th=PARAM.ICIC.SINR_th_for_stat)
-            UE_record.append(active_UE)
-            UE_offline_record.append(UE_offline)
-
-        if PARAM.ICIC.flag and PARAM.ICIC.dynamic:
-            RB_for_edge_ratio_list.append(PARAM.ICIC.RB_for_edge_ratio)
+            if PARAM.ICIC.flag and PARAM.ICIC.dynamic:
+                RB_for_edge_ratio_list.append(PARAM.ICIC.RB_for_edge_ratio)
 
         '''开始HO eval'''
         measure_criteria = 'L3'
@@ -274,6 +298,9 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
         else:
             actice_HO_eval(PARAM, NN, normalize_para, UE_list, BS_list, shadow, large_fading, instant_channel,
                                     serving_map, allocate_method, measure_criteria)
+
+        '''对HO后SS_SINR变为None的UE估计SS_SINR'''
+        update_SS_SINR(UE_list, PARAM.sigma2, PARAM.filter_length_for_SINR, after_HO=True)
 
 
 
@@ -311,7 +338,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0609_scene0_test_nRB=50_AHO'
+        root_path = 'result/0613_AHO_ICIC_pred_SINR'
         nDrop = 10000 - 10*8 # 时间步进长度
 
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
@@ -331,43 +358,50 @@ if __name__ == '__main__':
     PARAM_list = []
 
     PARAM1 = Parameter()
-    PARAM1.active_HO = False  # 被动切换
-    PARAM1.PHO.ideal_HO = False
+    PARAM1.active_HO = True
     PARAM1.AHO.ideal_pred = False
-    PARAM1.AHO.add_noise = False
-    PARAM1.ICIC.flag = False
-    PARAM1.nRB = 50
+    PARAM1.ICIC.flag = True
+    PARAM1.ideal_RL_state = True
+    PARAM1.RL_state_pred_flag = False
+    PARAM1.RL_state_pred_len = 1  # max pred len refers to predictor
+    PARAM1.dynamic_period = 1  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
+    PARAM1.nRB = 15
     PARAM_list.append(PARAM1)
 
-    # PARAM2 = Parameter()
-    # PARAM2.active_HO = False  # 被动切换
-    # PARAM2.PHO.ideal_HO = False
-    # PARAM2.AHO.ideal_pred = False
-    # PARAM2.AHO.add_noise = False
-    # PARAM2.ICIC.flag = True  # 干扰协调
-    # PARAM2.ICIC.dynamic = True
-    # PARAM2.nRB = 15
-    # PARAM_list.append(PARAM2)
+    PARAM2 = Parameter()
+    PARAM2.active_HO = True
+    PARAM2.AHO.ideal_pred = False
+    PARAM2.ICIC.flag = True
+    PARAM2.ideal_RL_state = False
+    PARAM2.RL_state_pred_flag = False
+    PARAM2.RL_state_pred_len = 1  # max pred len refers to predictor
+    PARAM2.dynamic_period = 1  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
+    PARAM2.nRB = 15
+    PARAM_list.append(PARAM2)
 
-    # PARAM3 = Parameter()
-    # PARAM3.active_HO = True  # 主动切换
-    # PARAM3.PHO.ideal_HO = False
-    # PARAM3.AHO.ideal_pred = True  # 理想主动切换
-    # PARAM3.AHO.add_noise = False
-    # PARAM3.ICIC.flag = True  # 干扰协调
-    # PARAM3.ICIC.dynamic = True
-    # PARAM3.nRB = 15
-    # PARAM_list.append(PARAM3)
+    PARAM3 = Parameter()
+    PARAM3.active_HO = True
+    PARAM3.AHO.ideal_pred = False
+    PARAM3.ICIC.flag = True
+    PARAM3.ideal_RL_state = False
+    PARAM3.RL_state_pred_flag = True
+    PARAM3.RL_state_pred_len = 1  # max pred len refers to predictor
+    PARAM3.dynamic_period = 1  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
+    PARAM3.nRB = 15
+    PARAM_list.append(PARAM3)
 
     PARAM4 = Parameter()
-    PARAM4.active_HO = True  # 主动切换
-    PARAM4.PHO.ideal_HO = False
-    PARAM4.AHO.ideal_pred = True  # 理想主动切换
-    PARAM4.AHO.add_noise = False
-    PARAM4.ICIC.flag = False
-    PARAM4.ICIC.dynamic = False
-    PARAM4.nRB = 50
+    PARAM4.active_HO = True
+    PARAM4.AHO.ideal_pred = False
+    PARAM4.ICIC.flag = True
+    PARAM4.ideal_RL_state = False
+    PARAM4.RL_state_pred_flag = True
+    PARAM4.RL_state_pred_len = 5  # max pred len refers to predictor
+    PARAM4.dynamic_period = 5  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
+    PARAM4.nRB = 15
     PARAM_list.append(PARAM4)
+
+
 
     # PARAM5 = Parameter()
     # PARAM5.active_HO = True  # 主动切换
@@ -379,15 +413,15 @@ if __name__ == '__main__':
     # PARAM5.nRB = 15
     # PARAM_list.append(PARAM5)
 
-    PARAM6 = Parameter()
-    PARAM6.active_HO = True  # 主动切换
-    PARAM6.PHO.ideal_HO = False
-    PARAM6.AHO.ideal_pred = False
-    PARAM6.AHO.add_noise = False
-    PARAM6.ICIC.flag = False
-    PARAM6.ICIC.dynamic = False
-    PARAM6.nRB = 50
-    PARAM_list.append(PARAM6)
+    # PARAM6 = Parameter()
+    # PARAM6.active_HO = True  # 主动切换
+    # PARAM6.PHO.ideal_HO = False
+    # PARAM6.AHO.ideal_pred = False
+    # PARAM6.AHO.add_noise = False
+    # PARAM6.ICIC.flag = False
+    # PARAM6.ICIC.dynamic = False
+    # PARAM6.nRB = 50
+    # PARAM_list.append(PARAM6)
 
 
     # for _SINR_th_for_stat in SINR_th_for_stat:
