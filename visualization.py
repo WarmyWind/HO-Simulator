@@ -590,19 +590,20 @@ if __name__ == '__main__':
     rate_data = []
 
 
-    root_path = 'result/0609_scene0'
-    data_num = 0
-    # drop_idx = 500
-    rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
-    print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
-    rate_data_all.append(rate_arr)
+    # root_path = 'result/0609_scene0'
+    # data_num = 0
+    # # drop_idx = 500
+    # rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    # rate_data_all.append(rate_arr)
+    #
+    # UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+    # rate_data.append(HO_duration_rate_all)
+    #
+    # UE_offline_dict = np.load(root_path + '/{}/UE_offline_dict.npy'.format(data_num), allow_pickle=True).tolist()
+    # max_inter_arr = np.load(root_path + '/{}/max_inter_arr.npy'.format(data_num), allow_pickle=True)
 
-    UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
-    HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
-    rate_data.append(HO_duration_rate_all)
-
-    UE_offline_dict = np.load(root_path + '/{}/UE_offline_dict.npy'.format(data_num), allow_pickle=True).tolist()
-    max_inter_arr = np.load(root_path + '/{}/max_inter_arr.npy'.format(data_num), allow_pickle=True)
     # RB_for_edge_ratio_arr = np.load(root_path + '/{}/RB_for_edge_ratio_arr.npy'.format(data_num), allow_pickle=True)
     # plt.plot(RB_for_edge_ratio_arr)
     # plt.show()
@@ -616,18 +617,18 @@ if __name__ == '__main__':
     # max_interf_center_all_list = [10*np.log10(copy.deepcopy(max_interf_center_all+PARAM.sigma2))]
 
 
-    root_path = 'result/0609_scene0_test_AHO'
-    data_num = 0
-    rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
-    print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
-    rate_data_all.append(rate_arr)
-
-    UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
-    HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
-    rate_data.append(HO_duration_rate_all)
-
-    UE_offline_dict = np.load(root_path + '/{}/UE_offline_dict.npy'.format(data_num), allow_pickle=True).tolist()
-    max_inter_arr = np.load(root_path + '/{}/max_inter_arr.npy'.format(data_num), allow_pickle=True)
+    # root_path = 'result/0609_scene0_test_AHO'
+    # data_num = 0
+    # rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    # rate_data_all.append(rate_arr)
+    #
+    # UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+    # rate_data.append(HO_duration_rate_all)
+    #
+    # UE_offline_dict = np.load(root_path + '/{}/UE_offline_dict.npy'.format(data_num), allow_pickle=True).tolist()
+    # max_inter_arr = np.load(root_path + '/{}/max_inter_arr.npy'.format(data_num), allow_pickle=True)
 
     # max_interf_center_all, max_interf_edge_all = handle_func(max_inter_arr, UE_offline_dict)
     # max_interf_edge_all_list.append(10*np.log10(copy.deepcopy(max_interf_edge_all+PARAM.sigma2)))
@@ -636,8 +637,8 @@ if __name__ == '__main__':
 
 
 
-    root_path = 'result/0609_scene0_test_AHO'
-    data_num = 1
+    root_path = 'result/0613_AHO_ICIC_pred_SINR'
+    data_num = 0
     rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
     print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
     rate_data_all.append(rate_arr)
@@ -652,7 +653,7 @@ if __name__ == '__main__':
     # max_interf_edge_all_list.append(10 * np.log10(copy.deepcopy(max_interf_edge_all + PARAM.sigma2)))
     # max_interf_center_all_list.append(10 * np.log10(copy.deepcopy(max_interf_center_all + PARAM.sigma2)))
 
-    root_path = 'result/0609_scene0'
+    root_path = 'result/0613_AHO_ICIC_pred_SINR'
     data_num = 1
     rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
     print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
@@ -664,7 +665,7 @@ if __name__ == '__main__':
     # UE_offline_dict = np.load(root_path + '/{}/UE_offline_dict.npy'.format(data_num), allow_pickle=True).tolist()
     # max_inter_arr = np.load(root_path + '/{}/max_inter_arr.npy'.format(data_num), allow_pickle=True)
 
-    root_path = 'result/0609_scene0'
+    root_path = 'result/0613_AHO_ICIC_pred_SINR'
     data_num = 2
     rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
     print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
@@ -674,8 +675,8 @@ if __name__ == '__main__':
     HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
     rate_data.append(HO_duration_rate_all)
 
-    root_path = 'result/0609_scene0'
-    data_num = 4
+    root_path = 'result/0613_AHO_ICIC_pred_SINR'
+    data_num = 3
     rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
     print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
     rate_data_all.append(rate_arr)
@@ -718,23 +719,23 @@ if __name__ == '__main__':
     # rate_data.append(HO_duration_rate_all)
 
 
-    # '''绘制HO前的速率cdf'''
+    '''绘制HO前的速率cdf'''
     # label_list=['passive','ideal active', 'active', 'ICIC passive', 'ICIC ideal active', 'ICIC active']
-    # # label_list = ['nRB=13', 'nRB=15', 'nRB=17']
-    # ax = plot_cdf(np.array(rate_data)/1e6, 'bit rate(Mbps)', 'cdf', label_list)
-    # plt.legend(loc='lower right')
-    # plt.xlim(0, 6)
-    # plt.show()
-    # print(np.mean(rate_data[0]),np.mean(rate_data[1]),np.mean(rate_data[2]),
-    #       np.mean(rate_data[3]),np.mean(rate_data[4]),np.mean(rate_data[5]))
+    label_list = ['ideal SINR', 'obsolete SINR', 'pred_len=1', 'pred_len=5']
+    ax = plot_cdf(np.array(rate_data)/1e6, 'bit rate(Mbps)', 'cdf', label_list)
+    plt.legend(loc='lower right')
+    plt.xlim(0, 6)
+    plt.show()
+    print(np.mean(rate_data[0]),np.mean(rate_data[1]),np.mean(rate_data[2]),
+          np.mean(rate_data[3]))
 
-    rate_data = np.array(rate_data_all)
-    sio.savemat('passive_rate.mat', {'passive_rate': rate_data[0][rate_data[0] != 0].reshape((-1))})
-    sio.savemat('ideal_active_rate.mat', {'ideal_active_rate':rate_data[1][rate_data[1] != 0].reshape((-1))})
-    sio.savemat('active_rate.mat', {'active_rate':rate_data[2][rate_data[2] != 0].reshape((-1))})
-    sio.savemat('ICIC_passive_rate.mat', {'ICIC_passive_rate':rate_data[3][rate_data[3] != 0].reshape((-1))})
-    sio.savemat('ICIC_ideal_active_rate.mat', {'ICIC_ideal_active_rate':rate_data[4][rate_data[4] != 0].reshape((-1))})
-    sio.savemat('ICIC_active_rate.mat', {'ICIC_active_rate':rate_data[5][rate_data[5] != 0].reshape((-1))})
+    # rate_data = np.array(rate_data_all)
+    # sio.savemat('passive_rate.mat', {'passive_rate': rate_data[0][rate_data[0] != 0].reshape((-1))})
+    # sio.savemat('ideal_active_rate.mat', {'ideal_active_rate':rate_data[1][rate_data[1] != 0].reshape((-1))})
+    # sio.savemat('active_rate.mat', {'active_rate':rate_data[2][rate_data[2] != 0].reshape((-1))})
+    # sio.savemat('ICIC_passive_rate.mat', {'ICIC_passive_rate':rate_data[3][rate_data[3] != 0].reshape((-1))})
+    # sio.savemat('ICIC_ideal_active_rate.mat', {'ICIC_ideal_active_rate':rate_data[4][rate_data[4] != 0].reshape((-1))})
+    # sio.savemat('ICIC_active_rate.mat', {'ICIC_active_rate':rate_data[5][rate_data[5] != 0].reshape((-1))})
 
     # rate_data = np.array(rate_data_all)
     # rate_data = np.array(rate_data)/1e6
