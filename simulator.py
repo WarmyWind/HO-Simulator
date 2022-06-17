@@ -152,26 +152,24 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
                 update_serv_BS_L3_h([_UE], large_fading, instant_channel, PARAM.L3_coe)
                 update_SS_SINR([_UE], PARAM.sigma2, PARAM.filter_length_for_SINR)
 
-            '''若假设RL state理想，更新RL state后再ICIC'''
-            if PARAM.ICIC.ideal_RL_state:
 
-                '''更新所有基站的L3测量（预测大尺度信道时需要）'''
-                if PARAM.active_HO:
-                    update_all_BS_L3_h_record(UE_list, large_fading, instant_channel, PARAM.L3_coe)
+            '''更新所有基站的L3测量（预测大尺度信道时需要）'''
+            if PARAM.active_HO:
+                update_all_BS_L3_h_record(UE_list, large_fading, instant_channel, PARAM.L3_coe)
 
-                '''更新UE的邻基站及其的L3测量'''
-                find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading,
+            '''更新UE的邻基站及其的L3测量'''
+            find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading,
                                              instant_channel, PARAM.L3_coe)
 
-                '''更新UE的服务基站L3测量'''
-                update_serv_BS_L3_h(UE_list, large_fading, instant_channel, PARAM.L3_coe)
+            '''更新UE的服务基站L3测量'''
+            update_serv_BS_L3_h(UE_list, large_fading, instant_channel, PARAM.L3_coe)
 
-                '''更新SS_SINR'''
-                update_SS_SINR(UE_list, PARAM.sigma2, PARAM.filter_length_for_SINR)
+            '''更新SS_SINR'''
+            update_SS_SINR(UE_list, PARAM.sigma2, PARAM.filter_length_for_SINR)
 
-            else:  # RL state只能用上一帧的值或预测值
-                if PARAM.ICIC.RL_state_pred_flag:
-                    update_pred_SS_SINR(UE_list, PARAM.sigma2, NN, normalize_para, PARAM.ICIC.RL_state_pred_len)
+
+            if PARAM.ICIC.RL_state_pred_flag:
+                update_pred_SS_SINR(UE_list, PARAM.sigma2, NN, normalize_para, PARAM.ICIC.RL_state_pred_len)
 
 
 
@@ -207,23 +205,6 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
                 '''针对额外使用RB的用户和RB类型不一致的用户，重新分配RB'''
                 ICIC_RB_reallocate(UE_list, BS_list, PARAM.RB_per_UE, serving_map)
 
-            '''若假设RL state不理想，ICIC后再更新RL state'''
-            if not PARAM.ICIC.ideal_RL_state:
-
-                '''更新所有基站的L3测量（预测大尺度信道时需要）'''
-                if PARAM.active_HO or PARAM.ICIC.RL_state_pred_flag:
-                    update_all_BS_L3_h_record(UE_list, large_fading, instant_channel, PARAM.L3_coe)
-
-                '''更新UE的邻基站及其的L3测量'''
-                find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading,
-                                             instant_channel,
-                                             PARAM.L3_coe)
-
-                '''更新UE的服务基站L3测量'''
-                update_serv_BS_L3_h(UE_list, large_fading, instant_channel, PARAM.L3_coe)
-
-                '''更新SS_SINR'''
-                update_SS_SINR(UE_list, PARAM.sigma2, PARAM.filter_length_for_SINR)
 
             # for _UE in UE_list:
             #     if not _UE.active: continue
@@ -338,8 +319,8 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0614_AHO_ICIC_pred_SINR_length10'
-        nDrop = 10000 - 10*8 # 时间步进长度
+        root_path = 'result/0616_AHO_ICIC_SINR_obsolete10_fixed'
+        nDrop = 10000 - 10*8  # 时间步进长度
 
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
         shadow_filepath = 'ShadowFad/0523_ShadowFad_dB_normed_6sigmaX_10dCov.mat'
@@ -358,58 +339,67 @@ if __name__ == '__main__':
     PARAM_list = []
 
     # PARAM1 = Parameter()
-    # PARAM1.active_HO = True
+    # PARAM1.active_HO = False  # 被动切换
     # PARAM1.AHO.ideal_pred = False
     # PARAM1.ICIC.flag = True
     # PARAM1.ICIC.ideal_RL_state = True  # ICIC时SINR理想已知
+    # PARAM1.ICIC.obsolete_time = 10
     # PARAM1.ICIC.RL_state_pred_flag = False
-    # PARAM1.ICIC.RL_state_pred_len = 1  # max pred len refers to predictor
-    # PARAM1.ICIC.dynamic_period = 1  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
+    # PARAM1.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
+    # PARAM1.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
     # PARAM1.nRB = 15
     # PARAM_list.append(PARAM1)
-    #
-    # PARAM2 = Parameter()
-    # PARAM2.active_HO = True
-    # PARAM2.AHO.ideal_pred = False
-    # PARAM2.ICIC.flag = True
-    # PARAM2.ICIC.ideal_RL_state = False  # ICIC时SINR过时
-    # PARAM2.ICIC.RL_state_pred_flag = False
-    # PARAM2.ICIC.RL_state_pred_len = 1  # max pred len refers to predictor
-    # PARAM2.ICIC.dynamic_period = 1  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-    # PARAM2.nRB = 15
-    # PARAM_list.append(PARAM2)
-    #
+
+
+    PARAM2 = Parameter()
+    PARAM2.active_HO = True
+    PARAM2.AHO.ideal_pred = False
+    PARAM2.ICIC.flag = True
+    PARAM2.ICIC.ideal_RL_state = False  # ICIC时SINR过时
+    PARAM2.ICIC.obsolete_time = 10  # 过时10帧
+    PARAM2.ICIC.RL_state_pred_flag = False
+    PARAM2.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
+    PARAM2.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
+    PARAM2.nRB = 15
+    PARAM_list.append(PARAM2)
+
+
     # PARAM3 = Parameter()
     # PARAM3.active_HO = True
-    # PARAM3.AHO.ideal_pred = False
+    # PARAM3.AHO.ideal_pred = True  # 理想主动切换
     # PARAM3.ICIC.flag = True
-    # PARAM3.ICIC.ideal_RL_state = False  # ICIC时SINR过时
-    # PARAM3.ICIC.RL_state_pred_flag = True  # 预测SINR
+    # PARAM3.ICIC.ideal_RL_state = True  # 理想SINR
+    # PARAM3.ICIC.obsolete_time = 10
+    # PARAM3.ICIC.RL_state_pred_flag = False
     # PARAM3.ICIC.RL_state_pred_len = 1  # max pred len refers to predictor
     # PARAM3.ICIC.dynamic_period = 1  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
     # PARAM3.nRB = 15
     # PARAM_list.append(PARAM3)
-
-    PARAM4 = Parameter()
-    PARAM4.active_HO = True
-    PARAM4.AHO.ideal_pred = False
-    PARAM4.ICIC.flag = True
-    PARAM4.ICIC.ideal_RL_state = False
-    PARAM4.ICIC.RL_state_pred_flag = True  # 预测SINR
-    PARAM4.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-    PARAM4.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-    PARAM4.nRB = 15
-    PARAM_list.append(PARAM4)
-
-
-
+    #
+    #
+    # PARAM4 = Parameter()
+    # PARAM4.active_HO = True
+    # PARAM4.AHO.ideal_pred = False  # 基于预测的主动切换
+    # PARAM4.ICIC.flag = True
+    # PARAM4.ICIC.ideal_RL_state = True  # 理想SINR
+    # PARAM4.ICIC.obsolete_time = 10
+    # PARAM4.ICIC.RL_state_pred_flag = False
+    # PARAM4.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
+    # PARAM4.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
+    # PARAM4.nRB = 15
+    # PARAM_list.append(PARAM4)
+    #
+    #
+    #
     # PARAM5 = Parameter()
-    # PARAM5.active_HO = True  # 主动切换
-    # PARAM5.PHO.ideal_HO = False
-    # PARAM5.AHO.ideal_pred = False
-    # PARAM5.AHO.add_noise = False
-    # PARAM5.ICIC.flag = True  # 干扰协调
-    # PARAM5.ICIC.dynamic = True
+    # PARAM5.active_HO = True
+    # PARAM5.AHO.ideal_pred = False  # 基于预测的主动切换
+    # PARAM5.ICIC.flag = True
+    # PARAM5.ICIC.ideal_RL_state = False
+    # PARAM5.ICIC.obsolete_time = 10
+    # PARAM5.ICIC.RL_state_pred_flag = True  # 预测SINR
+    # PARAM5.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
+    # PARAM5.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
     # PARAM5.nRB = 15
     # PARAM_list.append(PARAM5)
 
@@ -519,10 +509,26 @@ if __name__ == '__main__':
 
     if len(UE_posi.shape) != 3:
         UE_posi = np.swapaxes(UE_posi, 0,1)
+        up_v0_UE_posi = UE_posi[:40,:]
+        up_v1_UE_posi = UE_posi[40:80,:]
+        up_v2_UE_posi = UE_posi[80:120,:]
+        down_v0_UE_posi = UE_posi[120:160,:]
+        down_v1_UE_posi = UE_posi[160:200,:]
+        down_v2_UE_posi = UE_posi[200:240,:]
+        UE_posi = np.concatenate((up_v0_UE_posi,down_v0_UE_posi,up_v1_UE_posi,down_v1_UE_posi,up_v2_UE_posi,down_v2_UE_posi), axis=0)
         UE_posi = np.reshape(UE_posi, (PARAM_list[0].ntype, -1, UE_posi.shape[1]))
         UE_posi = np.swapaxes(UE_posi, 1, 2)
 
     UE_posi = process_posi_data(UE_posi)
+
+    # '''验证UE轨迹'''
+    # fig, ax = plt.subplots()
+    # for i in range(15):
+    #     _UE_tra = UE_posi[0][:,i*5]
+    #     real_part = np.real(_UE_tra.tolist())
+    #     imag_part = np.imag(_UE_tra.tolist())
+    #     ax.plot(real_part, imag_part)
+    # plt.show()
 
     '''进入仿真'''
     simulator_entry(PARAM_list, shadowFad_dB, UE_posi)

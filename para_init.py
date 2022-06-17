@@ -32,9 +32,10 @@ class ICIC:
 
         # edge_RB_reuse = False
         self.ideal_RL_state = True
+        self.obsolete_time = 10
         self.RL_state_pred_flag = False
-        self.RL_state_pred_len = 1  # max pred len refers to predictor
-        self.dynamic_period = 1  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
+        self.RL_state_pred_len = 10  # max pred len refers to predictor
+        self.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
 
 
 class Macro:

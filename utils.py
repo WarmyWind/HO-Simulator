@@ -25,7 +25,7 @@ if __name__ == '__main__':
     from user_mobility import get_UE_posi_from_file
     from network_deployment import cellStructPPP
 
-    root_path = 'result/0609_scene0_test_AHO'
+    root_path = 'result/0616_PHO_ICIC_ideal_SINR'
 
 
     '''从文件读取UE位置'''
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     # index = 'Set_UE_posi'
     # UE_posi = get_UE_posi_from_file(filepath, index)
 
-    for i in range(2):
+    for i in range(1):
         rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(i), allow_pickle=True)
         UE_list = np.load(root_path + '/{}/UE_list.npy'.format(i), allow_pickle=True)
         UE_offline = np.load(root_path + '/{}/UE_offline_dict.npy'.format(i), allow_pickle=True).tolist()

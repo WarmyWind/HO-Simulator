@@ -381,7 +381,7 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                 _UE.HO_state.stage = 'HO_exec'
                 if len(_UE.RL_state.SINR_record) >= 2 and _UE.RL_state.state == 'out':
                     '''HO 执行时目标BS信道质量差，记HOF'''
-                    _UE.quit_handover(False, 'handovering', 2)
+                    _UE.quit_handover(False, 'served', 2)
                     _UE.HO_state.HOF_flag = 1
                     continue
 

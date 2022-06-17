@@ -362,12 +362,24 @@ def ICIC_decide_edge_UE(PARAM, BS_list, UE_list, init_flag = False):
             if not _UE.active:
                 _SINR = np.Inf
             else:
-                if PARAM.ICIC.ideal_RL_state or init_flag or len(_UE.RL_state.pred_SINR_dB) == 0:
+                if init_flag or PARAM.ICIC.ideal_RL_state:
                     _SINR = _UE.RL_state.filtered_SINR_dB
                     if _SINR == None:
                         raise Exception('SINR == None!')
+                # elif PARAM.ICIC.ideal_RL_state:
+                #     _SINR = _UE.RL_state.filtered_SINR_dB
+                #     if _SINR == None:
+                #         raise Exception('SINR == None!')
+                elif not PARAM.ICIC.ideal_RL_state and not PARAM.ICIC.RL_state_pred_flag:
+                    if len(_UE.RL_state.SINR_dB_record_all) < PARAM.ICIC.obsolete_time+1:
+                        _SINR = _UE.RL_state.SINR_dB_record_all[0]
+                    else:
+                        _SINR = _UE.RL_state.SINR_dB_record_all[-(PARAM.ICIC.obsolete_time+1)]
                 else:
-                    _SINR = _UE.RL_state.pred_SINR_dB[0]
+                    if len(_UE.RL_state.pred_SINR_dB)==0:
+                        _SINR = _UE.RL_state.filtered_SINR_dB
+                    else:
+                        _SINR = _UE.RL_state.pred_SINR_dB[0]
             SINR_list.append(_SINR)
 
         '''根据排序结果，依次分类是否是边缘用户'''
