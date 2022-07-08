@@ -80,6 +80,8 @@ def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
 
     # 根据邻基站列表接入，可能多个用户接入一个基站
     for _UE in UE_list:
+        if _UE.no == 398:
+            probe = _UE.no
         if not _UE.active: continue
         if _UE.state != 'unserved': continue
         # _UE_no = _UE.no
@@ -92,21 +94,11 @@ def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
         if BS_list[NewBS_idx].is_full_load(PARAMS.RB_per_UE, PARAMS.ICIC.flag):
             # 判断BS是否达到满载，若达到则掉线
             continue
-        # while BS_list[NewBS_idx].is_full_load(PARAMS.RB_per_UE, PARAMS.ICIC.flag):
-        #     # 判断BS是否达到满载，若达到则接入下一个
-        #     _idx = _idx[:-1]
-        #     if len(_idx) == 0: return False  # no more BS to access
-        #     NewBS_idx = _idx[-1]
 
-            # if PARAMS.ICIC.flag:
-            #     full_load_result = BS_list[NewBS_idx].if_RB_full_load(PARAMS.RB_per_UE, 'center') \
-            #                        and BS_list[NewBS_idx].if_RB_full_load(PARAMS.RB_per_UE, 'edge')
-            # else:
-            #     full_load_result = BS_list[NewBS_idx].if_RB_full_load(PARAMS.RB_per_UE)
 
         if allocate_method == equal_RB_allocate or allocate_method == ICIC_RB_allocate:
-            RB_per_UE = PARAMS.RB_per_UE
-            _allo_result = allocate_method([_UE], UE_list, BS_list[NewBS_idx], int(RB_per_UE), serving_map)
+            # RB_per_UE = BS_list[NewBS_idx].RB_per_UE
+            _allo_result = allocate_method([_UE], UE_list, BS_list[NewBS_idx], serving_map)
             if _allo_result:
                 '''更新服务基站的L3测量 以及RL state'''
                 _instant_h = instant_h[:, NewBS_idx, _UE.no]

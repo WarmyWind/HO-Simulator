@@ -67,28 +67,15 @@ def get_large_fading_dB_from_posi(PARAMS, UE_posi, BS_posi, BS_no, shadow_map:Sh
         # shadow  = PARAMS.pathloss.Micro.shadowdB
 
     distServer = np.abs(UE_posi - BS_posi)  # 用户-基站距离
-    '''
-    下面的x_temp和y_temp后加的常数与数据有关
-    '''
-    if scene == 0:
-        if np.mod(PARAMS.nCell, 2) == 1:
-            origin_y_point = (PARAMS.Dist / 2 * np.sqrt(3) - PARAMS.RoadWidth) / 2
-            x_temp = int(np.ceil(np.real(UE_posi) / 0.5))
-            y_temp = np.floor(np.ceil((np.imag(UE_posi) - origin_y_point) / 0.5)).astype(int)
-            x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp))
-            y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp))
-        else:
-            origin_y_point = -75
-            origin_x_point = -75
-            x_temp = int(np.ceil((np.real(UE_posi) - origin_x_point) / 0.5))
-            y_temp = np.floor(np.ceil((np.imag(UE_posi) - origin_y_point) / 0.5)).astype(int)
-            x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp))
-            y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp))
-    else:
-        x_temp = int(np.ceil((np.real(UE_posi) + 15) / 0.5))
-        y_temp = int(np.ceil((np.imag(UE_posi) + 15) / 0.5))
-        x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp))
-        y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp))
+
+
+    origin_x_point = PARAMS.origin_x
+    origin_y_point = PARAMS.origin_y
+    x_temp = int(np.ceil((np.real(UE_posi) - origin_x_point) / PARAMS.posi_resolution))
+    y_temp = np.floor(np.ceil((np.imag(UE_posi) - origin_y_point) / PARAMS.posi_resolution)).astype(int)
+    x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp))
+    y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp))
+
 
     shadow = shadow_map.map[BS_no][y_temp, x_temp]
     large_fading_dB = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain

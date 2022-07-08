@@ -22,6 +22,9 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
     '''创建UE对象，并加入列表'''
     UE_list = create_UE_list(PARAM, UE_posi)
 
+    '''确定GBR用户'''
+    decide_GBR_UE(PARAM, UE_list)
+
 
     '''初始化信道、服务信息'''
     shadow = ShadowMap(shadowFad_dB)
@@ -48,7 +51,8 @@ def create_Macro_BS_list(PARAM, Macro_Posi):
             _center_RB_num = PARAM.nRB - PARAM.ICIC.RB_partition_num * _edge_RB_per_partition
             center_RB_idx = np.arange(_center_RB_num)
 
-            _RB_start_idx = _center_RB_num + np.mod(i, PARAM.ICIC.RB_partition_num) * _edge_RB_per_partition
+            # _RB_start_idx = _center_RB_num + np.mod(i, PARAM.ICIC.RB_partition_num) * _edge_RB_per_partition
+            _RB_start_idx = _center_RB_num + PARAM.ICIC.ICIC_RB_group_for_BS[i] * _edge_RB_per_partition
             _RB_end_idx = _RB_start_idx + _edge_RB_per_partition
             edge_RB_idx = np.arange(_RB_start_idx, _RB_end_idx)
         else:
@@ -56,7 +60,8 @@ def create_Macro_BS_list(PARAM, Macro_Posi):
             edge_RB_idx = np.array([])
 
         macro_BS_list.append(BS(i, 'Macro', PARAM.Macro.nNt, PARAM.nRB, PARAM.Macro.Ptmax,
-                                Macro_Posi[i], True, PARAM.Macro.opt_UE_per_RB, PARAM.Macro.nNt, center_RB_idx, edge_RB_idx))
+                                Macro_Posi[i], True, PARAM.RB_per_UE, PARAM.Macro.opt_UE_per_RB, PARAM.Macro.nNt,
+                                center_RB_idx, edge_RB_idx))
     return macro_BS_list
 
 
@@ -124,6 +129,17 @@ def create_UE_list(PARAM, UE_posi):
         PARAM.nUE = len(UE_list)
     return UE_list
 
+
+def decide_GBR_UE(PARAM, UE_list, seed=0):
+    np.random.seed(seed)
+    nUE = len(UE_list)
+    GBR_idx_arr = np.random.choice(nUE, np.floor(nUE*PARAM.GBR_ratio).astype(int))
+    for _GBR_idx in GBR_idx_arr:
+        _GBR_UE = UE_list[_GBR_idx]
+        _GBR_UE.GBR_flag = True
+        _GBR_UE.min_rate = PARAM.min_rate
+
+    return
 
 def search_object_form_list_by_no(object_list, no):
     for _obj in object_list:

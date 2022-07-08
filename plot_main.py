@@ -19,9 +19,9 @@ if __name__ == '__main__':
     PARAM = Parameter()
     cmap = 'seismic'
 
-    width, height = 1150, 225
-    origin_x = -75
-    origin_y = -75
+    width, height = 500, 400
+    origin_x = -250
+    origin_y = -200
     resolution = 0.5
 
     sigmaX = 6
@@ -30,12 +30,39 @@ if __name__ == '__main__':
 
     '''从文件读取阴影衰落'''
     # shadow_filepath_0 = 'ShadowFad/0520_ShadowFad_dB_{}sigmaX_{}dCov.mat'.format(sigmaX, dCov)
-    shadow_filepath = 'ShadowFad/0523_ShadowFad_dB_normed_{}sigmaX_{}dCov.mat'.format(sigmaX, dCov)
+    shadow_filepath = 'ShadowFad/0627_7BS_ShadowFad_dB_normed_6sigmaX_10dCov.mat'
     index = 'shadowFad_dB'
-
-    # shadowFad_dB_0 = get_shadow_from_mat(shadow_filepath_0, index)
     shadowFad_dB = get_shadow_from_mat(shadow_filepath, index)
     # shadowFad_dB = np.zeros(shadowFad_dB.shape)
+
+    UE_posi_filepath = 'UE_tra/0627_7road_7BS/Set_UE_posi_60s_330user_7BS_V123.mat'
+    posi_index = 'Set_UE_posi'
+    UE_posi = get_UE_posi_from_file(UE_posi_filepath, posi_index)
+    # UE_posi = UE_posi[2, :, :]
+
+    '''调整UE轨迹的数据为【行人，自行车，汽车】'''
+    if len(UE_posi.shape) != 3:
+        UE_posi = np.swapaxes(UE_posi, 0, 1)
+        # up_v0_UE_posi = UE_posi[:40,:]
+        # up_v1_UE_posi = UE_posi[40:80,:]
+        # up_v2_UE_posi = UE_posi[80:120,:]
+        # down_v0_UE_posi = UE_posi[120:160,:]
+        # down_v1_UE_posi = UE_posi[160:200,:]
+        # down_v2_UE_posi = UE_posi[200:240,:]
+        # UE_posi = np.concatenate((up_v0_UE_posi,down_v0_UE_posi,up_v1_UE_posi, down_v1_UE_posi,up_v2_UE_posi,down_v2_UE_posi), axis=0)
+        UE_posi = np.reshape(UE_posi, (3, -1, UE_posi.shape[1]))
+        UE_posi = np.swapaxes(UE_posi, 1, 2)
+
+    final_posi = np.reshape(UE_posi[:,0,:],(-1,))
+    Macro_Posi = cell_struction(7, 150)
+    plot_BS_location(Macro_Posi)
+    plt.show()
+    nUE_in_range = [0 for _ in range(7)]
+    for _posi in final_posi:
+        _dist = np.abs(Macro_Posi-_posi)
+        _cell_no = np.argmin(_dist)
+        nUE_in_range[_cell_no] = nUE_in_range[_cell_no] + 1
+    # UE_posi = process_posi_data(UE_posi)
 
     # sns.kdeplot(np.reshape(shadowFad_dB_0, (-1)), label='raw')
     # sns.kdeplot(np.reshape(shadowFad_dB, (-1)), label='normed')
@@ -43,8 +70,8 @@ if __name__ == '__main__':
     # plt.show()
 
     # '''生成和保存归一化后的阴影衰落'''
-    # shadow_save_path = 'ShadowFad/0523_ShadowFad_dB_normed_{}sigmaX_{}dCov.mat'.format(sigmaX, dCov)
-    # save_normed_shadow(shadowFad_dB, nBS=8, sigma=sigmaX, save_path=shadow_save_path)
+    # shadow_save_path = 'ShadowFad/0627_7BS_ShadowFad_dB_normed_{}sigmaX_{}dCov.mat'.format(sigmaX, dCov)
+    # save_normed_shadow(shadowFad_dB, nBS=7, sigma=sigmaX, save_path=shadow_save_path)
 
 
     num_plot = 1

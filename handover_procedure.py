@@ -45,8 +45,9 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleCha
             if _UE.RL_state.state == 'RLF':  # 在未触发A3之前发生RLF
                 _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
                 _serv_BS.RLF_happen(_UE, serving_map)
-                # 尝试接入邻基站
-                _ = access_init(PARAMS, BS_list, [_UE], instant_channel, serving_map)
+                # 不尝试接入邻基站
+                # _ = access_init(PARAMS, BS_list, [_UE], instant_channel, serving_map)
+                continue
 
             '''判断最优基站'''
             if measure_criteria == 'avg' or measure_criteria == 'large_h':
@@ -84,16 +85,16 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleCha
 
                         # _target_BS = search_object_form_list_by_no(BS_list, _UE.HO_state.target_BS)
                         if allocate_method == equal_RB_allocate or allocate_method == ICIC_RB_allocate:
-                            _result = allocate_method([_UE], UE_list, _target_BS, PARAMS.RB_per_UE, serving_map)
+                            _result = allocate_method([_UE], UE_list, _target_BS, serving_map, HO_flag=True)
                         else:
                             raise Exception("Invalid allocate method!", allocate_method)
                         if _result:
                             _UE.reset_duration_and_SINR()  # 更新RL state
                         elif not _result:
-                            '''不进行记录，接入原BS'''
-                            # _UE.quit_handover(None, 'unserved')
+                            '''不进行记录，不接入原BS'''
+                            _UE.quit_handover(None, 'unserved')
                             # _UE.update_state('unserved')
-                            _ = allocate_method([_UE], UE_list, _serv_BS, PARAMS.RB_per_UE, serving_map)
+                            # _ = allocate_method([_UE], UE_list, _serv_BS, serving_map)
                             continue
                     else:
                         # _UE.update_state('handovering')
@@ -116,8 +117,8 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleCha
                     _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
                     _serv_BS.RLF_happen(_UE, serving_map)
 
-                    # 尝试接入邻基站
-                    _ = access_init(PARAMS, BS_list, [_UE], instant_channel, serving_map)
+                    # 不尝试接入邻基站
+                    # _ = access_init(PARAMS, BS_list, [_UE], instant_channel, serving_map)
                     continue
 
                 if measure_criteria == 'avg':
@@ -171,16 +172,16 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleCha
                 _serv_BS.unserve_UE(_UE, serving_map)  # 断开原服务，释放资源
                 _target_BS = search_object_form_list_by_no(BS_list, _UE.HO_state.target_BS)
                 if allocate_method == equal_RB_allocate or allocate_method == ICIC_RB_allocate:
-                    _result = allocate_method([_UE], UE_list, _target_BS, PARAMS.RB_per_UE, serving_map)
+                    _result = allocate_method([_UE], UE_list, _target_BS, serving_map, HO_flag=True)
                     if _result:
                         # _UE.update_state('served')
                         _UE.reset_duration_and_SINR()  # 更新RL state
                     else:
                         # _UE.update_state('unserved')
-                        '''不进行记录，接入原BS'''
+                        '''不记录，不接入原BS'''
                         _UE.quit_handover(None, 'unserved')
                         # _UE.update_state('unserved')
-                        _ = allocate_method([_UE], UE_list, _serv_BS, PARAMS.RB_per_UE, serving_map)
+                        # _ = allocate_method([_UE], UE_list, _serv_BS, serving_map)
                         continue
                 else:
                     raise Exception("Invalid allocate method!", allocate_method)
@@ -239,8 +240,8 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                 _UE.record_HOF(0)
                 _serv_BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
                 _serv_BS.RLF_happen(_UE, serving_map)
-                # 尝试接入邻基站
-                _ = access_init(PARAMS, BS_list, [_UE], instant_channel, serving_map)
+                # 不尝试接入邻基站
+                # _ = access_init(PARAMS, BS_list, [_UE], instant_channel, serving_map)
                 continue
 
             '''判断最优基站'''
@@ -269,6 +270,10 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                 raise Exception("Invalid measure criteria!", measure_criteria)
 
 
+            try:
+                20 * np.log10(_best_large_h)- 20 * np.log10(_serv_large_h) > HOM
+            except:
+                raise Exception('Invalid formula!')
             '''若目标BS信道超过服务BS一定阈值HOM，触发hanover条件'''
             if 20 * np.log10(_best_large_h) - 20 * np.log10(_serv_large_h) > HOM:
                 # if _UE.no == 77:
@@ -283,7 +288,7 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                     target_h_pred = _UE.cal_future_large_h(PARAMS, _target_BS, shadow_map)
                     serv_h_pred = _UE.cal_future_large_h(PARAMS, _serv_BS, shadow_map)
 
-                    pred_len = np.ceil(TTT / PARAMS.posi_resolution).astype(int)
+                    pred_len = np.ceil(TTT / PARAMS.time_resolution).astype(int)
                     target_h_pred = target_h_pred[:pred_len]
                     serv_h_pred = serv_h_pred[:pred_len]
 
@@ -299,7 +304,7 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                     # x = torch.tensor(x)
                     # _pred = np.array(NN.predict(x).detach().cpu())
                     # _pred = _pred.reshape((_UE.record_len, len(BS_list)))
-                    # pred_len = np.ceil(TTT/PARAMS.posi_resolution).astype(int)
+                    # pred_len = np.ceil(TTT/PARAMS.time_resolution).astype(int)
                     # target_h_pred = 10**(_pred[:pred_len, _best_BS]/10)
                     # serv_h_pred = 10**(_pred[:pred_len, _UE.serv_BS]/10)
 
@@ -320,7 +325,7 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                     target_h_pred_dB = np.array(NN.predict(x_target).detach().cpu())
                     target_h_pred = 10 ** (target_h_pred_dB / 10)
 
-                    pred_len = np.ceil(TTT / PARAMS.posi_resolution).astype(int)
+                    pred_len = np.ceil(TTT / PARAMS.time_resolution).astype(int)
                     serv_h_pred = serv_h_pred.reshape(-1)[:pred_len]
                     target_h_pred = target_h_pred.reshape(-1)[:pred_len]
 
@@ -363,16 +368,16 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                 _serv_BS.unserve_UE(_UE, serving_map)  # 断开原服务，释放资源
                 _target_BS = search_object_form_list_by_no(BS_list, _UE.HO_state.target_BS)
                 if allocate_method == equal_RB_allocate or allocate_method == ICIC_RB_allocate:
-                    _result = allocate_method([_UE], UE_list, _target_BS, PARAMS.RB_per_UE, serving_map)
+                    _result = allocate_method([_UE], UE_list, _target_BS, serving_map, HO_flag=True)
                     if _result:
                         # _UE.update_state('served')
                         _UE.reset_duration_and_SINR()  # 更新RL state
                     else:
                         # _UE.update_state('unserved')
-                        '''不进行记录，接入原BS'''
+                        '''不记录，不接入原BS'''
                         _UE.quit_handover(None, 'unserved')
                         # _UE.update_state('unserved')
-                        _ = allocate_method([_UE], UE_list, _serv_BS, PARAMS.RB_per_UE, serving_map)
+                        # _ = allocate_method([_UE], UE_list, _serv_BS, serving_map)
                         continue
                 else:
                     raise Exception("Invalid allocate method!", allocate_method)

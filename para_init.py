@@ -23,7 +23,7 @@ class ICIC:
         self.allow_drop_rate = 0.05
 
         self.RB_for_edge_ratio = 0
-        self.RB_partition_num = 2
+        self.RB_partition_num = 3
 
         self.edge_divide_method = 'SINR'  # 'SINR' or 'position'
         self.SINR_th = 10
@@ -37,10 +37,13 @@ class ICIC:
         self.RL_state_pred_len = 10  # max pred len refers to predictor
         self.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
 
+        # self.ICIC_RB_group_for_BS = [np.mod(i, 2) for i in range(8)]
+        self.ICIC_RB_group_for_BS = [1,2,0,1,2,2,1]
+
 
 class Macro:
     def __init__(self):
-        self.nBS = 8  # 宏基站个数
+        # self.nBS = 7  # 宏基站个数
         self.nNt = 16  # 宏基站天线个数
         self.PtmaxdBm = 46  # 宏基站最大发射功率
         self.Ptmax = 10 ** (self.PtmaxdBm / 10) / 1000
@@ -62,16 +65,22 @@ class Parameter:  # 仿真场景参数
         self.Macro = Macro()
         self.Micro = Micro()
 
-        self.scene = 0
-        self.nCell = 8  # 小区个数
+        self.nRB = 30  # RB数
+        self.ICIC.RB_partition_num = 3
+        self.scene = 2  # 0 = road struction, 1 = cross road struction, 2 = cell struction
+        self.nCell = 7  # 小区个数
         self.Dist = 150  # 小区间距
         self.RoadWidth = self.Dist / 2 * np.sqrt(3) - 40
+        self.origin_x = -250
+        self.origin_y = -200
 
         self.Macro.nBS = self.nCell * 1  # 宏基站个数
         # self.Macro.BS_flag = np.ones((1, self.Macro.nBS))
         self.Macro.opt_UE_per_RB = np.floor(self.Macro.nNt * 0.75)  # 宏基站每个RB的最大服务用户数
         self.Micro.opt_UE_per_RB = np.floor(self.Micro.nNt)  # 微基站每个RB的最大服务用户
         # self.RB_per_UE = int(np.floor(1 * self.Macro.nBS * self.Macro.MaxUE_per_RB * self.nRB / self.nUE))
+
+        self.dynamic_nRB_per_UE = True
         self.RB_per_UE = 3
 
         self.active_HO = True
@@ -83,12 +92,11 @@ class Parameter:  # 仿真场景参数
         self.sigma_c = self.sigma2 + self.sigma
         self.sigma_e = self.sigma2 + self.sigma_IC
 
-        self.nRB = 15  # RB数
 
         self.ntype = 3
         self.nUE = 'all'  # 用户设备总数，数或‘all’
         self.nUE_per_type = 'all'  # 每种用户的数量，列表或’all‘
-        self.num_neibour_BS_of_UE = 5
+        self.num_neibour_BS_of_UE = 7
 
         self.HOM = 1  # dB
         self.TTT = 32  # 个步进时长
@@ -98,7 +106,12 @@ class Parameter:  # 仿真场景参数
         self.L3_coe = 4  # k = (1/2)^(k/4)
         self.filter_length_for_SINR = 1
 
-        self.posi_resolution = 8
+        self.time_resolution = 8
+        self.posi_resolution = 0.5
+
+        self.GBR_ratio = 0  # GBR用户比例
+        self.min_rate = 1*1e6  # GBR用户的最低速率
+
 
 
     # class RL_state:
@@ -111,13 +124,13 @@ class Parameter:  # 仿真场景参数
             antGaindB = 0
             dFactordB = 37.6
             pLoss1mdB = 15.3  # 36.8
-            shadowdB = 2
+            shadowdB = 6
 
         class Micro:
             antGaindB = 0
             dFactordB = 36.7
             pLoss1mdB = 30.6  # 36.8
-            shadowdB = 2
+            shadowdB = 6
 
     class MLB:
         RB = 180 * 1e3  # 180kHz

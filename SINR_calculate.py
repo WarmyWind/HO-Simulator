@@ -12,6 +12,7 @@
 from info_management import *
 from precoding import ZF_precoding
 import torch
+from data_factory import search_object_form_list_by_no
 
 
 def get_receive_power(BS_list, channel: InstantChannelMap, precoding_method=ZF_precoding):
@@ -31,7 +32,7 @@ def get_receive_power(BS_list, channel: InstantChannelMap, precoding_method=ZF_p
     return receive_power
 
 
-def get_interference(BS_list, UE_list, channel: InstantChannelMap, precoding_method=ZF_precoding):
+def get_interference(PARAM, BS_list, UE_list, channel: InstantChannelMap, extra_interf_map=None):
     H = channel.map  # (nNt, nBS, nUE)
     nUE = H.shape[2]
     nRB = BS_list[0].nRB
@@ -55,6 +56,30 @@ def get_interference(BS_list, UE_list, channel: InstantChannelMap, precoding_met
                 _itf = np.square(np.linalg.norm(np.dot(_H, np.sqrt(_coe) *_W)))
                 interference_power[_UE.no, _RB] = interference_power[_UE.no, _RB] + _itf
 
+    if extra_interf_map is not None:
+        for _UE in UE_list:
+            if _UE.serv_BS == -1: continue
+            _BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
+            if _UE.serv_BS == 2:
+                probe = _UE.serv_BS
+            RB_serv_arr = np.array([_UE.RB_Nt_ocp[i][0] for i in range(len(_UE.RB_Nt_ocp))])
+            for _RB in RB_serv_arr:
+                    UE_posi = _UE.posi
+                    origin_x_point = PARAM.origin_x
+                    origin_y_point = PARAM.origin_y
+                    x_temp = int(np.ceil((np.real(UE_posi) - origin_x_point) / PARAM.posi_resolution))
+                    y_temp = np.floor(np.ceil((np.imag(UE_posi) - origin_y_point) / PARAM.posi_resolution)).astype(int)
+                    x_temp = np.min((extra_interf_map.shape[3] - 1, x_temp))
+                    y_temp = np.min((extra_interf_map.shape[2] - 1, y_temp))
+                    ICIC_RB_flag = 1*(_RB in _BS.resource_map.edge_RB_sorted_idx)
+                    try:
+                        _extra_itf = extra_interf_map[_UE.serv_BS, ICIC_RB_flag, y_temp, x_temp]
+                    except:
+                        raise Exception('Get extra interference Err')
+
+                    interference_power[_UE.no, _RB] = interference_power[_UE.no, _RB] + _extra_itf
+
+
     return interference_power
 
 
@@ -76,17 +101,32 @@ def calculate_SINR_dB(receive_power, interference_power, noise):
 #     SS_SINR = receive_power_sum / (interference_power_sum + noise)
 #     return SS_SINR
 
-def update_SS_SINR(UE_list, noise, mean_filter_length, after_HO=False):
+def update_SS_SINR(UE_list, BS_list, noise, mean_filter_length, after_HO=False):
     for _UE in UE_list:
+        if _UE.no == 9:
+            probe = _UE.no
         if not _UE.active: continue
         if after_HO and _UE.RL_state.filtered_SINR_dB != None: continue
         if _UE.state == 'unserved':
+            BS_no = _UE.neighbour_BS[0]
             BS_L3_h = _UE.neighbour_BS_L3_h[0]
         else:
+            BS_no = _UE.serv_BS
             BS_L3_h = _UE.serv_BS_L3_h
-        rec_power = np.square(BS_L3_h)
+
+        _BS = search_object_form_list_by_no(BS_list, BS_no)
+        Ptmax = _BS.Ptmax
+        nNt = _BS.nNt
+        nRB = len(_BS.center_RB_idx) + len(_BS.edge_RB_idx)
+        try:
+            K = np.min([_BS.MaxUE_per_RB, _BS.nUE_in_range])
+        except:
+            raise Exception('K is invalid!')
+
+        AG = (nNt-K+1)/K  # ZF预编码下的AG
+        rec_power = np.square(BS_L3_h) * Ptmax / nRB * AG
         neighbour_BS_L3_h = _UE.neighbour_BS_L3_h
-        interf = np.sum(np.square(neighbour_BS_L3_h)) - rec_power
+        interf = np.sum(np.square(neighbour_BS_L3_h)) * Ptmax / nRB - np.square(BS_L3_h) * Ptmax / nRB
         SS_SINR = rec_power / (interf + noise)
         _UE.update_RL_state_by_SINR(SS_SINR, mean_filter_length)
 

@@ -60,6 +60,12 @@ def cross_road_struction(Dist):
     Macro_Posi3 = Macro_Posi2 + Dist / 2 + 1j * np.sqrt(3) * Dist / 2
     return np.concatenate((Macro_Posi1,Macro_Posi2,Macro_Posi3)) - 1j*Dist/2/np.sqrt(3)
 
+def cell_struction(nCell, Dist):
+    if nCell == 7:
+        y_gap = Dist/2*np.sqrt(3)
+        return np.array([-Dist, -Dist/2+1j*y_gap, 0, Dist/2+1j*y_gap, Dist, -Dist/2-1j*y_gap, Dist/2-1j*y_gap])
+    else:
+        raise Exception('Unsupported nCell!')
 
 
 if __name__ == '__main__':

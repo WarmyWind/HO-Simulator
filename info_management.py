@@ -113,7 +113,7 @@ class HO_state:
 
 
 class RL_state:
-    def __init__(self, active=True, Qin=-6, Qout=-8, max_period=100):
+    def __init__(self, active=True, Qin=-18, Qout=-20, max_period=100):
         self.active = active
         self.duration = -1
         self.Qin = Qin
@@ -169,7 +169,7 @@ class RL_state:
 
 
 class UE:
-    def __init__(self, no, type_no, posi, type, active:bool, record_len=10):
+    def __init__(self, no, type_no, posi, type, active:bool, record_len=10, GBR_flag=False, min_rate=2*1e6):
         self.no = no  # UE编号
         self.record_len = record_len
         self.posi = posi
@@ -177,6 +177,10 @@ class UE:
         self.future_posi = [posi for _ in range(record_len)]
         self.type = type
         self.type_no = type_no  # 对应类型中的UE编号
+
+        self.GBR_flag = GBR_flag
+        self.min_rate = min_rate
+
         self.active = active
         self.Rreq = 0
         self.state = 'unserved'  # 'served', 'unserved'
@@ -198,6 +202,16 @@ class UE:
         self.RL_state = RL_state()
         self.posi_type = None
         self.RB_type = None
+
+    def estimate_needed_nRB_by_SINR(self, RB_width=180*1e3):
+        try:
+            SINR = 10 ** (self.RL_state.filtered_SINR_dB / 10)
+        except:
+            raise Exception('RL_state.filtered_SINR_dB is None!')
+        rate_per_RB = RB_width * np.log2(1 + SINR)
+        needed_nRB = self.min_rate / rate_per_RB
+        return np.ceil(needed_nRB)
+
 
     def is_in_invalid_RB(self, _BS, ICIC_flag:bool):
         if ICIC_flag:
@@ -431,6 +445,15 @@ class ResourceMap:
             self.RB_idle_antenna[_RB] = np.append(self.RB_idle_antenna[_RB], _Nt)
             self.RB_ocp_num[_RB] = self.RB_ocp_num[_RB] - 1
 
+        # 更新RB_sorted_idx
+        self.RB_sorted_idx = np.argsort(self.RB_ocp_num).astype(int)
+        if len(self.center_RB_sorted_idx) != 0:
+            self.center_RB_sorted_idx = self.center_RB_sorted_idx[
+                np.argsort(self.RB_ocp_num[self.center_RB_sorted_idx.astype(int)])].astype(int)
+        if len(self.edge_RB_sorted_idx) != 0:
+            self.edge_RB_sorted_idx = self.edge_RB_sorted_idx[
+                np.argsort(self.RB_ocp_num[self.edge_RB_sorted_idx.astype(int)])].astype(int)
+
         # 改变UE对象状态
         if UE.state == 'served':
             UE.update_state('unserved')
@@ -478,13 +501,14 @@ class PrecodingInfo():
 
 
 class BS:
-    def __init__(self, no, type: str, nNt, nRB, Ptmax, posi, active: bool, opt_UE_per_RB, MaxUE_per_RB, center_RB_idx, edge_RB_idx):
+    def __init__(self, no, type: str, nNt, nRB, Ptmax, posi, active: bool, RB_per_UE, opt_UE_per_RB, MaxUE_per_RB, center_RB_idx, edge_RB_idx):
         self.no = no
         self.type = type
         self.nNt = nNt
         self.nRB = nRB
         self.Ptmax = Ptmax
         self.posi = posi
+        self.RB_per_UE = RB_per_UE
         self.opt_UE_per_RB = opt_UE_per_RB
         self.MaxUE_per_RB = MaxUE_per_RB
         self.active = active
@@ -511,20 +535,56 @@ class BS:
             _RB_resource = self.resource_map.map[_RB, :]
             _serv_UE = _RB_resource[np.where(_RB_resource != -1)].astype('int32')
             if len(_serv_UE) == 0: continue  # 若没有服务用户，跳过
-            '''这里的功率分配简单的以RB上的用户数作为系数'''
+            '''这里的功率分配以RB上的用户数作为系数'''
             _Pt_ratio = self.resource_map.RB_ocp_num[_RB] / np.sum(self.resource_map.RB_ocp_num)  # 占用的功率比例
+            # '''这里的功率分配简单的用RB均分'''
+            # _Pt_ratio = 1/(len(self.center_RB_idx) + len(self.edge_RB_idx))
             _W, _coe = precoding_method(_H[:, _serv_UE].T, self.Ptmax * _Pt_ratio)
             self.precoding_info[_RB].update(_W, _coe)
 
+    def get_not_full_nRB(self, max_UE_per_RB, RB_type=None):
+        if RB_type == 'center':
+            _RB_arr = self.resource_map.center_RB_sorted_idx
+            if len(_RB_arr) != 0:
+                try:
+                    _RB_ocp_num = self.resource_map.RB_ocp_num[_RB_arr.astype(int)]
+                except:
+                    raise Exception('Get RB_ocp_num Wrong!')
+                idle_nRB = len(_RB_ocp_num[_RB_ocp_num < max_UE_per_RB])
+            else:
+                idle_nRB = 0
+        elif RB_type == 'edge':
+            _RB_arr = self.resource_map.edge_RB_sorted_idx
+            if len(_RB_arr) != 0:
+                _RB_ocp_num = self.resource_map.RB_ocp_num[_RB_arr.astype(int)]
+                idle_nRB = len(_RB_ocp_num[_RB_ocp_num < max_UE_per_RB])
+            else:
+                idle_nRB = 0
+        else:
+            _RB_arr = self.resource_map.RB_sorted_idx
+            if len(_RB_arr) != 0:
+                _RB_ocp_num = self.resource_map.RB_ocp_num[_RB_arr.astype(int)]
+                idle_nRB = len(_RB_ocp_num[_RB_ocp_num < max_UE_per_RB])
+            else:
+                idle_nRB = 0
+        return idle_nRB
 
     def if_RB_full_load(self, needed_nRB, max_UE_per_RB, RB_type=None):
         if RB_type == 'center':
+            if needed_nRB > len(self.resource_map.center_RB_sorted_idx):
+                return True
             most_idle_RB_arr = self.resource_map.center_RB_sorted_idx[0:needed_nRB]
         elif RB_type == 'edge':
+            if needed_nRB > len(self.resource_map.edge_RB_sorted_idx):
+                return True
             most_idle_RB_arr = self.resource_map.edge_RB_sorted_idx[0:needed_nRB]
         else:
+            if needed_nRB > len(self.resource_map.RB_sorted_idx):
+                return True
             most_idle_RB_arr = self.resource_map.RB_sorted_idx[0:needed_nRB]
 
+        if len(most_idle_RB_arr) == 0:
+            return True
         for most_idle_RB in most_idle_RB_arr:
             if self.resource_map.RB_ocp_num[int(most_idle_RB)] >= max_UE_per_RB:
                 return True
@@ -532,7 +592,8 @@ class BS:
 
     def is_full_load(self, needed_nRB, ICIC_flag):
         if ICIC_flag:
-            result = self.if_RB_full_load(needed_nRB, self.MaxUE_per_RB, 'center') and self.if_RB_full_load(needed_nRB, self.MaxUE_per_RB, 'edge')
+            idle_nRB = self.get_not_full_nRB(self.MaxUE_per_RB, RB_type='edge') + self.get_not_full_nRB(self.MaxUE_per_RB, RB_type='center')
+            result = idle_nRB < needed_nRB
         else:
             result = self.if_RB_full_load(needed_nRB, self.MaxUE_per_RB)
 
