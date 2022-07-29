@@ -75,7 +75,8 @@ def get_large_fading_dB_from_posi(PARAMS, UE_posi, BS_posi, BS_no, shadow_map:Sh
     y_temp = np.floor(np.ceil((np.imag(UE_posi) - origin_y_point) / PARAMS.posi_resolution)).astype(int)
     x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp))
     y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp))
-
+    x_temp = np.max((0, x_temp))
+    y_temp = np.max((0, y_temp))
 
     shadow = shadow_map.map[BS_no][y_temp, x_temp]
     large_fading_dB = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain

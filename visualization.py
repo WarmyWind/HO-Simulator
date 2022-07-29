@@ -327,6 +327,7 @@ def plot_SINR(UE_posi, UE, UE_HOF_posi = None, Qout = -8, ax=None):
     plt.show()
     return ax
 
+
 def plot_road(ax, scene, Dist, RoadWidth):
     if scene == 0:
         origin_y_point = (Dist / 2 * np.sqrt(3) - RoadWidth) / 2
@@ -350,6 +351,66 @@ def plot_road(ax, scene, Dist, RoadWidth):
         ax.vlines(x=415, ymin=-15, ymax=385, colors='black', ls='-', lw=1, label='road')
     return ax
 
+def handle_HO_rate(observe_length, PARAM, UE_list, UE_posi, rate_arr):
+    # observe_length = 8
+    HO_duration_rate = [[] for _ in range(4+1)]
+    for i in range(len(UE_list)):
+        _UE = UE_list[i]
+        _UE_posi = UE_posi[_UE.type][:,_UE.type_no]
+        for j in range(len(_UE.HO_state.failure_posi)):
+            for _failure_posi in _UE.HO_state.failure_posi[j]:
+                _posi_idx = np.where(_UE_posi == _failure_posi)[0][0]
+                _drop_idx = _posi_idx*PARAM.time_resolution
+                _rate_arr = rate_arr[_drop_idx-observe_length:_drop_idx, i]
+                if len(_rate_arr) != 0:
+                    HO_duration_rate[j].append(_rate_arr)
+
+        for _success_posi in _UE.HO_state.success_posi:
+            _posi_idx = np.where(_UE_posi == _success_posi)[0][0]
+            _drop_idx = _posi_idx * PARAM.time_resolution
+            _rate_arr = rate_arr[_drop_idx - observe_length-9:_drop_idx-9, i]
+            if len(_rate_arr) != 0:
+                HO_duration_rate[4].append(_rate_arr)
+
+    HO_duration_rate.append(rate_arr[rate_arr != 0])
+    HO_duration_rate_all = np.array([])
+    for i in range(5):
+        if len(HO_duration_rate[i]) == 0:
+            continue
+        else:
+            if len(HO_duration_rate_all) == 0:
+                HO_duration_rate_all = np.array(HO_duration_rate[i])
+            else:
+                HO_duration_rate_all = np.concatenate((HO_duration_rate_all, np.array(HO_duration_rate[i])), axis=0)
+
+    return HO_duration_rate_all.reshape(-1)
+
+def plot_all_HO_posi(UE_list, UE_posi, consider_HOF, consider_HOS=True, ax=None):
+    if ax == None:
+        fig, ax = plt.subplots()
+
+    HOF_posi = [[] for _ in range(4)]
+    HOS_posi = []
+    for i in range(len(UE_list)):
+        _UE = UE_list[i]
+        _UE_posi = UE_posi[_UE.type][:,_UE.type_no]
+        for j in range(len(_UE.HO_state.failure_posi)):
+            if j+1 in consider_HOF:
+                for _failure_posi in _UE.HO_state.failure_posi[j]:
+                    HOF_posi[j].append(_failure_posi)
+
+        if consider_HOS:
+            for _success_posi in _UE.HO_state.success_posi:
+                _posi_idx = np.where(_UE_posi == _success_posi)[0][0]
+                HOS_posi.append(_success_posi)
+
+    for i in range(4):
+        if len(HOF_posi[i]) != 0:
+            ax.scatter(np.real(HOF_posi[i]), np.imag(HOF_posi[i]), marker='o', s=10, label='HOF{}'.format(i+1))
+    if consider_HOS:
+        ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d', s=10, color='darkgreen', label='HOS')
+    return ax, HOF_posi
+
 if __name__ == '__main__':
     from simulator import *
     from channel_fading import get_shadow_from_mat
@@ -358,7 +419,7 @@ if __name__ == '__main__':
 
     PARAM = Parameter()
     '''从文件读取UE位置'''
-    UE_posi_filepath = 'UE_tra/0627_7road_7BS/Set_UE_posi_60s_330user_7BS_V123.mat'
+    UE_posi_filepath = 'UE_tra/0714_7road_7BS/Set_UE_posi_60s_330user_7BS_V123.mat'
     # UE_posi_filepath = 'UE_tra/0627_7road_7BS/Set_UE_posi_60s_330user_7BS_V123.mat'
     index = 'Set_UE_posi'
     UE_posi = get_UE_posi_from_file(UE_posi_filepath, index)
@@ -385,8 +446,8 @@ if __name__ == '__main__':
 
 
     '''从文件读取阴影衰落'''
-    shadow_filepath = 'ShadowFad/0523_ShadowFad_dB_normed_6sigmaX_10dCov.mat'
-    # shadow_filepath = 'ShadowFad/0627_7BS_ShadowFad_dB_normed_6sigmaX_10dCov.mat'
+    # shadow_filepath = 'ShadowFad/0523_ShadowFad_dB_normed_6sigmaX_10dCov.mat'
+    shadow_filepath = 'ShadowFad/0627_7BS_ShadowFad_dB_normed_6sigmaX_10dCov.mat'
     index = 'shadowFad_dB'
     shadowFad_dB = get_shadow_from_mat(shadow_filepath, index)
 
@@ -418,65 +479,7 @@ if __name__ == '__main__':
     # plt.show()
 
 
-    def handle_HO_rate(observe_length, PARAM, UE_list, UE_posi):
-        # observe_length = 8
-        HO_duration_rate = [[] for _ in range(4+1)]
-        for i in range(len(UE_list)):
-            _UE = UE_list[i]
-            _UE_posi = UE_posi[_UE.type][:,_UE.type_no]
-            for j in range(len(_UE.HO_state.failure_posi)):
-                for _failure_posi in _UE.HO_state.failure_posi[j]:
-                    _posi_idx = np.where(_UE_posi == _failure_posi)[0][0]
-                    _drop_idx = _posi_idx*PARAM.time_resolution
-                    _rate_arr = rate_arr[_drop_idx-observe_length:_drop_idx, i]
-                    if len(_rate_arr) != 0:
-                        HO_duration_rate[j].append(_rate_arr)
 
-            for _success_posi in _UE.HO_state.success_posi:
-                _posi_idx = np.where(_UE_posi == _success_posi)[0][0]
-                _drop_idx = _posi_idx * PARAM.time_resolution
-                _rate_arr = rate_arr[_drop_idx - observe_length-9:_drop_idx-9, i]
-                if len(_rate_arr) != 0:
-                    HO_duration_rate[4].append(_rate_arr)
-
-        HO_duration_rate.append(rate_arr[rate_arr != 0])
-        HO_duration_rate_all = np.array([])
-        for i in range(5):
-            if len(HO_duration_rate[i]) == 0:
-                continue
-            else:
-                if len(HO_duration_rate_all) == 0:
-                    HO_duration_rate_all = np.array(HO_duration_rate[i])
-                else:
-                    HO_duration_rate_all = np.concatenate((HO_duration_rate_all, np.array(HO_duration_rate[i])), axis=0)
-
-        return HO_duration_rate_all.reshape(-1)
-
-    def plot_all_HO_posi(UE_list, UE_posi, consider_HOF, consider_HOS=True, ax=None):
-        if ax == None:
-            fig, ax = plt.subplots()
-
-        HOF_posi = [[] for _ in range(4)]
-        HOS_posi = []
-        for i in range(len(UE_list)):
-            _UE = UE_list[i]
-            _UE_posi = UE_posi[_UE.type][:,_UE.type_no]
-            for j in range(len(_UE.HO_state.failure_posi)):
-                if j+1 in consider_HOF:
-                    for _failure_posi in _UE.HO_state.failure_posi[j]:
-                        HOF_posi[j].append(_failure_posi)
-
-            if consider_HOS:
-                for _success_posi in _UE.HO_state.success_posi:
-                    _posi_idx = np.where(_UE_posi == _success_posi)[0][0]
-                    HOS_posi.append(_success_posi)
-
-        for i in range(4):
-            if len(HOF_posi[i]) != 0:
-                ax.scatter(np.real(HOF_posi[i]), np.imag(HOF_posi[i]), marker='o', s=10, label='HOF{}'.format(i+1))
-        if consider_HOS:
-            ax.scatter(np.real(HOS_posi), np.imag(HOS_posi), marker='d', s=10, color='darkgreen', label='HOS')
-        return ax, HOF_posi
 
 
     def handle_func(max_inter_arr, UE_offline_dict):
@@ -514,13 +517,29 @@ if __name__ == '__main__':
     rate_data = []
     offline_rate_list = []
     num_UE = 330
-    for data_num in range(6):
-        root_path = 'result/0708_7BS_add_extra_itf'
+    for data_num in range(1):
+        print('ParaSet {}:'.format(data_num))
+        root_path = 'result/0723_7BS_noGBR_dynaRBICIC_330UE_fixAG'
         # data_num = 0
         rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+        # rate_arr = rate_arr[:400,:]
         print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
-        center_cell_rate = np.load(root_path + '/{}/center_cell_rate_arr.npy'.format(data_num), allow_pickle=True)
-        print('Center Cell Average rate: {}'.format(np.mean(center_cell_rate[center_cell_rate != 0])))
+        # center_cell_UE_list = np.load(root_path + '/{}/center_cell_UE_arr.npy'.format(data_num), allow_pickle=True)
+        # GBR_UE_list = np.load(root_path + '/{}/GBR_UE_arr.npy'.format(data_num), allow_pickle=True)
+        center_cell_rate = []
+        GBR_UE_rate = np.array([])
+        # for _frame in range(len(GBR_UE_list)):
+        #     # _center_UE_idx = center_cell_UE_list[_frame]
+        #     _GBR_UE_idx = GBR_UE_list[_frame]
+        #     _drop = _frame * 8
+        #
+        #     # center_cell_rate = np.concatenate((center_cell_rate, np.reshape(rate_arr[:,np.array(_UE_idx)],(-1,))))
+        #     # center_cell_rate.append(rate_arr[_drop,_center_UE_idx])
+        #     # GBR_UE_rate.append(rate_arr[_drop,_GBR_UE_idx])
+        #     GBR_UE_rate = np.concatenate((GBR_UE_rate, np.reshape(rate_arr[_drop,_GBR_UE_idx], (-1,))))
+        # print('Center Cell Average rate: {}'.format(np.mean(center_cell_rate[center_cell_rate != 0])))
+        # print('GBR UE Average rate: {}'.format(np.mean(GBR_UE_rate[GBR_UE_rate != 0])))
+        # print('Unsatified GBR UE rate : {}'.format(np.count_nonzero([GBR_UE_rate<1e6]) / len(GBR_UE_rate)))
 
         UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
         UE_offline_dict = np.load(root_path + '/{}/UE_offline_dict.npy'.format(data_num), allow_pickle=True).tolist()
@@ -554,91 +573,73 @@ if __name__ == '__main__':
         UE_list = UE_list[v2_UE_arr]
         rate_arr = rate_arr[:, v2_UE_arr]
 
-        HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+        HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi, rate_arr)
         HO_duration_rate_all = HO_duration_rate_all[HO_duration_rate_all != 0]
         rate_data.append(HO_duration_rate_all)
         rate_data_all.append(rate_arr[rate_arr != 0])
 
+    # for data_num in range(2):
+    #     print('ParaSet {}:'.format(data_num))
+    #     root_path = 'result/0711_7BS_with_GBR_RBforUE=6or9'
+    #     # data_num = 0
+    #     rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
+    #     print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
+    #     center_cell_UE_list = np.load(root_path + '/{}/center_cell_UE_arr.npy'.format(data_num), allow_pickle=True)
+    #     GBR_UE_list = np.load(root_path + '/{}/GBR_UE_arr.npy'.format(data_num), allow_pickle=True)
+    #     center_cell_rate = []
+    #     GBR_UE_rate = np.array([])
+    #     for _frame in range(len(center_cell_UE_list)):
+    #         _center_UE_idx = center_cell_UE_list[_frame]
+    #         _GBR_UE_idx = GBR_UE_list[_frame]
+    #         _drop = _frame * 8
+    #
+    #         # center_cell_rate = np.concatenate((center_cell_rate, np.reshape(rate_arr[:,np.array(_UE_idx)],(-1,))))
+    #         center_cell_rate.append(rate_arr[_drop,_center_UE_idx])
+    #         # GBR_UE_rate.append(rate_arr[_drop,_GBR_UE_idx])
+    #         GBR_UE_rate = np.concatenate((GBR_UE_rate, np.reshape(rate_arr[_drop,_GBR_UE_idx], (-1,))))
+    #     print('Center Cell Average rate: {}'.format(np.mean(center_cell_rate[center_cell_rate != 0])))
+    #     print('GBR UE Average rate: {}'.format(np.mean(GBR_UE_rate[GBR_UE_rate != 0])))
+    #     print('Unsatified GBR UE rate : {}'.format(np.count_nonzero([GBR_UE_rate<1e6]) / len(GBR_UE_rate)))
+    #
+    #     UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
+    #     UE_offline_dict = np.load(root_path + '/{}/UE_offline_dict.npy'.format(data_num), allow_pickle=True).tolist()
+    #     offline_rate_temp_list = []
+    #     if len(UE_offline_dict) == 5:
+    #         center_UE_offline_arr = np.array(UE_offline_dict['center_UE_offline'])
+    #         edge_UE_offline_arr = np.array(UE_offline_dict['edge_UE_offline'])
+    #         for i in range(len(center_UE_offline_arr)):
+    #             offline_nUE = len(center_UE_offline_arr[i]) + len(edge_UE_offline_arr[i])
+    #             _offline_rate = offline_nUE / num_UE
+    #             offline_rate_temp_list.append(_offline_rate)
+    #         offline_rate_list.append(np.mean(offline_rate_temp_list))
+    #
+    #
+    #     else:
+    #         UE_offline_arr = np.array(UE_offline_dict['UE_offline'])
+    #         for i in range(len(UE_offline_arr)):
+    #             offline_nUE = len(UE_offline_arr[i])
+    #             _offline_rate = offline_nUE / num_UE
+    #             offline_rate_temp_list.append(_offline_rate)
+    #         offline_rate_list.append(np.mean(offline_rate_temp_list))
+    #
+    #
+    #     v2_UE_list = []
+    #     for _UE in UE_list:
+    #         # if _UE.type == 0 or _UE.type == 1 or _UE.type == 2:
+    #         # if _UE.type == 0:
+    #         v2_UE_list.append(_UE.no)
+    #     v2_UE_arr = np.array(v2_UE_list)
+    #
+    #     UE_list = UE_list[v2_UE_arr]
+    #     rate_arr = rate_arr[:, v2_UE_arr]
+    #
+    #     HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
+    #     HO_duration_rate_all = HO_duration_rate_all[HO_duration_rate_all != 0]
+    #     rate_data.append(HO_duration_rate_all)
+    #     rate_data_all.append(rate_arr[rate_arr != 0])
+
     print(offline_rate_list)
 
-    # root_path = 'result/0622_1row_8BS'
-    # data_num = 1
-    # rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
-    # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
-    #
-    # UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
-    # UE_list = UE_list[v2_UE_arr]
-    # rate_arr = rate_arr[:, v2_UE_arr]
-    #
-    # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
-    # HO_duration_rate_all = HO_duration_rate_all[HO_duration_rate_all != 0]
-    # rate_data.append(HO_duration_rate_all)
-    # rate_data_all.append(rate_arr[rate_arr != 0])
-
-    # UE_offline_dict = np.load(root_path + '/{}/UE_offline_dict.npy'.format(data_num), allow_pickle=True).tolist()
-    # max_inter_arr = np.load(root_path + '/{}/max_inter_arr.npy'.format(data_num), allow_pickle=True)
-
-    # max_interf_center_all, max_interf_edge_all = handle_func(max_inter_arr, UE_offline_dict)
-    # max_interf_edge_all_list.append(10*np.log10(copy.deepcopy(max_interf_edge_all+PARAM.sigma2)))
-    # max_interf_center_all_list.append(10*np.log10(copy.deepcopy(max_interf_center_all+PARAM.sigma2)))
-
-    # root_path = 'result/0616_fix_posi_seq'
-    # data_num = 2
-    # rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
-    # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
-    #
-    # UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
-    # UE_list = UE_list[v2_UE_arr]
-    # rate_arr = rate_arr[:, v2_UE_arr]
-    #
-    # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
-    # HO_duration_rate_all = HO_duration_rate_all[HO_duration_rate_all != 0]
-    # rate_data.append(HO_duration_rate_all)
-    # rate_data_all.append(rate_arr[rate_arr != 0])
-    #
-    #
-    # root_path = 'result/0616_fix_posi_seq'
-    # data_num = 3
-    # rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
-    # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
-    #
-    # UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
-    # UE_list = UE_list[v2_UE_arr]
-    # rate_arr = rate_arr[:, v2_UE_arr]
-    #
-    # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
-    # HO_duration_rate_all = HO_duration_rate_all[HO_duration_rate_all != 0]
-    # rate_data.append(HO_duration_rate_all)
-    # rate_data_all.append(rate_arr[rate_arr != 0])
-    #
-    # root_path = 'result/0616_AHO_ICIC_SINR_obsolete10_fixed'
-    # data_num = 0
-    # rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
-    # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
-    #
-    # UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
-    #
-    # UE_list = UE_list[v2_UE_arr]
-    # rate_arr = rate_arr[:, v2_UE_arr]
-    # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
-    # HO_duration_rate_all = HO_duration_rate_all[HO_duration_rate_all != 0]
-    # rate_data.append(HO_duration_rate_all)
-    # rate_data_all.append(rate_arr[rate_arr != 0])
-    #
-    #
-    # root_path = 'result/0616_fix_posi_seq'
-    # data_num = 4
-    # rate_arr = np.load(root_path + '/{}/rate_arr.npy'.format(data_num), allow_pickle=True)
-    # print('Total Average rate: {}'.format(np.mean(rate_arr[rate_arr != 0])))
-    #
-    # UE_list = np.load(root_path + '/{}/UE_list.npy'.format(data_num), allow_pickle=True)
-    #
-    # UE_list = UE_list[v2_UE_arr]
-    # rate_arr = rate_arr[:, v2_UE_arr]
-    # HO_duration_rate_all = handle_HO_rate(observe_length, PARAM, UE_list, UE_posi)
-    # HO_duration_rate_all = HO_duration_rate_all[HO_duration_rate_all != 0]
-    # rate_data.append(HO_duration_rate_all)
-    # rate_data_all.append(rate_arr[rate_arr != 0])
 
 
     # ax.plot(UE_on_edge_RB_num_list, label='75m')
@@ -647,45 +648,46 @@ if __name__ == '__main__':
     # rate_arr_no_zero = rate_data_all[0]
     # rate_arr_no_zero=rate_arr_no_zero[rate_arr_no_zero!=0]
     # sns.kdeplot(rate_data[0], label='passive')
-    #
-    # # rate_arr_no_zero = rate_data_all[1]
-    # # rate_arr_no_zero = rate_arr_no_zero[rate_arr_no_zero != 0]
-    # sns.kdeplot(rate_data[1], label='ICIC passive')
-    #
-    # # rate_arr_no_zero = rate_data_all[2]
-    # # rate_arr_no_zero = rate_arr_no_zero[rate_arr_no_zero != 0]
-    # sns.kdeplot(rate_data[2], label='ICIC ideal active')
-    #
-    # # rate_arr_no_zero = rate_data_all[3]
-    # # rate_arr_no_zero = rate_arr_no_zero[rate_arr_no_zero != 0]
-    # sns.kdeplot(rate_data[3], label='ICIC active')
-    #
-    # plt.xlim((-1*1e6,8*1e6))
-    # plt.legend()
+
+
+
+    # '''绘制HO前的速率cdf'''
+    # # label_list=['passive','ideal active', 'active', 'ICIC passive', 'ICIC ideal active', 'ICIC active']
+    # # label_list = ['ideal SINR', 'obsolete SINR', 'pred_len=1', 'pred_len=5', 'pred_len=10']
+    # # label_list = ['PHO ideal SINR','PHO obsolete frame = 10','ideal AHO ideal SINR','AHO ideal SINR','AHO obsolete frame = 10','AHO pred len = 10']
+    # label_list = ['dynamic nRB+ICIC+AHO','nRB=4+PHO','nRB=4+ICIC+AHO','nRB=6+PHO','nRB=6+ICIC+AHO','nRB=8+PHO','nRB=8+ICIC+AHO']
+    # ax = plot_cdf(np.array(rate_data)/1e6, 'bit rate(Mbps)', 'cdf', label_list)
+    # plt.legend(loc='lower right')
+    # plt.xlim(0, 6)
     # plt.show()
+    #
+    print([np.mean(rate_data[i][rate_data[i]!=0]) for i in range(6)])
+    print([(1-offline_rate_list[i])*np.mean(rate_data_all[i][rate_data_all[i] != 0]) for i in range(6)])
+    '''绘制全部时间内的速率分布'''
+    # temp_rate_data = copy.deepcopy(rate_data_all)
+    # temp_rate_data[2] = rate_data_all[4]
+    # temp_rate_data[3] = rate_data_all[2]
+    # temp_rate_data[4] = rate_data_all[3]
 
-
-
-    '''绘制HO前的速率cdf'''
-    # label_list=['passive','ideal active', 'active', 'ICIC passive', 'ICIC ideal active', 'ICIC active']
-    # label_list = ['ideal SINR', 'obsolete SINR', 'pred_len=1', 'pred_len=5', 'pred_len=10']
-    # label_list = ['PHO ideal SINR','PHO obsolete frame = 10','ideal AHO ideal SINR','AHO ideal SINR','AHO obsolete frame = 10','AHO pred len = 10']
-    label_list = ['dynamic nRB+ICIC+AHO','nRB=4+PHO','nRB=4+ICIC+AHO','nRB=6+PHO','nRB=6+ICIC+AHO','nRB=8+PHO','nRB=8+ICIC+AHO']
-    ax = plot_cdf(np.array(rate_data)/1e6, 'bit rate(Mbps)', 'cdf', label_list)
-    plt.legend(loc='lower right')
-    plt.xlim(0, 6)
-    plt.show()
-    print(np.mean(rate_data[0]),np.mean(rate_data[1]),np.mean(rate_data[2]),np.mean(rate_data[3])
-          ,np.mean(rate_data[4]),np.mean(rate_data[5]))
-    # print(np.mean(rate_data[0]))
-    # '''绘制全部时间内的速率cdf'''
-    # label_list = ['ideal SINR', 'obsolete SINR', 'pred_len=1', 'pred_len=5', 'pred_len=10']
-    # ax = plot_cdf(np.array(rate_data_all)/1e6, 'bit rate(Mbps)', 'cdf', label_list)
+    # data_idx = [0,1,2,3]
+    # temp_rate_data = np.array(rate_data_all)[data_idx]
+    # # label_list = ['5%GBR ICIC dynamicRB AHO', '5%GBR RB=3 PHO', '5%GBR ICIC RB=3 AHO', '10%GBR ICIC dynamicRB AHO', '10%GBR RB=3 PHO', '10%GBR ICIC RB=3 AHO']
+    # label_list = ['5%GBR ICIC dynamicRB AHO', '5%GBR ICIC RB=3 AHO', '5%GBR ICIC RB=6 AHO', '5%GBR ICIC RB=9 AHO']
+    # ax = plot_cdf(np.array(temp_rate_data)/1e6, 'bit rate(Mbps)', 'cdf', label_list)
     # plt.legend(loc='lower right')
     # plt.xlim(0, 10)
     # plt.show()
-    # print(np.mean(rate_data_all[0]),np.mean(rate_data_all[1]),np.mean(rate_data_all[2]),
-    #       np.mean(rate_data_all[3]),np.mean(rate_data_all[4]))
+
+    # for i in range(len(temp_rate_data)):
+    #     sns.kdeplot(temp_rate_data[i]/1e6, label=label_list[i])
+    #
+    # plt.xlim((0, 10))
+    # plt.xlabel('bit rate(Mbps)')
+    # plt.legend()
+    # plt.show()
+
+    # print([np.mean(temp_rate_data[i][temp_rate_data[i]!=0]) for i in range(6)])
+    # print([np.mean(rate_data_all[i][rate_data_all[i]!=0]) for i in range(6)])
 
     # rate_data = np.array(rate_data_all)
     # sio.savemat('passive_rate.mat', {'passive_rate': rate_data[0][rate_data[0] != 0].reshape((-1))})

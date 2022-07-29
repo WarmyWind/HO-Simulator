@@ -80,8 +80,8 @@ def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
 
     # 根据邻基站列表接入，可能多个用户接入一个基站
     for _UE in UE_list:
-        if _UE.no == 398:
-            probe = _UE.no
+        # if _UE.no == 37:
+        #     probe = _UE.no
         if not _UE.active: continue
         if _UE.state != 'unserved': continue
         # _UE_no = _UE.no

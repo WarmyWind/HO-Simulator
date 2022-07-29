@@ -85,7 +85,7 @@ def handover_criteria_eval(PARAMS, UE_list, BS_list, large_fading: LargeScaleCha
 
                         # _target_BS = search_object_form_list_by_no(BS_list, _UE.HO_state.target_BS)
                         if allocate_method == equal_RB_allocate or allocate_method == ICIC_RB_allocate:
-                            _result = allocate_method([_UE], UE_list, _target_BS, serving_map, HO_flag=True)
+                            _result = allocate_method([_UE], UE_list, _target_BS, serving_map, False)
                         else:
                             raise Exception("Invalid allocate method!", allocate_method)
                         if _result:

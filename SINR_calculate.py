@@ -60,8 +60,8 @@ def get_interference(PARAM, BS_list, UE_list, channel: InstantChannelMap, extra_
         for _UE in UE_list:
             if _UE.serv_BS == -1: continue
             _BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
-            if _UE.serv_BS == 2:
-                probe = _UE.serv_BS
+            # if _UE.serv_BS == 2:
+            #     probe = _UE.serv_BS
             RB_serv_arr = np.array([_UE.RB_Nt_ocp[i][0] for i in range(len(_UE.RB_Nt_ocp))])
             for _RB in RB_serv_arr:
                     UE_posi = _UE.posi
@@ -101,10 +101,13 @@ def calculate_SINR_dB(receive_power, interference_power, noise):
 #     SS_SINR = receive_power_sum / (interference_power_sum + noise)
 #     return SS_SINR
 
-def update_SS_SINR(UE_list, BS_list, noise, mean_filter_length, after_HO=False):
+def update_SS_SINR(PARAM, UE_list, BS_list, after_HO=False, extra_interf_map=None):
+    noise = PARAM.sigma2
+    mean_filter_length = PARAM.filter_length_for_SINR
+
     for _UE in UE_list:
-        if _UE.no == 9:
-            probe = _UE.no
+        # if _UE.no == 37:
+        #     probe = _UE.no
         if not _UE.active: continue
         if after_HO and _UE.RL_state.filtered_SINR_dB != None: continue
         if _UE.state == 'unserved':
@@ -117,9 +120,10 @@ def update_SS_SINR(UE_list, BS_list, noise, mean_filter_length, after_HO=False):
         _BS = search_object_form_list_by_no(BS_list, BS_no)
         Ptmax = _BS.Ptmax
         nNt = _BS.nNt
-        nRB = len(_BS.center_RB_idx) + len(_BS.edge_RB_idx)
+        nRB = PARAM.nRB
+
         try:
-            K = np.min([_BS.MaxUE_per_RB, _BS.nUE_in_range])
+            K = np.min([_BS.opt_UE_per_RB, _BS.nUE_in_range])
         except:
             raise Exception('K is invalid!')
 
@@ -127,8 +131,46 @@ def update_SS_SINR(UE_list, BS_list, noise, mean_filter_length, after_HO=False):
         rec_power = np.square(BS_L3_h) * Ptmax / nRB * AG
         neighbour_BS_L3_h = _UE.neighbour_BS_L3_h
         interf = np.sum(np.square(neighbour_BS_L3_h)) * Ptmax / nRB - np.square(BS_L3_h) * Ptmax / nRB
-        SS_SINR = rec_power / (interf + noise)
+        if interf < 0:
+            interf = 0
+
+
+        ICIC_itf = 0
+        if _BS.ICIC_group != -1:
+            for neighbour_BS_list_idx in range(len(_UE.neighbour_BS)):
+                _BS_no = _UE.neighbour_BS[neighbour_BS_list_idx]
+                _neighbour_BS = search_object_form_list_by_no(BS_list, _BS_no)
+                if _neighbour_BS.no != _BS.no and _neighbour_BS.ICIC_group == _BS.ICIC_group:
+                    ICIC_itf = ICIC_itf + (np.square(neighbour_BS_L3_h[neighbour_BS_list_idx])) * Ptmax / nRB
+        else:
+            ICIC_itf = interf
+
+        try:
+            UE_posi = _UE.posi
+            origin_x_point = PARAM.origin_x
+            origin_y_point = PARAM.origin_y
+            x_temp = int(np.ceil((np.real(UE_posi) - origin_x_point) / PARAM.posi_resolution))
+            y_temp = np.floor(np.ceil((np.imag(UE_posi) - origin_y_point) / PARAM.posi_resolution)).astype(int)
+            x_temp = np.min((extra_interf_map.shape[3] - 1, x_temp))
+            y_temp = np.min((extra_interf_map.shape[2] - 1, y_temp))
+            extra_ICIC_itf = extra_interf_map[_UE.serv_BS, 1, y_temp, x_temp]
+            extra_non_ICIC_itf = extra_interf_map[_UE.serv_BS, 0, y_temp, x_temp]
+        except:
+            # extra_itf = 0
+            raise Exception('Get extra interference Err')
+
+        ICIC_SINR = rec_power / (ICIC_itf + extra_ICIC_itf + noise)
+
+
+
+        SS_SINR = rec_power / (interf + extra_non_ICIC_itf + noise)
         _UE.update_RL_state_by_SINR(SS_SINR, mean_filter_length)
+
+
+        _UE.RL_state.estimated_rec_power = rec_power
+        _UE.RL_state.estimated_itf_power = interf + extra_non_ICIC_itf
+        _UE.RL_state.estimated_ICIC_itf_power = ICIC_itf + extra_ICIC_itf
+        _UE.RL_state.estimated_ICIC_SINR_dB = 10*np.log10(ICIC_SINR)
 
 
 def update_pred_SS_SINR(UE_list, noise, NN, normalize_para, pred_len):

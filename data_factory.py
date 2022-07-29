@@ -46,7 +46,7 @@ def create_Macro_BS_list(PARAM, Macro_Posi):
     macro_BS_list = []
 
     for i in range(PARAM.Macro.nBS):
-        if PARAM.ICIC.flag:
+        if PARAM.ICIC.flag and PARAM.ICIC.ICIC_RB_group_for_BS[i] != -1:
             _edge_RB_per_partition = np.floor(PARAM.nRB * PARAM.ICIC.RB_for_edge_ratio / PARAM.ICIC.RB_partition_num)
             _center_RB_num = PARAM.nRB - PARAM.ICIC.RB_partition_num * _edge_RB_per_partition
             center_RB_idx = np.arange(_center_RB_num)
@@ -56,12 +56,12 @@ def create_Macro_BS_list(PARAM, Macro_Posi):
             _RB_end_idx = _RB_start_idx + _edge_RB_per_partition
             edge_RB_idx = np.arange(_RB_start_idx, _RB_end_idx)
         else:
-            center_RB_idx = np.array([])
+            center_RB_idx = np.array([RB_idx for RB_idx in range(PARAM.nRB)])
             edge_RB_idx = np.array([])
 
         macro_BS_list.append(BS(i, 'Macro', PARAM.Macro.nNt, PARAM.nRB, PARAM.Macro.Ptmax,
                                 Macro_Posi[i], True, PARAM.RB_per_UE, PARAM.Macro.opt_UE_per_RB, PARAM.Macro.nNt,
-                                center_RB_idx, edge_RB_idx))
+                                center_RB_idx, edge_RB_idx, PARAM.ICIC.ICIC_RB_group_for_BS[i]))
     return macro_BS_list
 
 
@@ -85,7 +85,7 @@ def create_UE_list(PARAM, UE_posi):
                     _active = True
                 else:
                     _active = False
-                UE_list.append(UE(len(UE_list), _UE_type_no, _UE_posi, i, active=_active, record_len=PARAM.AHO.obs_len))
+                UE_list.append(UE(len(UE_list), _UE_type_no, _UE_posi, type=i, active=_active, record_len=PARAM.AHO.obs_len))
     elif len(UE_posi.shape) == 2:
         if PARAM.nUE == 'all':
             _nUE = UE_posi.shape[1]
@@ -98,7 +98,7 @@ def create_UE_list(PARAM, UE_posi):
                 _active = True
             else:
                 _active = False
-            UE_list.append(UE(_UE_no, _UE_no, _UE_posi, active=_active))
+            UE_list.append(UE(_UE_no, _UE_no, _UE_posi, type=0, active=_active))
     elif len(UE_posi.shape) == 3:
         for i in range(PARAM.ntype):
             if PARAM.nUE_per_type == 'all':

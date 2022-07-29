@@ -37,7 +37,8 @@ outer_group0_BS_posi = [np.exp(1j*(i*np.pi/3+np.pi/6))*Dist*np.sqrt(3) for i in 
 outer_group1_BS_posi = [np.exp(1j*(i*2*np.pi/3))*Dist*2 for i in range(3)]
 outer_group2_BS_posi = [np.exp(1j*(i*2*np.pi/3+np.pi/3))*Dist*np.sqrt(3) for i in range(3)]
 outer_BS_posi = [outer_group0_BS_posi,outer_group1_BS_posi,outer_group2_BS_posi]
-inner_BS_group = [1,2,0,1,2,2,1]
+# inner_BS_group = [1,2,0,1,2,2,1]
+inner_BS_group = [1,-1,0,1,-1,-1,1]
 for _BS_idx in range(len(Macro_Posi)):
     # _BS_posi = Macro_Posi[_BS_idx]
     for ICIC_flag in range(2):
@@ -53,14 +54,24 @@ for _BS_idx in range(len(Macro_Posi)):
                     interf_map[_BS_idx,ICIC_flag,...] = interf_map[_BS_idx,ICIC_flag,...] + _estimated_interf_power
 
         else:
-            for _outer_BS_posi in outer_BS_posi[inner_BS_group[_BS_idx]]:
-                _dist = np.abs(posi_map - _outer_BS_posi)
-                if np.count_nonzero(_dist == 0):
-                    raise Exception('Dist == 0')
-                large_fading_dB = pLoss1mdB + dFactordB * np.log10(_dist) - antGaindB
-                large_scale_channel = 10 ** (-large_fading_dB / 20)
-                _estimated_interf_power = Ptmax / nRB * np.square(large_scale_channel)
-                interf_map[_BS_idx, ICIC_flag, ...] = interf_map[_BS_idx, ICIC_flag, ...] + _estimated_interf_power
+            _BS_group = inner_BS_group[_BS_idx]
+            if _BS_group != -1:
+                for _outer_BS_posi in outer_BS_posi[_BS_group]:
+                    _dist = np.abs(posi_map - _outer_BS_posi)
+                    if np.count_nonzero(_dist == 0):
+                        raise Exception('Dist == 0')
+                    large_fading_dB = pLoss1mdB + dFactordB * np.log10(_dist) - antGaindB
+                    large_scale_channel = 10 ** (-large_fading_dB / 20)
+                    _estimated_interf_power = Ptmax / nRB * np.square(large_scale_channel)
+                    interf_map[_BS_idx, ICIC_flag, ...] = interf_map[_BS_idx, ICIC_flag, ...] + _estimated_interf_power
 
+                for _outer_BS_posi in outer_group2_BS_posi:
+                    _dist = np.abs(posi_map - _outer_BS_posi)
+                    if np.count_nonzero(_dist == 0):
+                        raise Exception('Dist == 0')
+                    large_fading_dB = pLoss1mdB + dFactordB * np.log10(_dist) - antGaindB
+                    large_scale_channel = 10 ** (-large_fading_dB / 20)
+                    _estimated_interf_power = Ptmax / nRB * np.square(large_scale_channel)
+                    interf_map[_BS_idx, ICIC_flag, ...] = interf_map[_BS_idx, ICIC_flag, ...] + _estimated_interf_power
 
 sio.savemat(save_path, {index: np.array(interf_map)})
