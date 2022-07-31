@@ -5,7 +5,8 @@
 
 import tensorflow as tf
 import pickle
-# from ReinfocementLearning.actor import ActorNetwork
+# from ReinforcementLearningV1.actor import ActorNetwork
+from DNN_model_utils import DNN_Model_Wrapper
 from ReinforcementLearningV2.actor import ActorNetwork
 import tf_slim as slim
 import numpy as np
@@ -14,7 +15,6 @@ import os
 import copy
 from para_init import *
 from network_deployment import cellStructPPP, road_cell_struct
-
 from radio_access import access_init, find_and_update_neighbour_BS
 from resource_allocation import *
 from channel_measurement import *
@@ -108,7 +108,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
             _GBR_UE.append(_UE.no)
     GBR_UE_list = [_GBR_UE]
 
-    '''统计中心、边缘UE数、掉线率'''
+    '''统计中心、边缘UE数、未服务率'''
     if PARAM.ICIC.flag:
         center_UE, center_UE_offline, edge_UE, edge_UE_offline, UE_on_edge_RB = count_UE_offline(PARAM, UE_list, SINR_th=PARAM.ICIC.SINR_th_for_stat)
         center_UE_record = [center_UE]
@@ -224,7 +224,6 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
             if PARAM.ICIC.flag:
                 # '''针对使用不合法RB的用户和RB类型不一致的用户，重新分配RB'''
                 # ICIC_RB_reallocate(UE_list, BS_list, serving_map)
-
                 '''对BS内UE做RB分配'''
                 for _BS in BS_list:
                     ICIC_BS_RB_allocate(PARAM, UE_list, _BS, serving_map)  # 边缘UE优先分配正交资源
@@ -288,7 +287,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
             # center_cell_UE_list.append(_center_cell_UE)
 
 
-            '''统计中心、边缘用户以及掉线用户'''
+            '''统计中心、边缘用户以及未服务用户'''
             if PARAM.ICIC.flag:
                 center_UE, center_UE_offline, edge_UE, edge_UE_offline, UE_on_edge_RB = count_UE_offline(PARAM, UE_list, SINR_th=PARAM.ICIC.SINR_th_for_stat)
                 center_UE_record.append(center_UE)
@@ -304,7 +303,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
             if PARAM.ICIC.flag and PARAM.ICIC.dynamic:
                 RB_for_edge_ratio_list.append(PARAM.ICIC.RB_for_edge_ratio)
 
-        '''开始HO eval'''
+        '''开始切换'''
         measure_criteria = 'L3'
         if PARAM.ICIC.flag == 1:
             allocate_method = ICIC_RB_allocate
@@ -316,14 +315,13 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
             handover_criteria_eval(PARAM, UE_list, BS_list, large_fading, instant_channel,
                                     serving_map, allocate_method, measure_criteria)
         else:
+            # 主动HO
             actice_HO_eval(PARAM, NN, normalize_para, UE_list, BS_list, shadow, large_fading, instant_channel,
                                     serving_map, allocate_method, measure_criteria)
 
         '''对HO后SS_SINR变为None的UE估计SS_SINR'''
         count_UE_in_range(UE_list, BS_list)
         update_SS_SINR(PARAM, UE_list, BS_list, after_HO=True, extra_interf_map=extra_interf_map)
-
-
 
 
         '''显示进度条'''
@@ -362,7 +360,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
 
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
-        save_flag = 1  # 是否保存结果
+        save_flag = 0  # 是否保存结果
         root_path = 'result/0727_7BS_150moving_180staticUE-2'
         # nDrop = 6000 - 10*8  # 时间步进长度
         nDrop = 400
@@ -391,8 +389,8 @@ if __name__ == '__main__':
         '''大尺度信道预测模型'''
         model_name = 'scene0_large_h_DNN_0515'
         # model_name = 'DNN_0508'
-        NN_path = 'Model/large_h_predict/'+model_name+'/'+model_name+'.dat'
-        normalize_para_filename = 'Model/large_h_predict/'+model_name+'/normalize_para.npy'
+        NN_path = 'DNNModel/large_h_predict/'+model_name+'/'+model_name+'.dat'
+        normalize_para_filename = 'DNNModel/large_h_predict/'+model_name+'/normalize_para.npy'
 
         '''每个UE的RB数决策模型'''
         # actor_path = 'ReinfocementLearning/models/0709model/actor_1234567_0709_0'
@@ -410,7 +408,6 @@ if __name__ == '__main__':
 
     def simulator_entry(PARAM_list, shadowFad_dB, UE_posi, extra_interf_map=None):
         if SimConfig.save_flag == 1:
-            # _path = SimConfig.root_path+'/PARAM_list.npy'
             if not os.path.exists(SimConfig.root_path):
                 os.makedirs(SimConfig.root_path)
             np.save(SimConfig.root_path+'/PARAM_list.npy', PARAM_list)

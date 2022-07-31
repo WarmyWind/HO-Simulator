@@ -143,10 +143,10 @@ def paraset_generator():
     RB_per_UE = [3,4,5,6,7]
 
     PARAM0 = Parameter()
-    PARAM0.active_HO = False  # 被动切换
-    PARAM0.PHO.ideal_HO = True  # 理想被动切换，哪个基站好就接入哪个
-    PARAM0.TTT = 0
-    PARAM0.HOM = 0
+    PARAM0.active_HO = True  # 被动切换
+    PARAM0.PHO.ideal_HO = False  # 理想被动切换，哪个基站好就接入哪个
+    # PARAM0.TTT = 0
+    # PARAM0.HOM = 0
     PARAM0.AHO.ideal_pred = False
     # PARAM0.ICIC.flag = True
     PARAM0.ICIC.RB_partition_num = 3
@@ -168,7 +168,7 @@ def paraset_generator():
         for _RB_per_UE in RB_per_UE:
             PARAM0 = Parameter()
             PARAM0.active_HO = False  # 被动切换
-            PARAM0.PHO.ideal_HO = True  # 理想被动切换，哪个基站好就接入哪个
+            PARAM0.PHO.ideal_HO = True  # 理想被动切换
             PARAM0.TTT = 0
             PARAM0.HOM = 0
             PARAM0.AHO.ideal_pred = False
@@ -187,191 +187,6 @@ def paraset_generator():
             PARAM0.nRB = 30
             PARAM0.GBR_ratio = 0
             PARAM_list.append(PARAM0)
-
-    # PARAM1 = Parameter()
-    # PARAM1.active_HO = False  # 被动
-    # PARAM1.AHO.ideal_pred = False
-    # # PARAM1.ICIC.flag = True
-    # PARAM1.ICIC.RB_partition_num = 3
-    # PARAM1.ICIC.dynamic = False  # ICIC
-    # PARAM1.ICIC.RB_for_edge_ratio = 0
-    # PARAM1.ICIC.ideal_RL_state = True  # ICIC时SINR理想
-    # # PARAM1.ICIC.obsolete_time = 10
-    # PARAM1.ICIC.RL_state_pred_flag = False
-    # # PARAM1.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-    # # PARAM1.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-    # PARAM1.dynamic_nRB_per_UE = False
-    # PARAM1.RB_per_UE = 6
-    # PARAM1.nRB = 30
-    # PARAM1.GBR_ratio = 0
-    # PARAM_list.append(PARAM1)
-    #
-    # PARAM3 = Parameter()
-    # PARAM3.active_HO = False  # 被动
-    # PARAM3.AHO.ideal_pred = False
-    # # PARAM3.ICIC.flag = True
-    # PARAM3.ICIC.RB_partition_num = 3
-    # PARAM3.ICIC.dynamic = False  # ICIC
-    # PARAM3.ICIC.RB_for_edge_ratio = 0
-    # PARAM3.ICIC.ideal_RL_state = True  # ICIC时SINR理想
-    # # PARAM3.ICIC.obsolete_time = 10
-    # PARAM3.ICIC.RL_state_pred_flag = False
-    # # PARAM3.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-    # # PARAM3.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-    # PARAM3.dynamic_nRB_per_UE = False
-    # PARAM3.RB_per_UE = 9
-    # PARAM3.nRB = 30
-    # PARAM3.GBR_ratio = 0
-    # PARAM_list.append(PARAM3)
-
-    # PARAM0 = Parameter()
-    # PARAM0.active_HO = True  # 主动切换
-    # PARAM0.AHO.ideal_pred = False
-    # # PARAM0.ICIC.flag = True
-    # PARAM0.ICIC.RB_partition_num = 3
-    # PARAM0.ICIC.dynamic = True  # ICIC
-    # PARAM0.ICIC.ideal_RL_state = True  # ICIC时SINR理想
-    # # PARAM0.ICIC.obsolete_time = 10
-    # PARAM0.ICIC.RL_state_pred_flag = False
-    # # PARAM0.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-    # # PARAM0.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-    # PARAM0.dynamic_nRB_per_UE = True
-    # PARAM0.RB_per_UE = 3
-    # PARAM0.nRB = 30
-    # PARAM0.GBR_ratio = 0
-    # PARAM_list.append(PARAM0)
-
-    # PARAM1 = Parameter()
-    # PARAM1.active_HO = True  # 主动切换
-    # PARAM1.AHO.ideal_pred = False
-    # # PARAM1.ICIC.flag = True
-    # PARAM1.ICIC.RB_partition_num = 3
-    # PARAM1.ICIC.dynamic = True  # ICIC
-    # PARAM1.ICIC.ideal_RL_state = True  # ICIC时SINR理想
-    # # PARAM1.ICIC.obsolete_time = 10
-    # PARAM1.ICIC.RL_state_pred_flag = False
-    # # PARAM1.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-    # # PARAM1.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-    # PARAM1.dynamic_nRB_per_UE = False  # 固定RB数
-    # PARAM1.RB_per_UE = 3
-    # PARAM1.nRB = 30
-    # PARAM1.GBR_ratio = 0
-    # PARAM_list.append(PARAM1)
-    #
-    # PARAM2 = Parameter()
-    # PARAM2.active_HO = True  # 主动切换
-    # PARAM2.AHO.ideal_pred = False
-    # # PARAM2.ICIC.flag = True
-    # PARAM2.ICIC.RB_partition_num = 3
-    # PARAM2.ICIC.dynamic = True  # ICIC
-    # PARAM2.ICIC.ideal_RL_state = True  # ICIC时SINR理想
-    # # PARAM2.ICIC.obsolete_time = 10
-    # PARAM2.ICIC.RL_state_pred_flag = False
-    # # PARAM2.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-    # # PARAM2.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-    # PARAM2.dynamic_nRB_per_UE = False  # 固定RB数
-    # PARAM2.RB_per_UE = 6
-    # PARAM2.nRB = 30
-    # PARAM2.GBR_ratio = 0
-    # PARAM_list.append(PARAM2)
-    #
-    # PARAM3 = Parameter()
-    # PARAM3.active_HO = True  # 主动切换
-    # PARAM3.AHO.ideal_pred = False
-    # # PARAM3.ICIC.flag = True
-    # PARAM3.ICIC.RB_partition_num = 3
-    # PARAM3.ICIC.dynamic = True  # ICIC
-    # PARAM3.ICIC.ideal_RL_state = True  # ICIC时SINR理想
-    # # PARAM3.ICIC.obsolete_time = 10
-    # PARAM3.ICIC.RL_state_pred_flag = False
-    # # PARAM3.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-    # # PARAM3.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-    # PARAM3.dynamic_nRB_per_UE = False  # 固定RB数
-    # PARAM3.RB_per_UE = 9
-    # PARAM3.nRB = 30
-    # PARAM3.GBR_ratio = 0
-    # PARAM_list.append(PARAM3)
-    #
-    #
-    # PARAM4 = Parameter()
-    # PARAM4.active_HO = True  # 主动切换
-    # PARAM4.AHO.ideal_pred = False
-    # # PARAM4.ICIC.flag = True
-    # PARAM4.ICIC.dynamic = True  # ICIC
-    # PARAM4.ICIC.ideal_RL_state = True  # ICIC时SINR理想
-    # # PARAM4.ICIC.obsolete_time = 10
-    # PARAM4.ICIC.RL_state_pred_flag = False
-    # # PARAM4.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-    # # PARAM4.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-    # PARAM4.dynamic_nRB_per_UE = False
-    # PARAM4.RB_per_UE = 6
-    # # PARAM4.nRB = 15
-    # PARAM_list.append(PARAM4)
-    #
-    #
-    # PARAM5 = Parameter()
-    # PARAM5.active_HO = False  # 被动切换
-    # PARAM5.AHO.ideal_pred = False
-    # # PARAM5.ICIC.flag = True
-    # PARAM5.ICIC.dynamic = False
-    # PARAM5.ICIC.RB_for_edge_ratio = 0  # 不做ICIC
-    # PARAM5.ICIC.ideal_RL_state = True  # ICIC时SINR理想
-    # # PARAM5.ICIC.obsolete_time = 10  # 过时10帧
-    # PARAM5.ICIC.RL_state_pred_flag = False
-    # # PARAM5.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-    # # PARAM5.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-    # PARAM5.dynamic_nRB_per_UE = False
-    # PARAM5.RB_per_UE = 9
-    # # PARAM5.nRB = 15
-    # PARAM_list.append(PARAM5)
-    #
-    #
-    # PARAM6 = Parameter()
-    # PARAM6.active_HO = True  # 主动切换
-    # PARAM6.AHO.ideal_pred = False
-    # # PARAM6.ICIC.flag = True
-    # PARAM6.ICIC.dynamic = True  # ICIC
-    # PARAM6.ICIC.ideal_RL_state = True  # ICIC时SINR理想
-    # # PARAM6.ICIC.obsolete_time = 10  # 过时10帧
-    # PARAM6.ICIC.RL_state_pred_flag = False
-    # # PARAM6.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-    # # PARAM6.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-    # PARAM6.dynamic_nRB_per_UE = False
-    # PARAM6.RB_per_UE = 9
-    # # PARAM6.nRB = 15
-    # PARAM_list.append(PARAM6)
-
-    # PARAM7 = Parameter()
-    # PARAM7.active_HO = False  # 被动切换
-    # PARAM7.AHO.ideal_pred = False
-    # # PARAM7.ICIC.flag = True
-    # PARAM7.ICIC.dynamic = False
-    # PARAM7.ICIC.RB_for_edge_ratio = 0  # 不做ICIC
-    # PARAM7.ICIC.ideal_RL_state = True  # ICIC时SINR理想
-    # # PARAM7.ICIC.obsolete_time = 10  # 过时10帧
-    # PARAM7.ICIC.RL_state_pred_flag = False
-    # # PARAM7.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-    # # PARAM7.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-    # PARAM7.dynamic_nRB_per_UE = False
-    # PARAM7.RB_per_UE = 12
-    # # PARAM7.nRB = 15
-    # PARAM_list.append(PARAM7)
-    #
-    #
-    # PARAM8 = Parameter()
-    # PARAM8.active_HO = True  # 主动切换
-    # PARAM8.AHO.ideal_pred = False
-    # # PARAM8.ICIC.flag = True
-    # PARAM8.ICIC.dynamic = True  # ICIC
-    # PARAM8.ICIC.ideal_RL_state = True  # ICIC时SINR理想
-    # # PARAM8.ICIC.obsolete_time = 10  # 过时10帧
-    # PARAM8.ICIC.RL_state_pred_flag = False
-    # # PARAM8.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-    # # PARAM8.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-    # PARAM8.dynamic_nRB_per_UE = False
-    # PARAM8.RB_per_UE = 12
-    # # PARAM8.nRB = 15
-    # PARAM_list.append(PARAM8)
 
     return PARAM_list
 

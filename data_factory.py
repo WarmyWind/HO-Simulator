@@ -1,6 +1,5 @@
 '''
 本模块包含处理各种仿真数据和类型的函数
-
 '''
 
 import sys
@@ -10,7 +9,7 @@ import numpy as np
 from para_init import *
 from user_mobility import *
 from channel_fading import *
-from visualization import *
+# from visualization import *
 import matplotlib.pyplot as plt
 
 

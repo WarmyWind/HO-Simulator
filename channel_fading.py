@@ -1,8 +1,5 @@
 '''
-本模块包含关于衰落信道的函数:
-    get_shadow_from_mat
-    large_scale_fading
-    small_scale_fading
+本模块包含关于衰落信道的函数
 '''
 
 from info_management import *

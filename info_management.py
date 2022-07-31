@@ -6,6 +6,7 @@
     class ShadowMap
     class LargeScaleFadingMap
     class SmallScaleFadingMap
+    等
 '''
 
 import numpy as np

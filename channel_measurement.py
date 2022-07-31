@@ -1,6 +1,5 @@
 '''
-本模块包含信道测量相关函数:
-    update_target_BS_L3_h
+本模块包含信道测量相关函数
 '''
 
 from info_management import *

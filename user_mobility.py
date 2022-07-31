@@ -1,6 +1,5 @@
 '''
-本模块包含获得用户移动性的方法:
-    get_UE_posi_from_mat
+本模块包含关于用户移动性的函数
 '''
 
 
@@ -10,6 +9,12 @@ import pandas as pd
 from network_deployment import *
 
 def get_UE_posi_from_file(filepath, index):
+    '''
+    从mat文件读取数据（不限于位置数据，只要满足mat数据格式都可以利用此函数读取）
+    :param filepath:  文件路径
+    :param index:  mat数据的头索引
+    :return:
+    '''
     if isinstance(filepath, str):
         if '.mat' in filepath:
             data = scio.loadmat(filepath)
@@ -33,6 +38,13 @@ def get_UE_posi_from_file(filepath, index):
     return posi_data
 
 def process_posi_data(posi_data, fill_symbol = None, dis_threshold=10):
+    '''
+    对UE轨迹进行处理
+    :param posi_data: UE在每一帧的位置数据
+    :param fill_symbol: 用户位置如果为空，那么就用fill_symbol填充
+    :param dis_threshold: 如果上一帧的位置与这一帧的位置，相距超过了该参数为，那么就视为出现了一个新用户，旧用户消失。
+    :return:
+    '''
     new_posi_data = []
     if len(posi_data.shape) == 2:
         for _UE_no in range(posi_data.shape[1]):

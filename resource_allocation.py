@@ -1,8 +1,5 @@
 '''
-本模块包含资源分配函数:
-    equal_RB_allocate
-
-暂时未考虑对不同RB的功率分配
+本模块包含资源分配的各种函数
 '''
 
 import numpy as np

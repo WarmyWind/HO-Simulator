@@ -368,7 +368,7 @@ def actice_HO_eval(PARAMS, NN:DNN_Model_Wrapper, normalize_para, UE_list, BS_lis
                 _serv_BS.unserve_UE(_UE, serving_map)  # 断开原服务，释放资源
                 _target_BS = search_object_form_list_by_no(BS_list, _UE.HO_state.target_BS)
                 if allocate_method == equal_RB_allocate or allocate_method == ICIC_RB_allocate:
-                    _result = allocate_method([_UE], UE_list, _target_BS, serving_map, HO_flag=True)
+                    _result = allocate_method([_UE], UE_list, _target_BS, serving_map, est_nRB_flag=False)
                     if _result:
                         # _UE.update_state('served')
                         _UE.reset_duration_and_SINR()  # 更新RL state
