@@ -143,8 +143,8 @@ def paraset_generator():
     RB_per_UE = [3,4,5,6,7]
 
     PARAM0 = Parameter()
-    PARAM0.active_HO = True  # 被动切换
-    PARAM0.PHO.ideal_HO = False  # 理想被动切换，哪个基站好就接入哪个
+    PARAM0.active_HO = False  # 被动切换
+    PARAM0.PHO.ideal_HO = True  # 理想被动切换，哪个基站好就接入哪个
     # PARAM0.TTT = 0
     # PARAM0.HOM = 0
     PARAM0.AHO.ideal_pred = False

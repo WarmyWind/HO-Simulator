@@ -80,59 +80,13 @@ def get_large_fading_dB_from_posi(PARAMS, UE_posi, BS_posi, BS_no, shadow_map:Sh
     return large_fading_dB
 
 
-def small_scale_fading(nUE, nBS, nNt, fading_model='Rayleigh'):
-    small_H = np.zeros((nBS,nUE, nNt),dtype=np.complex_)
+def small_scale_fading(nBS, nUE, nRB, nNt, fading_model='Rayleigh'):
+    small_H = np.ones((nBS, nUE, nRB, nNt),dtype=np.complex_)
 
     if fading_model == 'Rayleigh':
-        for iBS in range(nBS):
-
-            small_h = np.zeros((nUE, nNt),dtype=np.complex_)
-            for iUE in range(nUE):
-                # 控制随机数相同
-                np.random.seed(iBS * nUE + iUE)
-                h = (np.random.randn(nNt) + 1j * np.random.randn(nNt)) / np.sqrt(2)
-                small_h[iUE,:] = h  # 小尺度衰落
-
-            small_H[iBS] = small_h
-    else:
-        raise Exception("fading_model not supported", fading_model)
+        np.random.seed()
+        small_H = (np.random.randn(nBS, nUE, nRB, nNt) + 1j*np.random.randn(nBS, nUE, nRB, nNt)) / np.sqrt(2)
 
     return small_H
 
 
-if __name__ == '__main__':
-    '''
-    用于测试
-    '''
-    from simulator import Parameter
-    from network_deployment import cellStructPPP
-    from user_mobility import get_UE_posi_from_mat
-
-    PARAM = Parameter()
-    filepath = 'shadowFad_dB1.mat'
-    index = 'shadowFad_dB'
-    shadowFad_dB = get_shadow_from_mat(filepath, index)
-    print('shadowFad_dB shape:',shadowFad_dB.shape)
-    filepath = 'Set_UE_posi_60s_250user_1to2_new.mat'
-    index = 'Set_UE_posi'
-    UE_posi = get_UE_posi_from_mat(filepath, index)
-
-    Macro_Posi, Micro_Posi, nMicro = cellStructPPP(PARAM.nCell,PARAM.Dist, PARAM.Micro.nBS_avg)
-    Macro_BS_list = []
-
-    for i in range(PARAM.Macro.nBS):
-        Macro_BS_list.append(BS(i, 'Macro', PARAM.Macro.nNt, PARAM.nRB,PARAM.Macro.Ptmax, Macro_Posi[i], True, PARAM.Macro.MaxUE_per_RB))
-
-    shadow = ShadowMap(shadowFad_dB[0])
-    print(shadow.map.shape)  # (3,)
-    large_fading = LargeScaleChannelMap(PARAM.Macro.nBS, PARAM.nUE)
-
-    large_h = large_scale_channel(PARAM, Macro_BS_list, UE_posi[0, :], shadow)  # (3, 250)
-    large_fading.update(large_h)
-    print('大尺度信道shape：',large_fading.map.shape)
-    print('大尺度信道：', large_fading.map[:,0])
-    print('大尺度衰落（dB）：', -20 * np.log10(large_fading.map[:,0]))
-
-
-    small_h = small_scale_fading(PARAM.nUE, len(Macro_BS_list), PARAM.Macro.nNt)
-    print(small_h.shape)

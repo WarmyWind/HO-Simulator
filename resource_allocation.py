@@ -178,8 +178,6 @@ def ICIC_BS_RB_allocate(PARAM, UE_list, BS:BS, serving_map:ServingMap):
     center_UE_no_list = []
     '''先找出边缘和中心UE'''
     for _UE_no in UE_in_range_list:
-        if _UE_no == 9:
-            probe = _UE_no
         # if not _UE_no in BS.resource_map.serv_UE_list: continue
         _UE = search_object_form_list_by_no(UE_list, _UE_no)
         if _UE.state == 'served' and _UE.serv_BS != BS.no:
@@ -268,40 +266,12 @@ def ICIC_RB_reallocate(UE_list, BS_list, serving_map:ServingMap):
         '''针对RB类型不一致的用户重新分配RB'''
         if _UE.posi_type == _UE.RB_type: continue
         else:
-            # if _UE.posi_type == 'center':
-            #     if _BS.if_RB_full_load(_BS.RB_per_UE, max_UE_per_RB=_BS.opt_UE_per_RB, RB_type='center'): continue
-            #     # RB_arr = _BS.resource_map.center_RB_sorted_idx[:RB_per_UE].astype(int)
-            # elif _UE.posi_type == 'edge':
-            #     if _BS.if_RB_full_load(_BS.RB_per_UE, max_UE_per_RB=_BS.opt_UE_per_RB, RB_type='edge'): continue
-            #     # RB_arr = _BS.resource_map.edge_RB_sorted_idx[:RB_per_UE].astype(int)
-            # else:
-            #     raise Exception('Invalid posi type:', _UE.posi_type)
-
             _BS.unserve_UE(_UE, serving_map)  # 释放原RB资源,并令UE的serv_BS暂时为-1
             _UE.RB_type = None  # 令UE的RB_type暂时为None
             _UE.state = 'unserved'  # 令UE的状态暂时为‘unserved’
             ICIC_RB_allocate([_UE], UE_list, _BS, serving_map)
             continue
             # find_RB_arr_and_serve(_BS, _UE, _UE.posi_type, serving_map)
-
-    # '''针对额外使用RB的用户重新分配RB'''
-    # for _BS in BS_list:
-    #     for _UE_no in _BS.resource_map.extra_edge_RB_serv_list:
-    #         if not _BS.if_RB_full_load(_BS.RB_per_UE, max_UE_per_RB=_BS.opt_UE_per_RB, RB_type='edge'):
-    #             _UE = search_object_form_list_by_no(UE_list, _UE_no)
-    #             _BS.unserve_UE(_UE, serving_map)  # 释放原RB资源,并令UE的serv_BS暂时为-1
-    #             _UE.RB_type = None  # 令UE的RB_type暂时为None
-    #             _UE.state = 'unserved'  # 令UE的状态暂时为‘unserved’
-    #             find_RB_arr_and_serve(_BS, _UE, 'edge', serving_map)
-    #
-    #     for _UE_no in _BS.resource_map.extra_center_RB_serv_list:
-    #         if not _BS.if_RB_full_load(_BS.RB_per_UE, max_UE_per_RB=_BS.opt_UE_per_RB, RB_type='center'):
-    #             _UE = search_object_form_list_by_no(UE_list, _UE_no)
-    #             _BS.unserve_UE(_UE, serving_map)  # 释放原RB资源,并令UE的serv_BS暂时为-1
-    #             _UE.RB_type = None  # 令UE的RB_type暂时为None
-    #             _UE.state = 'unserved'  # 令UE的状态暂时为‘unserved’
-    #             find_RB_arr_and_serve(_BS, _UE, 'center', serving_map)
-
     return
 
 # def ICIC_edge_RB_reuse(UE_list, BS:BS, RB_per_UE, serving_map:ServingMap):
@@ -365,7 +335,8 @@ def count_UE_in_range(UE_list, BS_list):
 
 
 def dynamic_nRB_per_UE_and_ICIC(PARAM, BS_list, UE_list, serving_map:ServingMap, large_fading: LargeScaleChannelMap,
-                                instant_channel: InstantChannelMap, extra_interf_map, actor=None, sess=None, newmodel=True):
+                                instant_channel: InstantChannelMap, extra_interf_map, actor=None, sess=None,
+                                newmodel=True, est_by_large_scale=True):
     '''ICIC动态调整干扰协调的RB比例'''
     def handle_ICIC_RB(PARAM, BS_list):
         for _BS in BS_list:
@@ -465,11 +436,13 @@ def dynamic_nRB_per_UE_and_ICIC(PARAM, BS_list, UE_list, serving_map:ServingMap,
             corresponding_nRB_per_UE = [3 for _ in range(len(BS_list))]
             best_ICIC_nRB = 0
             ICIC_nRB_list = [_nRB * PARAM.ICIC.RB_partition_num for _nRB in range(0, int(np.floor(PARAM.nRB/PARAM.ICIC.RB_partition_num))+1)]
-            for _ICIC_nRB in ICIC_nRB_list:
+
+
+            for ii in range(0, len(ICIC_nRB_list)):
+                _ICIC_nRB = ICIC_nRB_list[ii]
                 temp_nRB_per_UE=[]
                 est_rate_sum = 0
                 for _BS in BS_list:
-
                     _ICI = (_BS.nRB - _ICIC_nRB)/_BS.nRB * neighbour_nUE_list[_BS.no] + _ICIC_nRB/_BS.nRB * neighbour_ICIC_nUE_list[_BS.no]
                     # state = [_BS.nUE_in_range / _BS.nRB, (_ICI-167.6895)/57.3456, _ICIC_nRB/_BS.nRB]
                     state = [_BS.nUE_in_range / _BS.nRB, _ICI/PARAM.nUE, _ICIC_nRB / _BS.nRB]
@@ -477,43 +450,65 @@ def dynamic_nRB_per_UE_and_ICIC(PARAM, BS_list, UE_list, serving_map:ServingMap,
                     _nRB_per_UE = round(_nRB_per_UE)
                     temp_nRB_per_UE.append(_nRB_per_UE)
 
-                    # _rate = _BS.estimated_sum_rate(UE_list, PARAM, ICIC_nRB=_ICIC_nRB, nRB_per_UE=_nRB_per_UE)
-                    # est_rate_sum = est_rate_sum + _rate
-                    # _BS.RB_per_UE = _nRB_per_UE
 
-                temp_BS_list = deepcopy(BS_list)
-                temp_UE_list = deepcopy(UE_list)
-                temp_PARAM = deepcopy(PARAM)
-                for _idx in range(len(temp_BS_list)):
-                    temp_BS_list[_idx].RB_per_UE = temp_nRB_per_UE[_idx]
+                temp_instant_channel = deepcopy(instant_channel)
+                temp_small_scale_fading = SmallScaleFadingMap(PARAM.Macro.nBS, PARAM.nUE, PARAM.nRB, PARAM.Macro.nNt)
+                MCtimes = 8
+                for MC_idx in range(MCtimes):
+                    # if np.mod(MC_idx,10) == 0:
+                    #     print('Current ii:{}, MC time:{}'.format(ii, MC_idx))
+                    temp_BS_list = deepcopy(BS_list)
+                    temp_UE_list = deepcopy(UE_list)
+                    temp_PARAM = deepcopy(PARAM)
+                    for _idx in range(len(temp_BS_list)):
+                        temp_BS_list[_idx].RB_per_UE = temp_nRB_per_UE[_idx]
 
-                temp_PARAM.ICIC.RB_for_edge_ratio = _ICIC_nRB / temp_PARAM.nRB
-                handle_ICIC_RB(temp_PARAM, temp_BS_list)
-                ICIC_decide_edge_UE(temp_PARAM, temp_BS_list, temp_UE_list)
-                '''对BS内UE做RB分配'''
-                for _BS in temp_BS_list:
-                    ICIC_BS_RB_allocate(temp_PARAM, temp_UE_list, _BS, serving_map)
+                    temp_PARAM.ICIC.RB_for_edge_ratio = _ICIC_nRB / temp_PARAM.nRB
+                    handle_ICIC_RB(temp_PARAM, temp_BS_list)
+                    ICIC_decide_edge_UE(temp_PARAM, temp_BS_list, temp_UE_list)
+                    '''对BS内UE做RB分配'''
+                    for _BS in temp_BS_list:
+                        ICIC_BS_RB_allocate(temp_PARAM, temp_UE_list, _BS, serving_map)
 
-                from channel_measurement import update_serv_BS_L3_h
-                '''更新UE的服务基站L3测量'''
-                update_serv_BS_L3_h(temp_UE_list, large_fading, instant_channel, temp_PARAM.L3_coe)
+                    if est_by_large_scale:  # 通过大尺度信道估计系统和数据率
+                        '''通过大尺度信道估计系统和数据率'''
+                        _sum_rate = 0
+                        for _BS in temp_BS_list:
+                            _nRB_per_UE = temp_nRB_per_UE[_BS.no]
+                            _rate = _BS.estimated_sum_rate(temp_UE_list, temp_PARAM, nRB_per_UE=temp_nRB_per_UE[_BS.no])
+                            _sum_rate = _sum_rate + _rate
 
-                '''更新预编码信息和服务记录，10ms更新一次'''
-                from precoding import ZF_precoding
-                for _BS in temp_BS_list:
-                    _BS.update_precoding_matrix(instant_channel, ZF_precoding)
-                    _BS.serv_UE_list_record.append(_BS.resource_map.serv_UE_list)
-                    _BS.RB_ocp_num_record.append(_BS.resource_map.RB_ocp_num)
+                        est_rate_sum = _sum_rate
+                        break
 
-                '''统计性能'''
-                from SINR_calculate import get_receive_power, get_interference, calculate_SINR_dB, user_rate
-                rec_P = get_receive_power(temp_BS_list, instant_channel)
-                inter_P = get_interference(temp_PARAM, temp_BS_list, temp_UE_list, instant_channel, extra_interf_map)
-                SINR_dB = calculate_SINR_dB(rec_P, inter_P, temp_PARAM.sigma2)
-                UE_rate = user_rate(temp_PARAM.MLB.RB, SINR_dB, temp_UE_list)
-                est_rate_sum = np.sum(UE_rate)
+                    else:  # 通过多次实际测量估计系统和数据率
+                        from channel_measurement import update_serv_BS_L3_h
+                        '''更新UE的服务基站L3测量'''
+                        update_serv_BS_L3_h(temp_UE_list, large_fading, temp_instant_channel, temp_PARAM.L3_coe)
 
-                est_sum_rate_record.append(est_rate_sum)
+                        '''更新预编码信息和服务记录，10ms更新一次'''
+                        from precoding import ZF_precoding
+                        for _BS in temp_BS_list:
+                            _BS.update_precoding_matrix(temp_instant_channel, ZF_precoding)
+                            _BS.serv_UE_list_record.append(_BS.resource_map.serv_UE_list)
+                            _BS.RB_ocp_num_record.append(_BS.resource_map.RB_ocp_num)
+
+                        '''统计性能'''
+                        from SINR_calculate import get_receive_power, get_interference, calculate_SINR_dB, user_rate
+                        rec_P = get_receive_power(temp_BS_list, temp_instant_channel)
+                        inter_P = get_interference(temp_PARAM, temp_BS_list, temp_UE_list, temp_instant_channel, extra_interf_map)
+                        SINR_dB = calculate_SINR_dB(rec_P, inter_P, temp_PARAM.sigma2)
+                        UE_rate = user_rate(temp_PARAM.MLB.RB, SINR_dB, temp_UE_list)
+                        est_rate_sum = np.sum(UE_rate)
+                        est_sum_rate_record.append(est_rate_sum)
+                        est_rate_sum = np.mean(est_sum_rate_record)
+
+                        '''再次随机化小尺度信道和瞬时信道'''
+                        from channel_fading import small_scale_fading
+                        small_h = small_scale_fading(len(temp_BS_list), temp_PARAM.nUE, temp_PARAM.nRB, temp_PARAM.Macro.nNt)
+                        temp_small_scale_fading.update(small_h)
+                        temp_instant_channel.calculate_by_fading(large_fading, temp_small_scale_fading)
+
                 if est_rate_sum > max_rate_sum:
                     max_rate_sum = est_rate_sum
                     corresponding_nRB_per_UE = temp_nRB_per_UE

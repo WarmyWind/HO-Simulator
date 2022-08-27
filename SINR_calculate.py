@@ -16,25 +16,29 @@ from data_factory import search_object_form_list_by_no
 
 
 def get_receive_power(BS_list, channel: InstantChannelMap, precoding_method=ZF_precoding):
-    H = channel.map  # (nNt, nBS, nUE)
-    nUE = H.shape[2]
+    H = channel.map  # (nRB, nNt, nBS, nUE)
+    nUE = H.shape[3]
     nRB = BS_list[0].nRB
-    receive_power = np.zeros((nUE,nRB))
+    receive_power = np.zeros((nUE, nRB))
     for _BS in BS_list:
-        _H = H[:, _BS.no, :]
+        _H = H[:, :, _BS.no, :]
         for _RB in range(_BS.nRB):
             _RB_resource = _BS.resource_map.map[_RB, :]
             _serv_UE = _RB_resource[np.where(_RB_resource != -1)].astype('int32')
             if len(_serv_UE) == 0: continue  # 若没有服务用户，跳过
             _coe = _BS.precoding_info[_RB].coeffient
-            receive_power[_serv_UE,_RB] = receive_power[_serv_UE,_RB] + _coe
+            # for _UE_no in _serv_UE:
+            try:
+                receive_power[_serv_UE,_RB] = receive_power[_serv_UE,_RB] + _coe
+            except:
+                raise Exception('Error')
 
     return receive_power
 
 
 def get_interference(PARAM, BS_list, UE_list, channel: InstantChannelMap, extra_interf_map=None):
-    H = channel.map  # (nNt, nBS, nUE)
-    nUE = H.shape[2]
+    H = channel.map  # (nRB, nNt, nBS, nUE)
+    nUE = H.shape[3]
     nRB = BS_list[0].nRB
     interference_power = np.zeros((nUE,nRB))
     for _UE in UE_list:
@@ -46,13 +50,13 @@ def get_interference(PARAM, BS_list, UE_list, channel: InstantChannelMap, extra_
             if _BS.no not in _UE.neighbour_BS: continue  # 如果不在邻基站列表内，忽略干扰
             '''找到有干扰的频段'''
             _inter_RB = RB_serv_arr[np.where(_BS.resource_map.RB_ocp_num[RB_serv_arr] != 0)[0]]
-            _H_itf = H[:, _BS.no, :]
+            _H_itf = H[:, :, _BS.no, :]
             for _RB in _inter_RB:
                 _W = _BS.precoding_info[_RB].matrix
 
                 _coe = _BS.precoding_info[_RB].coeffient  # 干扰基站预编码系数
 
-                _H = H[:, _BS.no, _UE.no]  # 干扰基站与当前用户信道
+                _H = H[_RB, :, _BS.no, _UE.no]  # 干扰基站与当前用户信道
                 _itf = np.square(np.linalg.norm(np.dot(_H, np.sqrt(_coe) *_W)))
                 interference_power[_UE.no, _RB] = interference_power[_UE.no, _RB] + _itf
 
@@ -145,6 +149,7 @@ def update_SS_SINR(PARAM, UE_list, BS_list, after_HO=False, extra_interf_map=Non
         else:
             ICIC_itf = interf
 
+        # 添加外圈干扰
         try:
             UE_posi = _UE.posi
             origin_x_point = PARAM.origin_x
@@ -159,9 +164,8 @@ def update_SS_SINR(PARAM, UE_list, BS_list, after_HO=False, extra_interf_map=Non
             # extra_itf = 0
             raise Exception('Get extra interference Err')
 
+
         ICIC_SINR = rec_power / (ICIC_itf + extra_ICIC_itf + noise)
-
-
 
         SS_SINR = rec_power / (interf + extra_non_ICIC_itf + noise)
         _UE.update_RL_state_by_SINR(SS_SINR, mean_filter_length)
@@ -224,62 +228,4 @@ def calculate_SNR_dB(receive_power, noise):
     SNR = receive_power/(noise)
     return 10*np.log10(SNR)
 
-if __name__ == '__main__':
-    '''
-    用于测试
-    '''
-    from simulator import Parameter
-    from network_deployment import cellStructPPP
-    from user_mobility import get_UE_posi_from_mat
-    from channel_fading import *
-    from radio_access import access_init
 
-    np.random.seed(0)
-    PARAM = Parameter()
-    filepath = 'shadowFad_dB1.mat'
-    index = 'shadowFad_dB'
-    shadowFad_dB = get_shadow_from_mat(filepath, index)
-    # print(shadowFad_dB[0][1])
-    filepath = 'Set_UE_posi_60s_250user_1to2_new.mat'
-    index = 'Set_UE_posi'
-    UE_posi = get_UE_posi_from_mat(filepath, index)
-
-    Macro_Posi, Micro_Posi, nMicro = cellStructPPP(PARAM.nCell, PARAM.Dist, PARAM.Micro.nBS_avg)
-    Macro_BS_list = []
-    print("Macro Ptmax:", PARAM.Macro.Ptmax)
-    for i in range(PARAM.Macro.nBS):
-        Macro_BS_list.append(BS(i, 'Macro', PARAM.Macro.nNt, PARAM.nRB,PARAM.Macro.Ptmax, Macro_Posi[i], True, PARAM.Macro.MaxUE_per_RB))
-
-    UE_list = []
-    # random_UE_idx = np.random.choice(len(UE_posi[0]),PARAM.nUE,replace=False)
-    for i in range(PARAM.nUE):
-        UE_list.append(UE(i, UE_posi[0,i], True))
-
-    shadow = ShadowMap(shadowFad_dB[0])
-    large_fading = LargeScaleChannelMap(PARAM.Macro.nBS, PARAM.nUE)
-    small_fading = SmallScaleFadingMap(PARAM.Macro.nBS, PARAM.nUE, PARAM.Macro.nNt)
-    instant_channel = InstantChannelMap(PARAM.Macro.nBS, PARAM.nUE, PARAM.Macro.nNt)
-    serving_map = ServingMap(PARAM.Macro.nBS, PARAM.nUE)
-
-    large_h = large_scale_channel(PARAM, Macro_BS_list, UE_posi[0, :], shadow)
-    large_fading.update(large_h)
-    # print(_large_h[2, 4:6], large_fading.map[2, 4:6])  # 看更新后一不一致
-    small_h = small_scale_fading(PARAM.nUE, len(Macro_BS_list), PARAM.Macro.nNt)
-    small_fading.update(small_h)
-    # print('small_h shape:', small_h.shape)
-    instant_channel.calculate_by_fading(large_fading, small_fading)
-
-    result = access_init(PARAM, Macro_BS_list, UE_list, large_fading, serving_map)
-    # print(result)
-
-    rec_P = get_receive_power(Macro_BS_list, instant_channel)
-    inter_P = get_interference(Macro_BS_list, UE_list, instant_channel)
-    # print(PARAM.sigma2, PARAM.sigma_c)
-    SINR_dB = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma2)
-    SINR_dB_c = calculate_SINR_dB(rec_P, inter_P, PARAM.sigma_c)
-    SNR_dB = calculate_SNR_dB(rec_P, PARAM.sigma2)
-    UE_rate = user_rate(PARAM.MLB.RB, SINR_dB)
-    UE_rate_c = user_rate(PARAM.MLB.RB, SINR_dB_c)
-    print('初次接入: 采用sigma2 平均数据率：{:.2f} Mbps'.format(np.mean(UE_rate)/1e6))
-    print('采用sigma_c 平均数据率：{:.2f} Mbps'.format(np.mean(UE_rate_c)/1e6))
-    # print(UE_list[0].serv_BS,UE_list[240].serv_BS)

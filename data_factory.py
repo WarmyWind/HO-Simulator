@@ -28,12 +28,12 @@ def init_all(PARAM, Macro_Posi, UE_posi, shadowFad_dB):
     '''初始化信道、服务信息'''
     shadow = ShadowMap(shadowFad_dB)
     large_fading = LargeScaleChannelMap(PARAM.Macro.nBS, PARAM.nUE)
-    small_fading = SmallScaleFadingMap(PARAM.Macro.nBS, PARAM.nUE, PARAM.Macro.nNt)
-    instant_channel = InstantChannelMap(PARAM.Macro.nBS, PARAM.nUE, PARAM.Macro.nNt)
+    small_fading = SmallScaleFadingMap(PARAM.Macro.nBS, PARAM.nUE, PARAM.nRB, PARAM.Macro.nNt)
+    instant_channel = InstantChannelMap(PARAM.nRB, PARAM.Macro.nNt, PARAM.Macro.nBS, PARAM.nUE)
 
     large_h = large_scale_channel(PARAM, Macro_BS_list, UE_list, shadow)
     large_fading.update(large_h)
-    small_h = small_scale_fading(PARAM.nUE, len(Macro_BS_list), PARAM.Macro.nNt)
+    small_h = small_scale_fading(len(Macro_BS_list), PARAM.nUE, PARAM.nRB, PARAM.Macro.nNt)
     small_fading.update(small_h)
     instant_channel.calculate_by_fading(large_fading, small_fading)
     serving_map = ServingMap(PARAM.Macro.nBS, PARAM.nUE)

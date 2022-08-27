@@ -152,7 +152,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
 
 
             '''更新小尺度信道信息'''
-            small_h = small_scale_fading(PARAM.nUE, len(BS_list), PARAM.Macro.nNt)
+            small_h = small_scale_fading(len(BS_list), PARAM.nUE, PARAM.nRB, PARAM.Macro.nNt)
             small_fading.update(small_h)
 
             '''更新大尺度信道信息'''
@@ -360,8 +360,8 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
 
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
-        save_flag = 0  # 是否保存结果
-        root_path = 'result/0727_7BS_150moving_180staticUE-2'
+        save_flag = 1  # 是否保存结果
+        root_path = 'result/0827_7BS_150moving_180staticUE-2'
         # nDrop = 6000 - 10*8  # 时间步进长度
         nDrop = 400
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
@@ -373,12 +373,14 @@ if __name__ == '__main__':
         # UE_posi_filepath = 'UE_tra/0621_2row_15BS/Set_UE_posi_150user_15BS.mat'
         # UE_posi_filepath = 'UE_tra/0527_scene0/Set_UE_posi_180.mat'
         # UE_posi_filepath = 'UE_tra/0714_7road_7BS/Set_UE_posi_60s_330user_7BS_V123.mat'
-        # UE_posi_filepath = 'UE_tra/0726_7BS_withstaticUE/Set_UE_posi_60s_330user_7BS_150move_180static.mat'
-        UE_posi_filepath = 'UE_tra/0726_7BS_withstaticUE/0727edge2.mat'
+        UE_posi_filepath = 'UE_tra/0726_7BS_withstaticUE/Set_UE_posi_60s_330user_7BS_150move_180static.mat'
+        # UE_posi_filepath = 'UE_tra/0726_7BS_withstaticUE/0727edge2.mat'
         # UE_posi_filepath = 'UE_tra/0721_7BS_PPP/Set_UE_posi_PPP_60s_[10,90,30,10,90,90,10]user_7BS_.mat'
         # UE_posi_filepath = 'UE_tra/0721_7BS_PPP/Set_UE_posi_PPP_60s_60-75m_[80,20,50,70,30,30,50]user_7BS_.mat'
         # UE_posi_filepath = 'UE_tra/0721_7BS_PPP/Set_UE_posi_50_330user_balanced_edge_7BS.mat'
         # UE_posi_filepath = 'UE_tra/0726_7BS_withstaticUE/Set_UE_posi_60s_180moving_150static_7BS_.mat'
+        # UE_posi_filepath = 'UE_tra/0714_7road_7BS/Set_UE_posi_60s_432user_7BS_V123.mat'
+
 
         posi_index = 'Set_UE_posi'
 

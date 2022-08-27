@@ -46,8 +46,8 @@ class SmallScaleFadingMap:
     目前仅考虑平衰落，即对所有RB的小尺度衰落相同
     '''
 
-    def __init__(self, nBS, nUE, nNt):
-        self.map = np.zeros((nBS, nUE, nNt))  # 单位不是dB
+    def __init__(self, nBS, nUE, nRB, nNt):
+        self.map = np.zeros((nBS, nUE, nRB, nNt))  # 单位不是dB
 
     def update(self, new_fading):
         self.map = new_fading
@@ -58,11 +58,13 @@ class InstantChannelMap:
     瞬时信道
     '''
 
-    def __init__(self, nBS, nUE, nNt):
-        self.map = np.zeros((nNt, nBS, nUE))  # 单位不是dB
+    def __init__(self, nRB, nNt, nBS, nUE):
+        self.map = np.zeros((nRB, nNt, nBS, nUE))  # 单位不是dB
 
     def calculate_by_fading(self, large_h:LargeScaleChannelMap, small_h:SmallScaleFadingMap):
-        self.map = large_h.map * np.rollaxis(small_h.map, 2)
+        temp_small_h = np.rollaxis(small_h.map, 3)
+        temp_small_h = np.rollaxis(temp_small_h, 3)
+        self.map = large_h.map * temp_small_h
 
     def update(self, new_channel):
         self.map = new_channel
@@ -124,8 +126,11 @@ class RL_state:
         self.filtered_SINR_dB = None
         self.estimated_ICIC_SINR_dB = None
         self.estimated_rec_power = None
+        self.est_nonICIC_fixAG_rec_power = None
+        self.est_ICIC_fixAG_rec_power = None
         self.estimated_itf_power = None
         self.estimated_ICIC_itf_power = None
+
         self.pred_SINR_dB = []  # 后几帧的预测值
         self.max_period = max_period
         self.state = 'in'
@@ -545,91 +550,163 @@ class BS:
         if nRB_per_UE== -1:
             nRB_per_UE = self.RB_per_UE
 
-        opt_ICIC_resourse = ICIC_nRB/PARAM.ICIC.RB_partition_num * self.opt_UE_per_RB
-        max_ICIC_resourse = ICIC_nRB/PARAM.ICIC.RB_partition_num * self.MaxUE_per_RB
-        opt_nonICIC_resourse = (self.nRB - ICIC_nRB) * self.opt_UE_per_RB
-        max_nonICIC_resourse = (self.nRB - ICIC_nRB) * self.MaxUE_per_RB
-        used_ICIC_resourse = 0
-        used_nonICIC_resourse = 0
-
-        UE_nonICIC_SINR_record = []
-        UE_ICIC_SINR_record = []
-        UE_nonICIC_nRB_record = []
-        UE_ICIC_nRB_record = []
-        # if self.no == 0 and ICIC_nRB==30:
-        #     probe = self.no
-        for _UE_no in self.UE_in_range:
-            if max_ICIC_resourse+max_nonICIC_resourse-used_ICIC_resourse-used_nonICIC_resourse<nRB_per_UE:
-                break
-
-            from data_factory import search_object_form_list_by_no
-            _UE = search_object_form_list_by_no(UE_list, _UE_no)
-            if _UE.active == -1:
-                continue
-            # if _UE.serv_BS != self.no:
-            #     continue
-
-            if used_ICIC_resourse >= max_ICIC_resourse:
-                _est_nonICIC_nRB = nRB_per_UE
-                _est_ICIC_nRB = 0
-            elif used_nonICIC_resourse >= max_nonICIC_resourse:
-                _est_ICIC_nRB = nRB_per_UE
-                _est_nonICIC_nRB = 0
-            elif used_ICIC_resourse >= opt_ICIC_resourse and used_nonICIC_resourse < opt_nonICIC_resourse:
-                if nRB_per_UE <= self.nRB-ICIC_nRB:
-                    _est_nonICIC_nRB = nRB_per_UE
-                    _est_ICIC_nRB = 0
-                else:
-                    _est_nonICIC_nRB = self.nRB-ICIC_nRB
-                    _est_ICIC_nRB = nRB_per_UE-_est_nonICIC_nRB
-            else:
-                if nRB_per_UE <= ICIC_nRB/PARAM.ICIC.RB_partition_num:
-                    _est_ICIC_nRB = nRB_per_UE
-                    _est_nonICIC_nRB = 0
-                else:
-                    _est_ICIC_nRB = ICIC_nRB/PARAM.ICIC.RB_partition_num
-                    _est_nonICIC_nRB = nRB_per_UE-_est_ICIC_nRB
-
-            used_ICIC_resourse = used_ICIC_resourse + _est_ICIC_nRB
-            used_nonICIC_resourse = used_nonICIC_resourse + _est_nonICIC_nRB
-
-
-
-            _nonICIC_SINR = 10**(_UE.RL_state.filtered_SINR_dB/10)
-            _ICIC_SINR = 10**(_UE.RL_state.estimated_ICIC_SINR_dB/10)
-            UE_nonICIC_SINR_record.append(_nonICIC_SINR)
-            UE_ICIC_SINR_record.append(_ICIC_SINR)
-            UE_nonICIC_nRB_record.append(_est_nonICIC_nRB)
-            UE_ICIC_nRB_record.append(_est_ICIC_nRB)
-
-
         K = np.min([self.opt_UE_per_RB, self.nUE_in_range])
         AG = (self.nNt - K + 1) / K
-        try:
-            average_UE_per_nonICIC_RB = np.floor(used_nonICIC_resourse / (self.nRB - ICIC_nRB))
-            rec_on_nonICICRB_compensate_coe = (self.nNt - average_UE_per_nonICIC_RB + 1) / average_UE_per_nonICIC_RB / AG
-            if rec_on_nonICICRB_compensate_coe == np.inf:
-                rec_on_nonICICRB_compensate_coe = 0
-        except:
-            rec_on_nonICICRB_compensate_coe = 0
-        try:
-            average_UE_per_ICIC_RB = np.floor(used_ICIC_resourse / (ICIC_nRB / PARAM.ICIC.RB_partition_num))
-            rec_on_ICICRB_compensate_coe = (self.nNt - average_UE_per_ICIC_RB + 1) / average_UE_per_ICIC_RB / AG
-            if rec_on_ICICRB_compensate_coe == np.inf:
-                rec_on_ICICRB_compensate_coe = 0
-        except:
-            rec_on_ICICRB_compensate_coe = 0
 
+        from data_factory import search_object_form_list_by_no
         sum_rate = 0
-        for i in range(len(UE_nonICIC_SINR_record)):
-            _nonICIC_SINR = UE_nonICIC_SINR_record[i] * rec_on_nonICICRB_compensate_coe
-            _ICIC_SINR = UE_ICIC_SINR_record[i] * rec_on_ICICRB_compensate_coe
-            _est_nonICIC_nRB = UE_nonICIC_nRB_record[i]
-            _est_ICIC_nRB = UE_ICIC_nRB_record[i]
-            _rate = _est_ICIC_nRB * RB_width * np.log2(1+_ICIC_SINR) + _est_nonICIC_nRB * RB_width * np.log2(1+_nonICIC_SINR)
-            if np.isnan(_rate):
-                raise Exception('rate is nan!')
+        for _UE_no in self.resource_map.serv_UE_list:
+            _UE = search_object_form_list_by_no(UE_list, _UE_no)
+            temp_est_nonICIC_rec_power_list = []
+            temp_est_ICIC_rec_power_list = []
+            _rate = 0
+            for _RB_Nt in _UE.RB_Nt_ocp:
+                _RB_no = _RB_Nt[0]
+                nUE_on_RB = self.resource_map.RB_ocp_num[_RB_no]
+                est_AG = (self.nNt - nUE_on_RB + 1) / nUE_on_RB
+                if _RB_no < len(self.center_RB_idx):
+                    temp_est_nonICIC_rec_power_list.append(_UE.RL_state.estimated_rec_power * est_AG / AG)
+                    _SINR = 10**(_UE.RL_state.filtered_SINR_dB/10) * est_AG / AG
+                else:
+                    temp_est_ICIC_rec_power_list.append(_UE.RL_state.estimated_rec_power * est_AG / AG)
+                    _SINR = 10**(_UE.RL_state.estimated_ICIC_SINR_dB/10) * est_AG / AG
+                _rate = _rate + RB_width * np.log2(1 + _SINR)
+
             sum_rate = sum_rate + _rate
+            _UE.RL_state.est_nonICIC_fixAG_rec_power = np.mean(temp_est_nonICIC_rec_power_list)
+            _UE.RL_state.est_ICIC_fixAG_rec_power = np.mean(temp_est_ICIC_rec_power_list)
+
+
+        # opt_ICIC_resourse = ICIC_nRB/PARAM.ICIC.RB_partition_num * self.opt_UE_per_RB
+        # max_ICIC_resourse = ICIC_nRB/PARAM.ICIC.RB_partition_num * self.MaxUE_per_RB
+        # opt_nonICIC_resourse = (self.nRB - ICIC_nRB) * self.opt_UE_per_RB
+        # max_nonICIC_resourse = (self.nRB - ICIC_nRB) * self.MaxUE_per_RB
+        # used_ICIC_resourse = 0
+        # used_nonICIC_resourse = 0
+        #
+        # UE_nonICIC_SINR_record = []
+        # UE_ICIC_SINR_record = []
+        # UE_nonICIC_nRB_record = []
+        # UE_ICIC_nRB_record = []
+        #
+        # RB_ocp_state = np.zeros((self.nRB,))
+        # ICIC_RB_idx = [i for i in range(int(ICIC_nRB/PARAM.ICIC.RB_partition_num))]
+        # non_ICIC_RB_idx = [i for i in range(ICIC_nRB, self.nRB)]
+        # RB_associated_list = []
+        # from data_factory import search_object_form_list_by_no
+        # for _UE_no in self.UE_in_range:
+        #     if max_ICIC_resourse+max_nonICIC_resourse-used_ICIC_resourse-used_nonICIC_resourse<nRB_per_UE:
+        #         break
+        #
+        #     _UE = search_object_form_list_by_no(UE_list, _UE_no)
+        #     if _UE.active == -1:
+        #         continue
+        #
+        #     if used_ICIC_resourse >= max_ICIC_resourse:
+        #         _est_nonICIC_nRB = nRB_per_UE
+        #         _est_ICIC_nRB = 0
+        #     elif used_nonICIC_resourse >= max_nonICIC_resourse:
+        #         _est_ICIC_nRB = nRB_per_UE
+        #         _est_nonICIC_nRB = 0
+        #     elif used_ICIC_resourse >= opt_ICIC_resourse and used_nonICIC_resourse < opt_nonICIC_resourse:
+        #         if nRB_per_UE <= self.nRB-ICIC_nRB:
+        #             _est_nonICIC_nRB = nRB_per_UE
+        #             _est_ICIC_nRB = 0
+        #         else:
+        #             _est_nonICIC_nRB = self.nRB-ICIC_nRB
+        #             _est_ICIC_nRB = nRB_per_UE-_est_nonICIC_nRB
+        #     else:
+        #         if nRB_per_UE <= ICIC_nRB/PARAM.ICIC.RB_partition_num:
+        #             _est_ICIC_nRB = nRB_per_UE
+        #             _est_nonICIC_nRB = 0
+        #         else:
+        #             _est_ICIC_nRB = ICIC_nRB/PARAM.ICIC.RB_partition_num
+        #             _est_nonICIC_nRB = nRB_per_UE-_est_ICIC_nRB
+        #
+        #     ICIC_ocp_state = RB_ocp_state[ICIC_RB_idx]
+        #     try:
+        #         target_ICIC_RB_idx = np.argsort(ICIC_ocp_state)[:int(_est_ICIC_nRB)]
+        #     except:
+        #         raise Exception('Error')
+        #     non_ICIC_ocp_state = RB_ocp_state[non_ICIC_RB_idx]
+        #     target_non_ICIC_RB_idx = ICIC_nRB + np.argsort(non_ICIC_ocp_state)[:int(_est_nonICIC_nRB)]
+        #     RB_ocp_state[target_ICIC_RB_idx] = RB_ocp_state[target_ICIC_RB_idx] + 1
+        #     RB_ocp_state[target_non_ICIC_RB_idx] = RB_ocp_state[target_non_ICIC_RB_idx] + 1
+        #     RB_associated_list.append(np.concatenate([target_ICIC_RB_idx,target_non_ICIC_RB_idx]))
+        #
+        #
+        #     used_ICIC_resourse = used_ICIC_resourse + _est_ICIC_nRB
+        #     used_nonICIC_resourse = used_nonICIC_resourse + _est_nonICIC_nRB
+        #
+        #     _nonICIC_SINR = 10**(_UE.RL_state.filtered_SINR_dB/10)
+        #     _ICIC_SINR = 10**(_UE.RL_state.estimated_ICIC_SINR_dB/10)
+        #     UE_nonICIC_SINR_record.append(_nonICIC_SINR)
+        #     UE_ICIC_SINR_record.append(_ICIC_SINR)
+        #     UE_nonICIC_nRB_record.append(_est_nonICIC_nRB)
+        #     UE_ICIC_nRB_record.append(_est_ICIC_nRB)
+
+
+
+
+
+        # try:
+        #     average_UE_per_nonICIC_RB = np.floor(used_nonICIC_resourse / (self.nRB - ICIC_nRB))
+        #     rec_on_nonICICRB_compensate_coe = (self.nNt - average_UE_per_nonICIC_RB + 1) / average_UE_per_nonICIC_RB / AG
+        #     if rec_on_nonICICRB_compensate_coe == np.inf:
+        #         rec_on_nonICICRB_compensate_coe = 0
+        # except:
+        #     rec_on_nonICICRB_compensate_coe = 0
+        # try:
+        #     average_UE_per_ICIC_RB = np.floor(used_ICIC_resourse / (ICIC_nRB / PARAM.ICIC.RB_partition_num))
+        #     rec_on_ICICRB_compensate_coe = (self.nNt - average_UE_per_ICIC_RB + 1) / average_UE_per_ICIC_RB / AG
+        #     if rec_on_ICICRB_compensate_coe == np.inf:
+        #         rec_on_ICICRB_compensate_coe = 0
+        # except:
+        #     rec_on_ICICRB_compensate_coe = 0
+
+        # sum_rate = 0
+        # for i in range(len(UE_nonICIC_SINR_record)):
+        #     _nonICIC_SINR = UE_nonICIC_SINR_record[i] * rec_on_nonICICRB_compensate_coe
+        #     _ICIC_SINR = UE_ICIC_SINR_record[i] * rec_on_ICICRB_compensate_coe
+        #     _UE_no = self.UE_in_range[i]
+        #     _UE = search_object_form_list_by_no(UE_list, _UE_no)
+        #     _UE.RL_state.est_nonICIC_fixAG_rec_power = _UE.RL_state.estimated_rec_power * rec_on_nonICICRB_compensate_coe
+        #     _UE.RL_state.est_ICIC_fixAG_rec_power = _UE.RL_state.estimated_rec_power * rec_on_ICICRB_compensate_coe
+        #
+        #     _est_nonICIC_nRB = UE_nonICIC_nRB_record[i]
+        #     _est_ICIC_nRB = UE_ICIC_nRB_record[i]
+        #     _rate = _est_ICIC_nRB * RB_width * np.log2(1+_ICIC_SINR) + _est_nonICIC_nRB * RB_width * np.log2(1+_nonICIC_SINR)
+        #     if np.isnan(_rate):
+        #         raise Exception('rate is nan!')
+        #     sum_rate = sum_rate + _rate
+
+        # sum_rate = 0
+        # for i in range(len(self.UE_in_range)):
+        #     if i >= len(RB_associated_list): break  # 后面的UE都没被服务了
+        #     temp_est_nonICIC_rec_power_list = []
+        #     temp_est_ICIC_rec_power_list = []
+        #     _UE_no = self.UE_in_range[i]
+        #     _UE = search_object_form_list_by_no(UE_list, _UE_no)
+        #
+        #     _rate = 0
+        #     try:
+        #         _RB_arr = RB_associated_list[i]
+        #     except:
+        #         raise Exception("Error")
+        #     for _RB_no in _RB_arr:
+        #         nUE_on_RB = RB_ocp_state[_RB_no]
+        #         est_AG = (self.nNt - nUE_on_RB + 1) / nUE_on_RB
+        #         if _RB_no < ICIC_nRB:
+        #             temp_est_ICIC_rec_power_list.append(_UE.RL_state.estimated_rec_power * est_AG / AG)
+        #             _SINR = UE_ICIC_SINR_record[i] * est_AG / AG
+        #         else:
+        #             temp_est_nonICIC_rec_power_list.append(_UE.RL_state.estimated_rec_power * est_AG / AG)
+        #             _SINR = UE_nonICIC_SINR_record[i] * est_AG / AG
+        #         _rate = _rate + RB_width * np.log2(1+_SINR)
+        #
+        #     sum_rate = sum_rate + _rate
+        #     _UE.RL_state.est_nonICIC_fixAG_rec_power = np.mean(temp_est_nonICIC_rec_power_list)
+        #     _UE.RL_state.est_ICIC_fixAG_rec_power = np.mean(temp_est_ICIC_rec_power_list)
 
         return sum_rate
 
@@ -637,7 +714,7 @@ class BS:
         self.active = new_active
 
     def update_precoding_matrix(self, channel: InstantChannelMap, precoding_method):
-        _H = channel.map[:, self.no, :]
+        _H = channel.map[:, :, self.no, :]  # (nRB, nNt, nBS, nUE)
         for _RB in range(self.nRB):
             _RB_resource = self.resource_map.map[_RB, :]
             _serv_UE = _RB_resource[np.where(_RB_resource != -1)].astype('int32')
@@ -646,7 +723,7 @@ class BS:
             # _Pt_ratio = self.resource_map.RB_ocp_num[_RB] / np.sum(self.resource_map.RB_ocp_num)  # 占用的功率比例
             '''这里的功率分配简单的用RB均分'''
             _Pt_ratio = 1/self.nRB
-            _W, _coe = precoding_method(_H[:, _serv_UE].T, self.Ptmax * _Pt_ratio)
+            _W, _coe = precoding_method(_H[_RB, :, _serv_UE], self.Ptmax * _Pt_ratio)
             self.precoding_info[_RB].update(_W, _coe)
 
     def get_not_full_nRB(self, max_UE_per_RB, RB_type=None):

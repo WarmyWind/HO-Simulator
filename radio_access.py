@@ -35,9 +35,10 @@ def find_and_update_neighbour_BS(BS_list, UE_list, num_neibour, large_channel: L
                 L3_h.append(large_channel.map[_BS_no, _UE_no])
 
         else:
-            instant_h = instant_channel.map[:, _neighbour_idx, _UE_no]
+            instant_h = instant_channel.map[:, :, _neighbour_idx, _UE_no]
             instant_h_power = np.square(np.abs(instant_h))
-            instant_h_power_mean = np.mean(instant_h_power, axis=0)
+            # instant_h_power_mean = np.mean(instant_h_power, axis=0)
+            instant_h_power_mean = np.mean(instant_h_power)
             instant_h_mean = np.sqrt(instant_h_power_mean)
 
             k = (1 / 2) ** (L3_coe / 4)
@@ -101,9 +102,10 @@ def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
             _allo_result = allocate_method([_UE], UE_list, BS_list[NewBS_idx], serving_map)
             if _allo_result:
                 '''更新服务基站的L3测量 以及RL state'''
-                _instant_h = instant_h[:, NewBS_idx, _UE.no]
+                _instant_h = instant_h[:, :, NewBS_idx, _UE.no]  # nRB, nNt, nBS, nUE
                 _instant_h_power = np.square(np.abs(_instant_h))
-                _instant_h_power_mean = np.mean(_instant_h_power, axis=0)
+                # _instant_h_power_mean = np.mean(_instant_h_power, axis=0)
+                _instant_h_power_mean = np.mean(_instant_h_power)
                 _UE.update_serv_BS_L3_h(np.sqrt(_instant_h_power_mean))
                 # _UE.RL_state.update_active(True)
                 _UE.reset_ToS()
@@ -113,43 +115,4 @@ def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
     return True
 
 
-if __name__ == '__main__':
-    '''
-    用于测试
-    '''
-    from simulator import Parameter
-    from network_deployment import cellStructPPP
-    from user_mobility import get_UE_posi_from_mat
-    from channel_fading import *
 
-    np.random.seed(0)
-    PARAM = Parameter()
-    filepath = 'shadowFad_dB1.mat'
-    index = 'shadowFad_dB'
-    shadowFad_dB = get_shadow_from_mat(filepath, index)
-    # print(shadowFad_dB[0][1])
-    filepath = 'Set_UE_posi_60s_250user_1to2_new.mat'
-    index = 'Set_UE_posi'
-    UE_posi = get_UE_posi_from_mat(filepath, index)
-
-    Macro_Posi, Micro_Posi, nMicro = cellStructPPP(PARAM.nCell, PARAM.Dist, PARAM.Micro.nBS_avg)
-    Macro_BS_list = []
-    for i in range(PARAM.Macro.nBS):
-        Macro_BS_list.append(BS(i, 'Macro', PARAM.Macro.nNt, PARAM.nRB, Macro_Posi[i], True, PARAM.Macro.MaxUE_per_RB))
-
-    UE_list = []
-    for i in range(PARAM.nUE):
-        UE_list.append(UE(i, UE_posi[0, i], True))
-
-    shadow = ShadowMap(shadowFad_dB[0])
-    large_fading = LargeScaleChannelMap(PARAM.Macro.nBS, PARAM.nUE)
-    serving_map = ServingMap(PARAM.Macro.nBS, PARAM.nUE)
-
-    _large_h = large_scale_channel(PARAM, Macro_BS_list, UE_posi[0, :], shadow, large_fading)
-    print(_large_h[2, 4:6], large_fading.map[2, 4:6])  # 看更新后一不一致
-
-    small_h = small_scale_fading(PARAM.nUE, len(Macro_BS_list), PARAM.Macro.nNt)
-    print('small_h shape:', small_h.shape)
-
-    result = access_init(PARAM, Macro_BS_list, UE_list, large_fading, serving_map)
-    print(result)
