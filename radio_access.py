@@ -6,6 +6,7 @@
 
 from info_management import *
 from resource_allocation import equal_RB_allocate, ICIC_RB_allocate
+from data_factory import search_object_form_list_by_no
 import numpy as np
 
 
@@ -84,7 +85,12 @@ def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
         # if _UE.no == 37:
         #     probe = _UE.no
         if not _UE.active: continue
-        if _UE.state != 'unserved': continue
+        # if _UE.state != 'unserved': continue
+        if _UE.serv_BS != -1:
+            _BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
+            _BS.unserve_UE(_UE, serving_map)
+            _UE.RB_type = None  # 令UE的RB_type暂时为None
+            _UE.state = 'unserved'  # 令UE的状态暂时为‘unserved’
         # _UE_no = _UE.no
         # _h = large_h[:, _UE_no]  # 所有基站到该用户的大尺度信道
         # _idx = np.argsort(_h.flatten())  # 信道响应由小到大

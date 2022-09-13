@@ -10,7 +10,7 @@ from copy import deepcopy
 def equal_RB_allocate(UE_list, all_UE_list, BS:BS, serving_map:ServingMap, HO_flag=False):
     for _UE in UE_list:
         if _UE.GBR_flag and not HO_flag:
-            _needed_nRB = _UE.estimate_needed_nRB_by_SINR()
+            _needed_nRB = _UE.estimate_needed_nRB_by_SINR('edge', len(BS.edge_RB_idx), len(BS.center_RB_idx))
             if _needed_nRB > BS.nRB:
                 _needed_nRB = BS.nRB
         else:
@@ -148,7 +148,8 @@ def ICIC_RB_allocate(target_UE_list, all_UE_list, BS:BS, serving_map:ServingMap,
         if _UE.state != 'unserved':
             continue
         if _UE.GBR_flag and est_nRB_flag:
-            _needed_nRB = _UE.estimate_needed_nRB_by_SINR()
+            _needed_nRB = _UE.estimate_needed_nRB_by_SINR('edge', len(BS.edge_RB_idx), len(BS.center_RB_idx))
+            _needed_nRB = _needed_nRB + 3
             if _needed_nRB > len(BS.center_RB_idx) + len(BS.edge_RB_idx):
                 _needed_nRB = len(BS.center_RB_idx) + len(BS.edge_RB_idx)
         else:
@@ -162,7 +163,8 @@ def ICIC_RB_allocate(target_UE_list, all_UE_list, BS:BS, serving_map:ServingMap,
 
         else:  # 中心用户
             if not BS.is_full_load(needed_nRB=_needed_nRB, ICIC_flag=True):
-                find_RB_arr_and_serve(BS, _UE, 'center_first', serving_map, needed_nRB=_needed_nRB)
+                # find_RB_arr_and_serve(BS, _UE, 'center_first', serving_map, needed_nRB=_needed_nRB)
+                find_RB_arr_and_serve(BS, _UE, 'edge_first', serving_map, needed_nRB=_needed_nRB)
             else:
                 result_flag = False
 
@@ -213,10 +215,7 @@ def ICIC_BS_RB_allocate(PARAM, UE_list, BS:BS, serving_map:ServingMap):
     '''先对边缘用户做干扰协调'''
     while len(edge_UE_no_list) != 0:
         _UE_no = edge_UE_no_list[0]
-        # if not BS.if_RB_full_load(BS.RB_per_UE, max_UE_per_RB=BS.opt_UE_per_RB, RB_type='edge'):
-        #     _UE = search_object_form_list_by_no(UE_list, _UE_no)
-        #     find_RB_arr_and_serve(BS, _UE, 'edge', serving_map)
-        #     edge_UE_no_list = edge_UE_no_list[1:]
+
         _UE = search_object_form_list_by_no(UE_list, _UE_no)
         result_flag = ICIC_RB_allocate([_UE], UE_list, BS, serving_map)
         if result_flag:
@@ -227,10 +226,7 @@ def ICIC_BS_RB_allocate(PARAM, UE_list, BS:BS, serving_map:ServingMap):
     '''再对中心用户分配RB'''
     while len(center_UE_no_list) != 0:
         _UE_no = center_UE_no_list[0]
-        # if not BS.if_RB_full_load(BS.RB_per_UE, max_UE_per_RB=BS.opt_UE_per_RB, RB_type='center'):
-        #     _UE = search_object_form_list_by_no(UE_list, _UE_no)
-        #     find_RB_arr_and_serve(BS, _UE, 'center', serving_map)
-        #     center_UE_no_list = center_UE_no_list[1:]
+
         _UE = search_object_form_list_by_no(UE_list, _UE_no)
         if not BS.is_full_load(needed_nRB=BS.RB_per_UE, ICIC_flag=True):
             try:
@@ -335,8 +331,8 @@ def count_UE_in_range(UE_list, BS_list):
 
 
 def dynamic_nRB_per_UE_and_ICIC(PARAM, BS_list, UE_list, serving_map:ServingMap, large_fading: LargeScaleChannelMap,
-                                instant_channel: InstantChannelMap, extra_interf_map, actor=None, sess=None,
-                                newmodel=True, est_by_large_scale=True):
+                                instant_channel: InstantChannelMap, extra_interf_map, dynamic_RB_scheme, actor=None, sess=None,
+                                 est_by_large_scale=True):
     '''ICIC动态调整干扰协调的RB比例'''
     def handle_ICIC_RB(PARAM, BS_list):
         for _BS in BS_list:
@@ -372,14 +368,25 @@ def dynamic_nRB_per_UE_and_ICIC(PARAM, BS_list, UE_list, serving_map:ServingMap,
     '''统计各小区内有多少UE（包括未服务的）'''
     count_UE_in_range(UE_list, BS_list)
 
-    if newmodel == False:
+    if dynamic_RB_scheme == 'equal':
+        if PARAM.dynamic_nRB_per_UE:
+            _ICIC_nRB = round(PARAM.ICIC.RB_for_edge_ratio * PARAM.nRB)
+            # temp_nRB_per_UE = []
+            for _BS in BS_list:
+                RB_resource = (_BS.nRB - _ICIC_nRB + _ICIC_nRB / PARAM.ICIC.RB_partition_num) * _BS.opt_UE_per_RB  # there
+                _nRB_per_UE = np.round(RB_resource / _BS.nUE_in_range)
+
+                _BS.RB_per_UE = np.min([len(_BS.center_RB_idx)+len(_BS.edge_RB_idx),_nRB_per_UE])
+
+
+    elif dynamic_RB_scheme == 'old_model':
         '''动态确定每个小区里给UE分多少RB'''
         if PARAM.dynamic_nRB_per_UE:
             for _BS in BS_list:
                 state = _BS.nUE_in_range / _BS.nRB
                 _nRB_per_UE = actor.get_action([[state]], sess)[0][0]
-                _nRB_per_UE = round(_nRB_per_UE)
-                _BS.RB_per_UE = _nRB_per_UE
+                _nRB_per_UE = np.round(_nRB_per_UE)
+                _BS.RB_per_UE = np.min([len(_BS.center_RB_idx)+len(_BS.edge_RB_idx),_nRB_per_UE])
         '''确定各个BS的最大边缘UE数'''
         all_RB_resourse = PARAM.Macro.opt_UE_per_RB * PARAM.nRB
         # average_edge_UE = 0
@@ -418,6 +425,7 @@ def dynamic_nRB_per_UE_and_ICIC(PARAM, BS_list, UE_list, serving_map:ServingMap,
         if PARAM.dynamic_nRB_per_UE:
             neighbour_nUE_list = [0 for _ in range(len(BS_list))]
             neighbour_ICIC_nUE_list = [0 for _ in range(len(BS_list))]
+            nUE = 0
             for _BS in BS_list:
                 _neighbour_nUE = 0
                 _neighbour_ICIC_nUE = 0
@@ -429,26 +437,33 @@ def dynamic_nRB_per_UE_and_ICIC(PARAM, BS_list, UE_list, serving_map:ServingMap,
                         _neighbour_ICIC_nUE = _neighbour_ICIC_nUE + _neighbour_BS.nUE_in_range
                 neighbour_nUE_list[_BS.no] = _neighbour_nUE
                 neighbour_ICIC_nUE_list[_BS.no] = _neighbour_ICIC_nUE
+                nUE = nUE + _BS.nUE_in_range
 
 
-            max_rate_sum = 0
+
             est_sum_rate_record = []
             corresponding_nRB_per_UE = [3 for _ in range(len(BS_list))]
             best_ICIC_nRB = 0
             ICIC_nRB_list = [_nRB * PARAM.ICIC.RB_partition_num for _nRB in range(0, int(np.floor(PARAM.nRB/PARAM.ICIC.RB_partition_num))+1)]
 
-
+            max_rate_sum = 0
             for ii in range(0, len(ICIC_nRB_list)):
                 _ICIC_nRB = ICIC_nRB_list[ii]
                 temp_nRB_per_UE=[]
                 est_rate_sum = 0
                 for _BS in BS_list:
-                    _ICI = (_BS.nRB - _ICIC_nRB)/_BS.nRB * neighbour_nUE_list[_BS.no] + _ICIC_nRB/_BS.nRB * neighbour_ICIC_nUE_list[_BS.no]
-                    # state = [_BS.nUE_in_range / _BS.nRB, (_ICI-167.6895)/57.3456, _ICIC_nRB/_BS.nRB]
-                    state = [_BS.nUE_in_range / _BS.nRB, _ICI/PARAM.nUE, _ICIC_nRB / _BS.nRB]
-                    _nRB_per_UE = _BS.nRB * actor.get_action([state], sess)[0][0]
-                    _nRB_per_UE = round(_nRB_per_UE)
-                    temp_nRB_per_UE.append(_nRB_per_UE)
+                    if dynamic_RB_scheme == 'new_model':
+                        # _ICI = (_BS.nRB - _ICIC_nRB)/_BS.nRB * neighbour_nUE_list[_BS.no] + _ICIC_nRB/_BS.nRB * neighbour_ICIC_nUE_list[_BS.no]
+                        # state = [_BS.nUE_in_range / _BS.nRB, _ICI/PARAM.nUE, _ICIC_nRB / _BS.nRB]
+                        low_SINR_nUE_in_range = _BS.count_low_SINR_nUE_in_range(UE_list, PARAM.ICIC.SINR_th_for_stat, PARAM.sigma2)
+                        state = [nUE/100/_BS.nRB, _BS.nUE_in_range/_BS.nRB, low_SINR_nUE_in_range/_BS.nUE_in_range,  _ICIC_nRB / _BS.nRB]
+                        _nRB_per_UE = _BS.nRB * actor.get_action([state], sess)[0][0]
+                        _nRB_per_UE = np.round(_nRB_per_UE)
+                        temp_nRB_per_UE.append(np.min([len(_BS.center_RB_idx) + len(_BS.edge_RB_idx), _nRB_per_UE]))
+                    else:
+                        RB_resource = (_BS.nRB - _ICIC_nRB + _ICIC_nRB/PARAM.ICIC.RB_partition_num) * _BS.opt_UE_per_RB  # there
+                        _nRB_per_UE = np.round(RB_resource / _BS.nUE_in_range)
+                        temp_nRB_per_UE.append(np.min([len(_BS.center_RB_idx) + len(_BS.edge_RB_idx), _nRB_per_UE]))
 
 
                 temp_instant_channel = deepcopy(instant_channel)
@@ -499,8 +514,8 @@ def dynamic_nRB_per_UE_and_ICIC(PARAM, BS_list, UE_list, serving_map:ServingMap,
                         inter_P = get_interference(temp_PARAM, temp_BS_list, temp_UE_list, temp_instant_channel, extra_interf_map)
                         SINR_dB = calculate_SINR_dB(rec_P, inter_P, temp_PARAM.sigma2)
                         UE_rate = user_rate(temp_PARAM.MLB.RB, SINR_dB, temp_UE_list)
-                        est_rate_sum = np.sum(UE_rate)
-                        est_sum_rate_record.append(est_rate_sum)
+                        _rate_sum = np.sum(UE_rate)
+                        est_sum_rate_record.append(_rate_sum)
                         est_rate_sum = np.mean(est_sum_rate_record)
 
                         '''再次随机化小尺度信道和瞬时信道'''
@@ -544,31 +559,57 @@ def ICIC_decide_edge_UE(PARAM, BS_list, UE_list, init_flag = False):
             _BS.UE_in_range = []
             _BS.edge_UE_in_range = []
             _BS.center_UE_in_range = []
+            # _BS.low_SINR_nUE_in_range = 0
         '''根据SINR由小到大对UE进行排序'''
         SINR_list = []
         for _UE in UE_list:
             if not _UE.active:
-                _SINR = np.Inf
+                continue
             else:
                 if init_flag or PARAM.ICIC.ideal_RL_state:
-                    _SINR = _UE.RL_state.filtered_SINR_dB
-                    if _SINR == None:
+                    _SINR_dB = _UE.RL_state.filtered_SINR_dB
+                    if _SINR_dB == None:
                         raise Exception('SINR == None!')
-                # elif PARAM.ICIC.ideal_RL_state:
-                #     _SINR = _UE.RL_state.filtered_SINR_dB
-                #     if _SINR == None:
-                #         raise Exception('SINR == None!')
+
                 elif not PARAM.ICIC.ideal_RL_state and not PARAM.ICIC.RL_state_pred_flag:
                     if len(_UE.RL_state.SINR_dB_record_all) < PARAM.ICIC.obsolete_time+1:
-                        _SINR = _UE.RL_state.SINR_dB_record_all[0]
+                        _SINR_dB = _UE.RL_state.SINR_dB_record_all[0]
                     else:
-                        _SINR = _UE.RL_state.SINR_dB_record_all[-(PARAM.ICIC.obsolete_time+1)]
+                        _SINR_dB = _UE.RL_state.SINR_dB_record_all[-(PARAM.ICIC.obsolete_time+1)]
                 else:
                     if len(_UE.RL_state.pred_SINR_dB)==0:
-                        _SINR = _UE.RL_state.filtered_SINR_dB
+                        _SINR_dB = _UE.RL_state.filtered_SINR_dB
                     else:
-                        _SINR = _UE.RL_state.pred_SINR_dB[0]
-            SINR_list.append(_SINR)
+                        _SINR_dB = _UE.RL_state.pred_SINR_dB[0]
+
+                # '''根据门限确定SINR低于门限的用户'''
+                # if _UE.active:
+                #     if _UE.serv_BS != -1:
+                #         _BS_no = _UE.serv_BS
+                #     else:
+                #         _BS_no = _UE.neighbour_BS[0]
+                #     _BS = search_object_form_list_by_no(BS_list, _BS_no)
+                #     K_raw = np.min([_BS.opt_UE_per_RB, _BS.nUE_in_range])
+                #     AG_raw = (_BS.nNt-K_raw+1)/K_raw
+                #     K_new = np.min([_BS.MaxUE_per_RB, _BS.nUE_in_range])
+                #     AG_new = (_BS.nNt-K_new+1)/K_new
+                #     _SINR = 10**(_SINR_dB/10)
+                #     _SINR = _SINR*AG_new/AG_raw
+                #     _SINR_dB = 10*np.log10(_SINR)
+                    # if _SINR_dB < PARAM.ICIC.SINR_th_for_stat:
+                    #     _BS.low_SINR_nUE_in_range = _BS.low_SINR_nUE_in_range + 1
+                # else:
+                #     _BS = BS_list[0]
+                #     K_raw = _BS.opt_UE_per_RB
+                #     AG_raw = (_BS.nNt - K_raw + 1) / K_raw
+                #     K_new = _BS.MaxUE_per_RB
+                #     AG_new = (_BS.nNt - K_new + 1) / K_new
+                #     _SINR = 10 ** (_SINR / 10)
+                #     _SINR = _SINR * AG_new / AG_raw
+                #     _SINR = 10 * np.log10(_SINR)
+
+            SINR_list.append(_SINR_dB)
+
 
         '''根据排序结果，依次分类是否是边缘用户'''
         sort_idx = np.argsort(SINR_list)
@@ -592,10 +633,10 @@ def ICIC_decide_edge_UE(PARAM, BS_list, UE_list, init_flag = False):
                 _UE.posi_type = 'center'
                 _BS.center_UE_in_range.append(_UE.no)
 
-        # '''check'''
-        # for _BS in BS_list:
-        #     if len(_BS.center_UE_in_range) + len(_BS.edge_UE_in_range) != _BS.nUE_in_range:
-        #         raise Exception('center UE num + edge UE num != nUE in range')
+        '''check'''
+        for _BS in BS_list:
+            if len(_BS.center_UE_in_range) + len(_BS.edge_UE_in_range) != _BS.nUE_in_range:
+                raise Exception('center UE num + edge UE num != nUE in range')
 
 
 

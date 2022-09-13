@@ -7,7 +7,7 @@ import tensorflow as tf
 import pickle
 # from ReinforcementLearningV1.actor import ActorNetwork
 from DNN_model_utils import DNN_Model_Wrapper
-from ReinforcementLearningV2.actor import ActorNetwork
+from unsupervised0829.actor import ActorNetwork
 import tf_slim as slim
 import numpy as np
 import time
@@ -41,8 +41,10 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
     '''若考虑干扰协调，划分边缘用户'''
     if PARAM.ICIC.flag:
         if PARAM.ICIC.dynamic:
-            dynamic_nRB_per_UE_and_ICIC(PARAM, BS_list, UE_list, serving_map, large_fading, instant_channel, extra_interf_map, actor, sess)
+            dynamic_nRB_per_UE_and_ICIC(PARAM, BS_list, UE_list, serving_map, large_fading, instant_channel,
+                                        extra_interf_map, PARAM.dynamic_nRB_scheme, actor, sess)
         ICIC_decide_edge_UE(PARAM, BS_list, UE_list, init_flag=True)
+
 
     '''初始接入'''
     _ = access_init(PARAM, BS_list, UE_list, instant_channel, serving_map)
@@ -68,7 +70,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
 
     '''更新预编码信息和服务记录'''
     for _BS in BS_list:
-        _BS.update_precoding_matrix(instant_channel, ZF_precoding)
+        _BS.update_precoding_matrix(instant_channel, MMSE_precoding)
         _BS.serv_UE_list_record.append(_BS.resource_map.serv_UE_list)
         _BS.RB_ocp_num_record.append(_BS.resource_map.RB_ocp_num)
 
@@ -128,7 +130,8 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
 
     '''开始步进时长仿真'''
     for drop_idx in range(1, SimConfig.nDrop):
-
+        if drop_idx >= 8:
+            probe = 8
         '''以下操作均以80ms为步长'''
         if drop_idx % PARAM.time_resolution == 0:
             '''更新UE位置'''
@@ -150,24 +153,77 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
                     _future_posi = UE_posi[_UE.type][_posi_idx + 1:_posi_idx + 1 + _UE.record_len, _UE.type_no]
                     _UE.update_future_posi(_future_posi)
 
-
             '''更新小尺度信道信息'''
             small_h = small_scale_fading(len(BS_list), PARAM.nUE, PARAM.nRB, PARAM.Macro.nNt)
             small_fading.update(small_h)
 
             '''更新大尺度信道信息'''
-            if drop_idx % PARAM.time_resolution == 0:
-                large_h = large_scale_channel(PARAM, BS_list, UE_list, shadow)
-                large_fading.update(large_h)
+            large_h = large_scale_channel(PARAM, BS_list, UE_list, shadow)
+            large_fading.update(large_h)
 
             '''更新瞬时信道信息'''
             instant_channel.calculate_by_fading(large_fading, small_fading)
 
             '''更新UE的邻基站'''
             find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading, instant_channel,
-                                         PARAM.L3_coe)
+                                             PARAM.L3_coe)
+
+        '''切换'''
+        '''更新小尺度信道信息'''
+        small_h = small_scale_fading(len(BS_list), PARAM.nUE, PARAM.nRB, PARAM.Macro.nNt)
+        small_fading.update(small_h)
+
+        # '''更新大尺度信道信息'''
+        # large_h = large_scale_channel(PARAM, BS_list, UE_list, shadow)
+        # large_fading.update(large_h)
+
+        '''更新瞬时信道信息'''
+        instant_channel.calculate_by_fading(large_fading, small_fading)
+
+        if PARAM.PHO.ideal_HO:
+            if drop_idx % PARAM.time_resolution == 0:
+                '''初始接入'''
+                _ = access_init(PARAM, BS_list, UE_list, instant_channel, serving_map)
+
+                '''更新RL state'''
+                update_SS_SINR(PARAM, UE_list, BS_list, extra_interf_map=extra_interf_map)
+
+                '''更新所有基站的L3测量（预测大尺度信道时需要）'''
+                if PARAM.active_HO:
+                    update_all_BS_L3_h_record(UE_list, large_fading, instant_channel, PARAM.L3_coe)
+
+                '''更新UE的邻基站及其的L3测量'''
+                find_and_update_neighbour_BS(BS_list, UE_list, PARAM.num_neibour_BS_of_UE, large_fading,
+                                             instant_channel, PARAM.L3_coe)
+
+                '''更新UE的服务基站L3测量'''
+                update_serv_BS_L3_h(UE_list, large_fading, instant_channel, PARAM.L3_coe)
+
+                '''更新SS_SINR'''
+                update_SS_SINR(PARAM, UE_list, BS_list, extra_interf_map=extra_interf_map)
+        else:
+            measure_criteria = 'L3'
+            if PARAM.ICIC.flag == 1:
+                allocate_method = ICIC_RB_allocate
+            else:
+                allocate_method = equal_RB_allocate
+
+            if not PARAM.active_HO:
+                # 被动HO
+                handover_criteria_eval(PARAM, UE_list, BS_list, large_fading, instant_channel,
+                                        serving_map, allocate_method, measure_criteria)
+            else:
+                # 主动HO
+                actice_HO_eval(PARAM, NN, normalize_para, UE_list, BS_list, shadow, large_fading, instant_channel,
+                                        serving_map, allocate_method, measure_criteria)
+
+            '''对HO后SS_SINR变为None的UE估计SS_SINR'''
+            count_UE_in_range(UE_list, BS_list)
+            update_SS_SINR(PARAM, UE_list, BS_list, after_HO=True, extra_interf_map=extra_interf_map)
 
 
+        '''以下操作均以80ms为步长'''
+        if drop_idx % PARAM.time_resolution == 0:
             '''统计小区内UE'''
             count_UE_in_range(UE_list, BS_list)
 
@@ -210,14 +266,12 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
                 update_pred_SS_SINR(UE_list, PARAM.sigma2, NN, normalize_para, PARAM.ICIC.RL_state_pred_len)
 
 
-
-            '''若考虑干扰协调，划分边缘用户'''
+            '''若考虑干扰协调，确定策略'''
             if PARAM.ICIC.flag:
                 if PARAM.ICIC.dynamic and (drop_idx / PARAM.time_resolution) % PARAM.ICIC.dynamic_period == 0:
                     dynamic_nRB_per_UE_and_ICIC(PARAM, BS_list, UE_list, serving_map, large_fading, instant_channel,
-                                                extra_interf_map,actor, sess)
+                                                extra_interf_map, PARAM.dynamic_nRB_scheme, actor, sess)
                 ICIC_decide_edge_UE(PARAM, BS_list, UE_list)
-
 
 
             '''若考虑RB干扰协调，根据UE类型分配RB'''
@@ -232,10 +286,11 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
             update_serv_BS_L3_h(UE_list, large_fading, instant_channel, PARAM.L3_coe)
 
 
+        '''以下10ms更新一次'''
 
-        '''更新预编码信息和服务记录，10ms更新一次'''
+        '''更新预编码信息和服务记录'''
         for _BS in BS_list:
-            _BS.update_precoding_matrix(instant_channel, ZF_precoding)
+            _BS.update_precoding_matrix(instant_channel, MMSE_precoding)
             _BS.serv_UE_list_record.append(_BS.resource_map.serv_UE_list)
             _BS.RB_ocp_num_record.append(_BS.resource_map.RB_ocp_num)
 
@@ -251,11 +306,9 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
         # max_inter_list.append(max_inter_P)
         rate_list.append(UE_rate)
 
-        # for i in range(len(BS_list)):
-        #     _true_sum_rate = np.sum(UE_rate[BS_list[i].UE_in_range])
-        #     _est_sum_rate = BS_list[i].estimated_sum_rate(UE_list, PARAM)
-        #     print('True rate:{} , estimated rate:{}'.format(_true_sum_rate/BS_list[i].nUE_in_range,
-        #         _est_sum_rate / BS_list[i].nUE_in_range))
+        if len(rate_list) == 8*50:
+            probe = 50
+
 
 
 
@@ -303,29 +356,10 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
             if PARAM.ICIC.flag and PARAM.ICIC.dynamic:
                 RB_for_edge_ratio_list.append(PARAM.ICIC.RB_for_edge_ratio)
 
-        '''开始切换'''
-        measure_criteria = 'L3'
-        if PARAM.ICIC.flag == 1:
-            allocate_method = ICIC_RB_allocate
-        else:
-            allocate_method = equal_RB_allocate
-
-        if not PARAM.active_HO:
-            # 被动HO
-            handover_criteria_eval(PARAM, UE_list, BS_list, large_fading, instant_channel,
-                                    serving_map, allocate_method, measure_criteria)
-        else:
-            # 主动HO
-            actice_HO_eval(PARAM, NN, normalize_para, UE_list, BS_list, shadow, large_fading, instant_channel,
-                                    serving_map, allocate_method, measure_criteria)
-
-        '''对HO后SS_SINR变为None的UE估计SS_SINR'''
-        count_UE_in_range(UE_list, BS_list)
-        update_SS_SINR(PARAM, UE_list, BS_list, after_HO=True, extra_interf_map=extra_interf_map)
-
 
         '''显示进度条'''
         progress_bar(drop_idx/(SimConfig.nDrop-1) * 100)
+
 
     HO_success = 0
     HO_failure = 0
@@ -361,7 +395,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0827_7BS_150moving_180staticUE-2'
+        root_path = 'result/0910_0.10GBR2M(+3RB)_02Set_UE_posi_330user_edge_7BS_liji_duobu_bylarge+fixednRB'
         # nDrop = 6000 - 10*8  # 时间步进长度
         nDrop = 400
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
@@ -373,15 +407,15 @@ if __name__ == '__main__':
         # UE_posi_filepath = 'UE_tra/0621_2row_15BS/Set_UE_posi_150user_15BS.mat'
         # UE_posi_filepath = 'UE_tra/0527_scene0/Set_UE_posi_180.mat'
         # UE_posi_filepath = 'UE_tra/0714_7road_7BS/Set_UE_posi_60s_330user_7BS_V123.mat'
-        UE_posi_filepath = 'UE_tra/0726_7BS_withstaticUE/Set_UE_posi_60s_330user_7BS_150move_180static.mat'
+        # UE_posi_filepath = 'UE_tra/0726_7BS_withstaticUE/Set_UE_posi_60s_330user_7BS_150move_180static.mat'
         # UE_posi_filepath = 'UE_tra/0726_7BS_withstaticUE/0727edge2.mat'
         # UE_posi_filepath = 'UE_tra/0721_7BS_PPP/Set_UE_posi_PPP_60s_[10,90,30,10,90,90,10]user_7BS_.mat'
         # UE_posi_filepath = 'UE_tra/0721_7BS_PPP/Set_UE_posi_PPP_60s_60-75m_[80,20,50,70,30,30,50]user_7BS_.mat'
         # UE_posi_filepath = 'UE_tra/0721_7BS_PPP/Set_UE_posi_50_330user_balanced_edge_7BS.mat'
         # UE_posi_filepath = 'UE_tra/0726_7BS_withstaticUE/Set_UE_posi_60s_180moving_150static_7BS_.mat'
         # UE_posi_filepath = 'UE_tra/0714_7road_7BS/Set_UE_posi_60s_432user_7BS_V123.mat'
-
-
+        # UE_posi_filepath = 'UE_tra/0721_7BS_PPP/Set_UE_posi_PPP_60s_60-75m_[10,90,50,10,90,90,10]user_7BS_.mat'
+        UE_posi_filepath = 'UE_tra/0909_7BS/02Set_UE_posi_330user_edge_7BS.mat'
         posi_index = 'Set_UE_posi'
 
         '''额外干扰地图'''
@@ -396,7 +430,8 @@ if __name__ == '__main__':
 
         '''每个UE的RB数决策模型'''
         # actor_path = 'ReinfocementLearning/models/0709model/actor_1234567_0709_0'
-        actor_path = 'ReinforcementLearningV2/actor_1234567(0-30)_0726'
+        # actor_path = 'ReinforcementLearningV2/actor_1234567(0-30)_0726'
+        actor_path = 'unsupervised0829/results/0905/actor_0905_200010_liji_duobu_0'
         actor_lr = 0.001
         actor_num_hidden_1 = 50
         actor_num_hidden_2 = 40
@@ -464,7 +499,7 @@ if __name__ == '__main__':
                 normalize_para = None
 
             '''每个UE的RB数决策模型'''
-            if PARAM.dynamic_nRB_per_UE:
+            if PARAM.dynamic_nRB_per_UE and (PARAM.dynamic_nRB_scheme == 'new_model' or PARAM.dynamic_nRB_scheme == 'old_model'):
                 def load_model(fname):
                     f = open(fname, 'rb')
                     var = pickle.load(f)
@@ -499,8 +534,8 @@ if __name__ == '__main__':
                 np.save(SimConfig.root_path + '/{}/UE_list.npy'.format(i), _UE_list)
                 np.save(SimConfig.root_path + '/{}/BS_list.npy'.format(i), _BS_list)
                 np.save(SimConfig.root_path + '/{}/UE_offline_dict.npy'.format(i), _UE_offline_dict)
-                np.save(SimConfig.root_path + '/{}/rec_arr.npy'.format(i), _rec_arr)
-                np.save(SimConfig.root_path + '/{}/inter_arr.npy'.format(i), _inter_arr)
+                # np.save(SimConfig.root_path + '/{}/rec_arr.npy'.format(i), _rec_arr)
+                # np.save(SimConfig.root_path + '/{}/inter_arr.npy'.format(i), _inter_arr)
                 np.save(SimConfig.root_path + '/{}/UE_in_different_cell_arr.npy'.format(i), _UE_in_different_cell_arr)
                 np.save(SimConfig.root_path + '/{}/est_RL_state_dict.npy'.format(i), _est_RL_state_dict)
 
@@ -521,6 +556,7 @@ if __name__ == '__main__':
     np.random.seed(0)
     '''从文件读取阴影衰落'''
     shadowFad_dB = get_shadow_from_mat(SimConfig.shadow_filepath, SimConfig.shadow_index)
+    # shadowFad_dB = np.zeros(shadowFad_dB.shape)  # 阴影置零，不考虑阴影
 
     '''从文件读取UE位置'''
     UE_posi = get_UE_posi_from_file(SimConfig.UE_posi_filepath, SimConfig.posi_index)

@@ -130,6 +130,8 @@ class RL_state:
         self.est_ICIC_fixAG_rec_power = None
         self.estimated_itf_power = None
         self.estimated_ICIC_itf_power = None
+        self.estimated_extra_itf_power = None
+        self.estimated_extra_ICIC_itf_power = None
 
         self.pred_SINR_dB = []  # 后几帧的预测值
         self.max_period = max_period
@@ -214,18 +216,33 @@ class UE:
         self.posi_type = None
         self.RB_type = None
 
-    def estimate_needed_nRB_by_SINR(self, RB_width=180*1e3):
+    def estimate_needed_nRB_by_SINR(self, RB_priority, available_ICIC_nRB, available_nonICIC_nRB, RB_width=180*1e3):
         try:
-            if self.posi_type == 'edge':
-                SINR = 10 ** (self.RL_state.estimated_ICIC_SINR_dB / 10)
+            if RB_priority == 'edge':
+                ICIC_SINR = 10 ** (self.RL_state.estimated_ICIC_SINR_dB / 10)
+                rate_per_ICIC_RB = RB_width * np.log2(1 + ICIC_SINR)
+                needed_nRB = np.ceil(self.min_rate / rate_per_ICIC_RB)
+                if available_ICIC_nRB < needed_nRB:
+                    SINR = 10 ** (self.RL_state.filtered_SINR_dB / 10)
+                    rate_per_RB = RB_width * np.log2(1 + SINR)
+                    non_ICIC_needed_rate = self.min_rate - available_ICIC_nRB * RB_width * np.log2(1 + SINR)
+                    non_ICIC_needed_nRB = np.ceil(non_ICIC_needed_rate / rate_per_RB)
+                    needed_nRB = available_ICIC_nRB + non_ICIC_needed_nRB
             else:
                 SINR = 10 ** (self.RL_state.filtered_SINR_dB / 10)
+                rate_per_RB = RB_width * np.log2(1 + SINR)
+                needed_nRB = np.ceil(self.min_rate / rate_per_RB)
+                if available_nonICIC_nRB < needed_nRB:
+                    ICIC_SINR = 10 ** (self.RL_state.estimated_ICIC_SINR_dB / 10)
+                    rate_per_ICIC_RB = RB_width * np.log2(1 + ICIC_SINR)
+                    ICIC_needed_rate = self.min_rate - available_nonICIC_nRB * RB_width * np.log2(1 + ICIC_SINR)
+                    ICIC_needed_nRB = np.ceil(ICIC_needed_rate / rate_per_ICIC_RB)
+                    needed_nRB = available_nonICIC_nRB + ICIC_needed_nRB
 
         except:
-            raise Exception('RL_state.filtered_SINR_dB is None!')
-        rate_per_RB = RB_width * np.log2(1 + SINR)
-        needed_nRB = self.min_rate / rate_per_RB
-        return np.ceil(needed_nRB)
+            raise Exception('RL_state SINR is None!')
+
+        return needed_nRB
 
 
     def is_in_invalid_RB(self, _BS, ICIC_flag:bool):
@@ -529,6 +546,7 @@ class BS:
         self.active = active
         self.resource_map = ResourceMap(nRB, nNt, center_RB_idx, edge_RB_idx)
         self.max_edge_UE_num = 0  # 小区的最大边缘UE数
+        self.low_SINR_nUE_in_range = 0  # 小区内SINR低于一定门限的UE数
         # self.edge_UE_num = 0  # 小区范围内的边缘UE数（包括未服务的）
         self.nUE_in_range = 0  # 小区范围内的UE数（包括未服务的）
         self.UE_in_range = []
@@ -542,6 +560,31 @@ class BS:
         self.RB_ocp_num_record = []
 
         self.ICIC_group = ICIC_gruop
+
+
+    def count_low_SINR_nUE_in_range(self, UE_list, SINR_th_for_stat, sigma2):
+        from data_factory import search_object_form_list_by_no
+        raw_K = np.min([self.opt_UE_per_RB, self.nUE_in_range])
+        new_K = np.min([self.MaxUE_per_RB, self.nUE_in_range])
+        raw_AG = (self.nNt - raw_K + 1) / raw_K
+        new_AG = (self.nNt - new_K + 1) / new_K
+        low_SINR_nUE = 0
+        for _UE_no in self.UE_in_range:
+            if _UE_no == 0:
+                probe = _UE_no
+            _UE = search_object_form_list_by_no(UE_list, _UE_no)
+            if not _UE.active: continue
+            _rec_P = _UE.RL_state.estimated_rec_power * new_AG / raw_AG
+            _rec_P = _rec_P * self.nRB * new_K / self.nUE_in_range
+            _itf_P = _UE.RL_state.estimated_itf_power * self.nRB
+            _SINR = _rec_P / (_itf_P + sigma2)
+            _SINR_dB = 10*np.log10(_SINR)
+            if _SINR_dB < SINR_th_for_stat:
+                low_SINR_nUE = low_SINR_nUE + 1
+
+        return low_SINR_nUE
+
+
 
     def estimated_sum_rate(self, UE_list, PARAM, ICIC_nRB=-1, nRB_per_UE=-1):
         RB_width = PARAM.MLB.RB
@@ -562,14 +605,27 @@ class BS:
             _rate = 0
             for _RB_Nt in _UE.RB_Nt_ocp:
                 _RB_no = _RB_Nt[0]
+                '''功率分配以RB上的用户数作为系数'''
+                _Pt_ratio = self.resource_map.RB_ocp_num[_RB_no] / np.sum(self.resource_map.RB_ocp_num)  # 占用的功率比例
+                power_compen = self.nRB * _Pt_ratio
                 nUE_on_RB = self.resource_map.RB_ocp_num[_RB_no]
                 est_AG = (self.nNt - nUE_on_RB + 1) / nUE_on_RB
+
+                rec_compen_coe = est_AG / AG * power_compen
+                itf_compen_coe = self.nRB / (len(self.edge_RB_idx) + len(self.center_RB_idx))
                 if _RB_no < len(self.center_RB_idx):
-                    temp_est_nonICIC_rec_power_list.append(_UE.RL_state.estimated_rec_power * est_AG / AG)
-                    _SINR = 10**(_UE.RL_state.filtered_SINR_dB/10) * est_AG / AG
+                    _est_rec_power = _UE.RL_state.estimated_rec_power * rec_compen_coe
+                    temp_est_nonICIC_rec_power_list.append(_est_rec_power)
+                    _est_itf_power = _UE.RL_state.estimated_itf_power * itf_compen_coe
+                    # _SINR = 10**(_UE.RL_state.filtered_SINR_dB/10) * rec_compen_coe
+                    _SINR = _est_rec_power / (_est_itf_power + PARAM.sigma2)
+
                 else:
-                    temp_est_ICIC_rec_power_list.append(_UE.RL_state.estimated_rec_power * est_AG / AG)
-                    _SINR = 10**(_UE.RL_state.estimated_ICIC_SINR_dB/10) * est_AG / AG
+                    _est_rec_power = _UE.RL_state.estimated_rec_power * rec_compen_coe
+                    temp_est_ICIC_rec_power_list.append(_est_rec_power)
+                    _est_itf_power = _UE.RL_state.estimated_ICIC_itf_power * itf_compen_coe
+                    # _SINR = 10**(_UE.RL_state.estimated_ICIC_SINR_dB/10) * rec_compen_coe
+                    _SINR = _est_rec_power / (_est_itf_power + PARAM.sigma2)
                 _rate = _rate + RB_width * np.log2(1 + _SINR)
 
             sum_rate = sum_rate + _rate
@@ -719,10 +775,10 @@ class BS:
             _RB_resource = self.resource_map.map[_RB, :]
             _serv_UE = _RB_resource[np.where(_RB_resource != -1)].astype('int32')
             if len(_serv_UE) == 0: continue  # 若没有服务用户，跳过
-            # '''这里的功率分配以RB上的用户数作为系数'''
-            # _Pt_ratio = self.resource_map.RB_ocp_num[_RB] / np.sum(self.resource_map.RB_ocp_num)  # 占用的功率比例
-            '''这里的功率分配简单的用RB均分'''
-            _Pt_ratio = 1/self.nRB
+            '''这里的功率分配以RB上的用户数作为系数'''
+            _Pt_ratio = self.resource_map.RB_ocp_num[_RB] / np.sum(self.resource_map.RB_ocp_num)  # 占用的功率比例
+            # '''这里的功率分配简单的用RB均分'''
+            # _Pt_ratio = 1/self.nRB
             _W, _coe = precoding_method(_H[_RB, :, _serv_UE], self.Ptmax * _Pt_ratio)
             self.precoding_info[_RB].update(_W, _coe)
 

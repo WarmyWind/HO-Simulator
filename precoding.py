@@ -29,5 +29,18 @@ def ZF_precoding(H, Ptmax, alloc = 'alloc_fair'):
     # precoding_power_sum = np.sum(precoding_power)
     return W, coe
 
+def MMSE_precoding(H, Ptmax, sigma2=0):
+    _nUE = H.shape[0]
+    G = np.linalg.pinv(np.dot(H, H.conj().T) + sigma2*np.eye(_nUE)) @ np.eye(_nUE)
+    W_temp = np.dot(H.conj().T, G)
+    d = np.diag(np.dot(W_temp.conj().T, W_temp))
+    PowerA = np.ones((_nUE,))*Ptmax/_nUE
+    G = np.dot(np.sqrt(np.diag(d)), np.eye(_nUE))
+    W = np.dot(W_temp @ G, np.sqrt(np.diag(PowerA)))
 
+    Power = np.diag(H@W)
+    W_normed = W @ np.linalg.inv(np.diag(Power))
+    coe = Ptmax / H.shape[0] / np.square(np.linalg.norm(W_normed, axis=0))
+
+    return W_normed, coe
 

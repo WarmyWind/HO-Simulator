@@ -68,20 +68,20 @@ def get_large_fading_dB_from_posi(PARAMS, UE_posi, BS_posi, BS_no, shadow_map:Sh
 
     origin_x_point = PARAMS.origin_x
     origin_y_point = PARAMS.origin_y
-    x_temp = int(np.ceil((np.real(UE_posi) - origin_x_point) / PARAMS.posi_resolution))
-    y_temp = np.floor(np.ceil((np.imag(UE_posi) - origin_y_point) / PARAMS.posi_resolution)).astype(int)
-    x_temp = np.min((shadow_map.map.shape[2] - 1, x_temp))
-    y_temp = np.min((shadow_map.map.shape[1] - 1, y_temp))
+    x_temp = int(np.ceil((np.real(UE_posi) - origin_x_point) / PARAMS.posi_resolution))-1
+    y_temp = int(np.ceil((np.imag(UE_posi) - origin_y_point) / PARAMS.posi_resolution))-1
+    x_temp = np.min((shadow_map.map.shape[2] - 2, x_temp))
+    y_temp = np.min((shadow_map.map.shape[1] - 2, y_temp))
     x_temp = np.max((0, x_temp))
     y_temp = np.max((0, y_temp))
 
-    shadow = shadow_map.map[BS_no][y_temp, x_temp]
-    large_fading_dB = pLoss1m + dFactor * np.log10(distServer) + shadow - antGain
+    _shadow = shadow_map.map[BS_no][y_temp, x_temp]
+    large_fading_dB = pLoss1m + dFactor * np.log10(distServer) + _shadow - antGain
     return large_fading_dB
 
 
 def small_scale_fading(nBS, nUE, nRB, nNt, fading_model='Rayleigh'):
-    small_H = np.ones((nBS, nUE, nRB, nNt),dtype=np.complex_)
+    small_H = np.ones((nBS, nUE, nRB, nNt), dtype=np.complex_)
 
     if fading_model == 'Rayleigh':
         np.random.seed()

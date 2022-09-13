@@ -10,7 +10,7 @@
 
 
 from info_management import *
-from precoding import ZF_precoding
+from precoding import *
 import torch
 from data_factory import search_object_form_list_by_no
 
@@ -110,8 +110,8 @@ def update_SS_SINR(PARAM, UE_list, BS_list, after_HO=False, extra_interf_map=Non
     mean_filter_length = PARAM.filter_length_for_SINR
 
     for _UE in UE_list:
-        # if _UE.no == 37:
-        #     probe = _UE.no
+        if _UE.no == 0:
+            probe = _UE.no
         if not _UE.active: continue
         if after_HO and _UE.RL_state.filtered_SINR_dB != None: continue
         if _UE.state == 'unserved':
@@ -149,13 +149,16 @@ def update_SS_SINR(PARAM, UE_list, BS_list, after_HO=False, extra_interf_map=Non
         else:
             ICIC_itf = interf
 
+
+        extra_ICIC_itf = 0
+        extra_non_ICIC_itf = 0
         # 添加外圈干扰
         try:
             UE_posi = _UE.posi
             origin_x_point = PARAM.origin_x
             origin_y_point = PARAM.origin_y
-            x_temp = int(np.ceil((np.real(UE_posi) - origin_x_point) / PARAM.posi_resolution))
-            y_temp = np.floor(np.ceil((np.imag(UE_posi) - origin_y_point) / PARAM.posi_resolution)).astype(int)
+            x_temp = int(np.ceil((np.real(UE_posi) - origin_x_point) / PARAM.posi_resolution))-1
+            y_temp = int(np.ceil((np.imag(UE_posi) - origin_y_point) / PARAM.posi_resolution))-1
             x_temp = np.min((extra_interf_map.shape[3] - 1, x_temp))
             y_temp = np.min((extra_interf_map.shape[2] - 1, y_temp))
             extra_ICIC_itf = extra_interf_map[_UE.serv_BS, 1, y_temp, x_temp]
@@ -166,14 +169,19 @@ def update_SS_SINR(PARAM, UE_list, BS_list, after_HO=False, extra_interf_map=Non
 
 
         ICIC_SINR = rec_power / (ICIC_itf + extra_ICIC_itf + noise)
+        # ICIC_SINR = rec_power / (ICIC_itf + noise)
 
         SS_SINR = rec_power / (interf + extra_non_ICIC_itf + noise)
         _UE.update_RL_state_by_SINR(SS_SINR, mean_filter_length)
 
 
         _UE.RL_state.estimated_rec_power = rec_power
-        _UE.RL_state.estimated_itf_power = interf + extra_non_ICIC_itf
-        _UE.RL_state.estimated_ICIC_itf_power = ICIC_itf + extra_ICIC_itf
+        # _UE.RL_state.estimated_itf_power = interf + extra_non_ICIC_itf
+        # _UE.RL_state.estimated_ICIC_itf_power = ICIC_itf + extra_ICIC_itf
+        _UE.RL_state.estimated_itf_power = interf
+        _UE.RL_state.estimated_ICIC_itf_power = ICIC_itf
+        _UE.RL_state.estimated_extra_itf_power = extra_non_ICIC_itf
+        _UE.RL_state.estimated_extra_ICIC_itf_power = extra_ICIC_itf
         _UE.RL_state.estimated_ICIC_SINR_dB = 10*np.log10(ICIC_SINR)
 
 

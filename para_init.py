@@ -27,7 +27,7 @@ class ICIC:
 
         self.edge_divide_method = 'SINR'  # 'SINR' or 'position'
         self.SINR_th = 10
-        self.SINR_th_for_stat = 10
+        self.SINR_th_for_stat = 2
         self.edge_area_width = 30
 
         # edge_RB_reuse = False
@@ -35,7 +35,7 @@ class ICIC:
         self.obsolete_time = 10
         self.RL_state_pred_flag = False
         self.RL_state_pred_len = 10  # max pred len refers to predictor
-        self.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
+        self.dynamic_period = 1  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
 
         # self.ICIC_RB_group_for_BS = [np.mod(i, 2) for i in range(8)]
         self.ICIC_RB_group_for_BS = [1,2,0,1,2,2,1]
@@ -65,6 +65,7 @@ class Parameter:  # 仿真场景参数
         self.Macro = Macro()
         self.Micro = Micro()
 
+        '''场景参数'''
         self.nRB = 30  # RB数
         self.ICIC.RB_partition_num = 3
         self.scene = 2  # 0 = road struction, 1 = cross road struction, 2 = cell struction
@@ -80,10 +81,12 @@ class Parameter:  # 仿真场景参数
         self.Micro.opt_UE_per_RB = np.floor(self.Micro.nNt)  # 微基站每个RB的最大服务用户
         # self.RB_per_UE = int(np.floor(1 * self.Macro.nBS * self.Macro.MaxUE_per_RB * self.nRB / self.nUE))
 
+        '''仿真设置'''
         self.dynamic_nRB_per_UE = True
-        self.RB_per_UE = 3
+        self.dynamic_nRB_scheme = 'new_model'  # 需要遍历正交RB数：'trav_equal','new_model', 不需要遍历：'equal','old_model'
+        self.RB_per_UE = 3  # 如果dynamic_nRB_per_UE = False, 则每个UE分配固定个RB
 
-        self.active_HO = True
+        self.active_HO = False
 
         self.sigma2dBm = -95
         self.sigma2 = 10 ** (self.sigma2dBm / 10) / 1000
@@ -93,7 +96,7 @@ class Parameter:  # 仿真场景参数
         self.sigma_e = self.sigma2 + self.sigma_IC
 
 
-        self.ntype = 3
+        self.ntype = 1
         self.nUE = 'all'  # 用户设备总数，数或‘all’
         self.nUE_per_type = 'all'  # 每种用户的数量，列表或’all‘
         self.num_neibour_BS_of_UE = 7
@@ -109,7 +112,7 @@ class Parameter:  # 仿真场景参数
         self.time_resolution = 8
         self.posi_resolution = 0.5
 
-        self.GBR_ratio = 0  # GBR用户比例
+        self.GBR_ratio = 0.1  # GBR用户比例
         self.min_rate = 2*1e6  # GBR用户的最低速率
 
 
@@ -139,14 +142,15 @@ class Parameter:  # 仿真场景参数
 
 def paraset_generator():
     PARAM_list = []
-    edgeRB_ratio = [0,0.2,0.4,0.6,0.8]
-    RB_per_UE = [3,4,5,6,7]
+    edgeRB_ratio = [0,0.2,0.4,0.6,0.8,1]
+    # edgeRB_ratio = [1]
+    RB_per_UE = [3,5,7,9]
 
     PARAM0 = Parameter()
     PARAM0.active_HO = False  # 被动切换
+    PARAM0.TTT = 0
+    PARAM0.HOM = 0
     PARAM0.PHO.ideal_HO = True  # 理想被动切换，哪个基站好就接入哪个
-    # PARAM0.TTT = 0
-    # PARAM0.HOM = 0
     PARAM0.AHO.ideal_pred = False
     # PARAM0.ICIC.flag = True
     PARAM0.ICIC.RB_partition_num = 3
@@ -156,13 +160,31 @@ def paraset_generator():
     PARAM0.ICIC.ideal_RL_state = True  # ICIC时SINR理想
     # PARAM0.ICIC.obsolete_time = 10
     PARAM0.ICIC.RL_state_pred_flag = False
-    # PARAM0.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-    # PARAM0.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
+
     PARAM0.dynamic_nRB_per_UE = True  # dynamic RB
-    # PARAM0.RB_per_UE = _RB_per_UE
+    PARAM0.dynamic_nRB_scheme = 'new_model'
     PARAM0.nRB = 30
-    PARAM0.GBR_ratio = 0
     PARAM_list.append(PARAM0)
+
+    # PARAM0 = Parameter()
+    # PARAM0.active_HO = False  # 被动切换
+    # PARAM0.TTT = 0
+    # PARAM0.HOM = 0
+    # PARAM0.PHO.ideal_HO = True  # 理想被动切换，哪个基站好就接入哪个
+    # PARAM0.AHO.ideal_pred = False
+    # # PARAM0.ICIC.flag = True
+    # PARAM0.ICIC.RB_partition_num = 3
+    # PARAM0.ICIC.dynamic = True  # dynamic ICIC
+    # # PARAM0.ICIC.RB_for_edge_ratio = _edgeRB_ratio
+    # # PARAM0.ICIC.SINR_th = 10
+    # PARAM0.ICIC.ideal_RL_state = True  # ICIC时SINR理想
+    # # PARAM0.ICIC.obsolete_time = 10
+    # PARAM0.ICIC.RL_state_pred_flag = False
+    #
+    # PARAM0.dynamic_nRB_per_UE = True  # dynamic RB
+    # PARAM0.dynamic_nRB_scheme = 'trav_equal'
+    # PARAM0.nRB = 30
+    # PARAM_list.append(PARAM0)
 
     for _edgeRB_ratio in edgeRB_ratio:
         for _RB_per_UE in RB_per_UE:
@@ -174,19 +196,43 @@ def paraset_generator():
             PARAM0.AHO.ideal_pred = False
             # PARAM0.ICIC.flag = True
             PARAM0.ICIC.RB_partition_num = 3
-            PARAM0.ICIC.dynamic = False  # fix ICIC
+            PARAM0.ICIC.dynamic = False  # fixed ICIC
             PARAM0.ICIC.RB_for_edge_ratio = _edgeRB_ratio
             # PARAM0.ICIC.SINR_th = 10
             PARAM0.ICIC.ideal_RL_state = True  # ICIC时SINR理想
             # PARAM0.ICIC.obsolete_time = 10
             PARAM0.ICIC.RL_state_pred_flag = False
-            # PARAM0.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
-            # PARAM0.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
-            PARAM0.dynamic_nRB_per_UE = False
+
+            PARAM0.dynamic_nRB_per_UE = False  # 这里改
+            # PARAM0.dynamic_nRB_scheme = 'equal'
             PARAM0.RB_per_UE = _RB_per_UE
             PARAM0.nRB = 30
-            PARAM0.GBR_ratio = 0
+            # PARAM0.GBR_ratio = 0
             PARAM_list.append(PARAM0)
+
+    # for _edgeRB_ratio in edgeRB_ratio:
+    #     PARAM0 = Parameter()
+    #     PARAM0.active_HO = False  # 被动切换
+    #     PARAM0.PHO.ideal_HO = True  # 理想被动切换
+    #     PARAM0.TTT = 0
+    #     PARAM0.HOM = 0
+    #     PARAM0.AHO.ideal_pred = False
+    #     # PARAM0.ICIC.flag = True
+    #     PARAM0.ICIC.RB_partition_num = 3
+    #     PARAM0.ICIC.dynamic = True
+    #     PARAM0.ICIC.RB_for_edge_ratio = _edgeRB_ratio
+    #     # PARAM0.ICIC.SINR_th = 10
+    #     PARAM0.ICIC.ideal_RL_state = True  # ICIC时SINR理想
+    #     # PARAM0.ICIC.obsolete_time = 10
+    #     PARAM0.ICIC.RL_state_pred_flag = False
+    #     # PARAM0.ICIC.RL_state_pred_len = 10  # max pred len refers to predictor
+    #     # PARAM0.ICIC.dynamic_period = 10  # 每多少帧做一次动态ICIC划分,最小为1,最大为 RL_state_pred_len
+    #     PARAM0.dynamic_nRB_per_UE = True
+    #     PARAM0.dynamic_nRB_scheme = 'equal'
+    #
+    #     PARAM0.nRB = 30
+    #     # PARAM0.GBR_ratio = 0
+    #     PARAM_list.append(PARAM0)
 
     return PARAM_list
 
