@@ -130,7 +130,7 @@ def create_UE_list(PARAM, UE_posi):
 
 
 def decide_GBR_UE(PARAM, UE_list, seed=0):
-    np.random.seed(seed)
+    # np.random.seed(seed)
     nUE = len(UE_list)
     GBR_idx_arr = np.random.choice(nUE, np.floor(nUE*PARAM.GBR_ratio).astype(int))
     for _GBR_idx in GBR_idx_arr:

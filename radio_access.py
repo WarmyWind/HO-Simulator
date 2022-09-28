@@ -105,7 +105,7 @@ def access_init(PARAMS, BS_list, UE_list, instant_channel: InstantChannelMap,
 
         if allocate_method == equal_RB_allocate or allocate_method == ICIC_RB_allocate:
             # RB_per_UE = BS_list[NewBS_idx].RB_per_UE
-            _allo_result = allocate_method([_UE], UE_list, BS_list[NewBS_idx], serving_map)
+            _allo_result = allocate_method(PARAMS, [_UE], UE_list, BS_list[NewBS_idx], serving_map)
             if _allo_result:
                 '''更新服务基站的L3测量 以及RL state'''
                 _instant_h = instant_h[:, :, NewBS_idx, _UE.no]  # nRB, nNt, nBS, nUE

@@ -112,8 +112,8 @@ class Parameter:  # 仿真场景参数
         self.time_resolution = 8
         self.posi_resolution = 0.5
 
-        self.GBR_ratio = 0.1  # GBR用户比例
-        self.min_rate = 2*1e6  # GBR用户的最低速率
+        self.GBR_ratio = 0.05  # GBR用户比例
+        self.min_rate = 1.5*1e6  # GBR用户的最低速率
 
 
 
@@ -142,9 +142,10 @@ class Parameter:  # 仿真场景参数
 
 def paraset_generator():
     PARAM_list = []
-    edgeRB_ratio = [0,0.2,0.4,0.6,0.8,1]
+    edgeRB_ratio = [0,0.4,0.8]
     # edgeRB_ratio = [1]
-    RB_per_UE = [3,5,7,9]
+    RB_per_UE = [3]
+    # RB_per_UE = [10]
 
     PARAM0 = Parameter()
     PARAM0.active_HO = False  # 被动切换

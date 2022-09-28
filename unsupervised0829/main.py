@@ -10,6 +10,9 @@ import os
 import pickle
 import numpy as np
 import scipy.io as scio
+import psutil
+import gc
+from memory_profiler import profile
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # -1: use CPU for training, 0: GPU
 np.seterr(all='raise')
 
@@ -138,7 +141,7 @@ if __name__ == '__main__':
                     save_model(critic_var,
                                './results/0829/critic_0825_200010_{}'.format(k))
 
-
+                print('{}：%.2f MB'.format(i) % (psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024))
                 # testing
                 if i > pre_train_episode + anneal_episode + train_episode:
                     state_list.append(cur_state)

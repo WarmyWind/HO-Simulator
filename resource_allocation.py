@@ -67,20 +67,20 @@ def find_RB_arr_and_serve(BS, _UE, RB_type, serving_map:ServingMap, needed_nRB=N
             RB_arr = np.concatenate((edge_RB_arr, center_RB_arr))
             _UE.RB_type = 'edge'
 
-        elif idle_max_edge_nRB + idle_opt_center_nRB >= needed_nRB:
-            center_RB_arr = get_RB_arr_by_type(BS, 'center', idle_opt_center_nRB)
-            edge_RB_arr = get_RB_arr_by_type(BS, 'edge', needed_nRB - idle_opt_center_nRB)
-            RB_arr = np.concatenate((edge_RB_arr, center_RB_arr))
-            if len(edge_RB_arr) != 0:
-                _UE.RB_type = 'edge'
-            else:
-                _UE.RB_type = 'center'
-
-        elif idle_max_edge_nRB + idle_max_center_nRB >= needed_nRB:
-            edge_RB_arr = get_RB_arr_by_type(BS, 'edge', idle_max_edge_nRB)
-            center_RB_arr = get_RB_arr_by_type(BS, 'center', needed_nRB - idle_max_edge_nRB)
-            RB_arr = np.concatenate((edge_RB_arr, center_RB_arr))
-            _UE.RB_type = 'edge'
+        # elif idle_max_edge_nRB + idle_opt_center_nRB >= needed_nRB:
+        #     center_RB_arr = get_RB_arr_by_type(BS, 'center', idle_opt_center_nRB)
+        #     edge_RB_arr = get_RB_arr_by_type(BS, 'edge', needed_nRB - idle_opt_center_nRB)
+        #     RB_arr = np.concatenate((edge_RB_arr, center_RB_arr))
+        #     if len(edge_RB_arr) != 0:
+        #         _UE.RB_type = 'edge'
+        #     else:
+        #         _UE.RB_type = 'center'
+        #
+        # elif idle_max_edge_nRB + idle_max_center_nRB >= needed_nRB:
+        #     edge_RB_arr = get_RB_arr_by_type(BS, 'edge', idle_max_edge_nRB)
+        #     center_RB_arr = get_RB_arr_by_type(BS, 'center', needed_nRB - idle_max_edge_nRB)
+        #     RB_arr = np.concatenate((edge_RB_arr, center_RB_arr))
+        #     _UE.RB_type = 'edge'
 
         else:
             return
@@ -112,20 +112,20 @@ def find_RB_arr_and_serve(BS, _UE, RB_type, serving_map:ServingMap, needed_nRB=N
             RB_arr = np.concatenate((edge_RB_arr, center_RB_arr))
             _UE.RB_type = 'center'
 
-        elif idle_max_center_nRB + idle_opt_edge_nRB >= needed_nRB:
-            edge_RB_arr = get_RB_arr_by_type(BS, 'edge', idle_opt_edge_nRB)
-            center_RB_arr = get_RB_arr_by_type(BS, 'center', needed_nRB - idle_opt_edge_nRB)
-            RB_arr = np.concatenate((edge_RB_arr, center_RB_arr))
-            if len(center_RB_arr) != 0:
-                _UE.RB_type = 'center'
-            else:
-                _UE.RB_type = 'edge'
-
-        elif idle_max_center_nRB + idle_max_edge_nRB >= needed_nRB:
-            center_RB_arr = get_RB_arr_by_type(BS, 'center', idle_max_center_nRB)
-            edge_RB_arr = get_RB_arr_by_type(BS, 'edge', needed_nRB - idle_max_center_nRB)
-            RB_arr = np.concatenate((edge_RB_arr, center_RB_arr))
-            _UE.RB_type = 'center'
+        # elif idle_max_center_nRB + idle_opt_edge_nRB >= needed_nRB:
+        #     edge_RB_arr = get_RB_arr_by_type(BS, 'edge', idle_opt_edge_nRB)
+        #     center_RB_arr = get_RB_arr_by_type(BS, 'center', needed_nRB - idle_opt_edge_nRB)
+        #     RB_arr = np.concatenate((edge_RB_arr, center_RB_arr))
+        #     if len(center_RB_arr) != 0:
+        #         _UE.RB_type = 'center'
+        #     else:
+        #         _UE.RB_type = 'edge'
+        #
+        # elif idle_max_center_nRB + idle_max_edge_nRB >= needed_nRB:
+        #     center_RB_arr = get_RB_arr_by_type(BS, 'center', idle_max_center_nRB)
+        #     edge_RB_arr = get_RB_arr_by_type(BS, 'edge', needed_nRB - idle_max_center_nRB)
+        #     RB_arr = np.concatenate((edge_RB_arr, center_RB_arr))
+        #     _UE.RB_type = 'center'
 
         else:
             return
@@ -142,14 +142,14 @@ def find_RB_arr_and_serve(BS, _UE, RB_type, serving_map:ServingMap, needed_nRB=N
         BS.serve_UE(_UE, RB_arr, Nt_arr, serving_map)
 
 
-def ICIC_RB_allocate(target_UE_list, all_UE_list, BS:BS, serving_map:ServingMap, est_nRB_flag=True):
+def ICIC_RB_allocate(PARAM, target_UE_list, all_UE_list, BS:BS, serving_map:ServingMap, est_GBR_nRB_flag=True):
     result_flag = True
     for _UE in target_UE_list:
         if _UE.state != 'unserved':
             continue
-        if _UE.GBR_flag and est_nRB_flag:
-            _needed_nRB = _UE.estimate_needed_nRB_by_SINR('edge', len(BS.edge_RB_idx), len(BS.center_RB_idx))
-            _needed_nRB = _needed_nRB + 3
+        if _UE.GBR_flag and est_GBR_nRB_flag:
+            _needed_nRB = _UE.estimate_needed_nRB_by_SINR(PARAM, 'edge', len(BS.edge_RB_idx), len(BS.center_RB_idx))
+            # _needed_nRB = _needed_nRB + 3
             if _needed_nRB > len(BS.center_RB_idx) + len(BS.edge_RB_idx):
                 _needed_nRB = len(BS.center_RB_idx) + len(BS.edge_RB_idx)
         else:
@@ -169,7 +169,7 @@ def ICIC_RB_allocate(target_UE_list, all_UE_list, BS:BS, serving_map:ServingMap,
                 result_flag = False
 
 
-    return result_flag  # 成功
+    return result_flag
 
 
 def ICIC_BS_RB_allocate(PARAM, UE_list, BS:BS, serving_map:ServingMap):
@@ -204,7 +204,7 @@ def ICIC_BS_RB_allocate(PARAM, UE_list, BS:BS, serving_map:ServingMap):
         if _UE.state == 'served' and _UE.serv_BS != BS.no:
             continue
         if _UE.GBR_flag:
-            result_flag = ICIC_RB_allocate([_UE], UE_list, BS, serving_map, est_nRB_flag=PARAM.ICIC.dynamic)
+            result_flag = ICIC_RB_allocate(PARAM, [_UE], UE_list, BS, serving_map, est_GBR_nRB_flag=True)
             if result_flag:
                 if _UE.posi_type == 'center':
                     center_UE_no_list = center_UE_no_list[center_UE_no_list!=_UE.no]
@@ -217,7 +217,7 @@ def ICIC_BS_RB_allocate(PARAM, UE_list, BS:BS, serving_map:ServingMap):
         _UE_no = edge_UE_no_list[0]
 
         _UE = search_object_form_list_by_no(UE_list, _UE_no)
-        result_flag = ICIC_RB_allocate([_UE], UE_list, BS, serving_map)
+        result_flag = ICIC_RB_allocate(PARAM, [_UE], UE_list, BS, serving_map)
         if result_flag:
             edge_UE_no_list = edge_UE_no_list[1:]
         else:
@@ -386,7 +386,7 @@ def dynamic_nRB_per_UE_and_ICIC(PARAM, BS_list, UE_list, serving_map:ServingMap,
                 state = _BS.nUE_in_range / _BS.nRB
                 _nRB_per_UE = actor.get_action([[state]], sess)[0][0]
                 _nRB_per_UE = np.round(_nRB_per_UE)
-                _BS.RB_per_UE = np.min([len(_BS.center_RB_idx)+len(_BS.edge_RB_idx),_nRB_per_UE])
+                _BS.RB_per_UE = np.min([len(_BS.center_RB_idx)+len(_BS.edge_RB_idx), _nRB_per_UE])
         '''确定各个BS的最大边缘UE数'''
         all_RB_resourse = PARAM.Macro.opt_UE_per_RB * PARAM.nRB
         # average_edge_UE = 0

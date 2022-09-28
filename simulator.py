@@ -110,6 +110,33 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
             _GBR_UE.append(_UE.no)
     GBR_UE_list = [_GBR_UE]
 
+    '''统计GBR用户掉线位置'''
+    GBR_offline_posi = []
+    for _UE in UE_list:
+        if not _UE.GBR_flag: continue
+        if UE_rate[_UE.no] < _UE.min_rate:
+            GBR_offline_posi.append(_UE.posi)
+
+    '''统计必然掉线的GBR用户'''
+    _inevitable_offline_GBR_UE = []
+    _out_of_capacity_GBR_UE = []
+    edge_nRB = len(BS_list[0].edge_RB_idx)
+    center_nRB = len(BS_list[0].center_RB_idx)
+    for _UE in UE_list:
+        if not _UE.active or not _UE.GBR_flag: continue
+
+        if UE_rate[_UE.no] < _UE.min_rate:
+            _needed_nRB = _UE.estimate_needed_nRB_by_SINR(PARAM, 'edge', edge_nRB, center_nRB)
+            if _needed_nRB > edge_nRB + center_nRB:
+                _inevitable_offline_GBR_UE.append(_UE.no)
+            elif _UE.serv_BS != -1:
+                _BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
+                if _UE.is_out_of_capacity(PARAM, 'edge', _BS.center_RB_idx, _BS.edge_RB_idx):
+                    _out_of_capacity_GBR_UE.append(_UE.no)
+    inevitable_offline_GBR_UE_list = [_inevitable_offline_GBR_UE]
+    out_of_capacity_GBR_UE_list = [_out_of_capacity_GBR_UE]
+
+
     '''统计中心、边缘UE数、未服务率'''
     if PARAM.ICIC.flag:
         center_UE, center_UE_offline, edge_UE, edge_UE_offline, UE_on_edge_RB = count_UE_offline(PARAM, UE_list, SINR_th=PARAM.ICIC.SINR_th_for_stat)
@@ -130,8 +157,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
 
     '''开始步进时长仿真'''
     for drop_idx in range(1, SimConfig.nDrop):
-        if drop_idx >= 8:
-            probe = 8
+
         '''以下操作均以80ms为步长'''
         if drop_idx % PARAM.time_resolution == 0:
             '''更新UE位置'''
@@ -306,11 +332,37 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
         # max_inter_list.append(max_inter_P)
         rate_list.append(UE_rate)
 
-        if len(rate_list) == 8*50:
-            probe = 50
+
+        '''统计GBR用户掉线位置'''
+        for _UE in UE_list:
+            if not _UE.GBR_flag: continue
+            if UE_rate[_UE.no] < _UE.min_rate:
+                GBR_offline_posi.append(_UE.posi)
+
+        '''统计必然掉线的GBR用户'''
+        _inevitable_offline_GBR_UE = []
+        _out_of_capacity_GBR_UE = []
+        edge_nRB = len(BS_list[0].edge_RB_idx)
+        center_nRB = len(BS_list[0].center_RB_idx)
+        for _UE in UE_list:
+            if not _UE.active or not _UE.GBR_flag:continue
+
+            if UE_rate[_UE.no] < _UE.min_rate:
+                _needed_nRB = _UE.estimate_needed_nRB_by_SINR(PARAM, 'edge', edge_nRB, center_nRB)
+                if _needed_nRB > edge_nRB + center_nRB:
+                    _inevitable_offline_GBR_UE.append(_UE.no)
+                elif _UE.serv_BS != -1:
+                    _BS = search_object_form_list_by_no(BS_list, _UE.serv_BS)
+                    if _UE.is_out_of_capacity(PARAM, 'edge', _BS.center_RB_idx, _BS.edge_RB_idx):
+                        _out_of_capacity_GBR_UE.append(_UE.no)
+        inevitable_offline_GBR_UE_list.append(_inevitable_offline_GBR_UE)
+        out_of_capacity_GBR_UE_list.append(_out_of_capacity_GBR_UE)
 
 
-
+        # GBR_num = [0 for _ in range(len(BS_list))]
+        # for _UE in UE_list:
+        #     if _UE.GBR_flag and _UE.active:
+        #         GBR_num[_UE.serv_BS] = GBR_num[_UE.serv_BS] + 1
 
         '''每80ms做一次记录，保存数据'''
         if drop_idx % PARAM.time_resolution == 0:
@@ -382,7 +434,9 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
     est_RL_state_dict = {'est_rec_power':est_rec_power_list, 'est_itf_power':est_itf_power_list, 'est_ICIC_itf_power':est_ICIC_itf_power_list}
 
     return np.array(rate_list), UE_list, BS_list, UE_offline_dict, np.array(rec_P_list), np.array(inter_P_list), \
-           np.array(RB_for_edge_ratio_list), np.array(UE_in_different_cell_list), np.array(GBR_UE_list), est_RL_state_dict
+           np.array(RB_for_edge_ratio_list), np.array(UE_in_different_cell_list), np.array(GBR_UE_list), est_RL_state_dict, \
+           np.array(GBR_offline_posi), np.array(inevitable_offline_GBR_UE_list), np.array(out_of_capacity_GBR_UE_list)
+
 
 
 
@@ -395,7 +449,7 @@ def start_simulation(PARAM, BS_list, UE_list, shadow, large_fading:LargeScaleCha
 if __name__ == '__main__':
     class SimConfig:  # 仿真参数
         save_flag = 1  # 是否保存结果
-        root_path = 'result/0910_0.10GBR2M(+3RB)_02Set_UE_posi_330user_edge_7BS_liji_duobu_bylarge+fixednRB'
+        root_path = 'result/0920_rerun1_0.05GBR1.5M_02Set_UE_posi_330user_edge_7BS_12UEperRB_lijiduobu+3fixednRB_[0,0.4,0.8]ICICnRB'
         # nDrop = 6000 - 10*8  # 时间步进长度
         nDrop = 400
         # shadow_filepath = 'shadowFad_dB_8sigma_200dcov.mat'
@@ -518,7 +572,12 @@ if __name__ == '__main__':
 
             '''进入仿真'''
             _start_time = time.time()
-            _rate_arr, _UE_list, _BS_list, _UE_offline_dict, _rec_arr, _inter_arr, _RB_for_edge_ratio_arr, _UE_in_different_cell_arr, _GBR_UE_arr, _est_RL_state_dict = start_simulation(PARAM, Macro_BS_list, UE_list, shadow, large_fading, small_fading, instant_channel, serving_map, NN, normalize_para, actor, sess, extra_interf_map)
+            _rate_arr, _UE_list, _BS_list, _UE_offline_dict, _rec_arr, _inter_arr, _RB_for_edge_ratio_arr, \
+            _UE_in_different_cell_arr, _GBR_UE_arr, _est_RL_state_dict, _GBR_offline_posi_arr, \
+            _inevitable_offline_GBR_UE_arr, _out_of_capacity_GBR_UE_arr = start_simulation(PARAM, Macro_BS_list, UE_list, shadow, large_fading,
+                                                              small_fading, instant_channel, serving_map, NN,
+                                                              normalize_para, actor, sess, extra_interf_map)
+
             _end_time = time.time()
 
             '''一轮仿真结束，输出和保存信息'''
@@ -538,6 +597,9 @@ if __name__ == '__main__':
                 # np.save(SimConfig.root_path + '/{}/inter_arr.npy'.format(i), _inter_arr)
                 np.save(SimConfig.root_path + '/{}/UE_in_different_cell_arr.npy'.format(i), _UE_in_different_cell_arr)
                 np.save(SimConfig.root_path + '/{}/est_RL_state_dict.npy'.format(i), _est_RL_state_dict)
+                np.save(SimConfig.root_path + '/{}/GBR_offline_posi.npy'.format(i), _GBR_offline_posi_arr)
+                np.save(SimConfig.root_path + '/{}/inevitable_offline_GBR_UE_arr.npy'.format(i), _inevitable_offline_GBR_UE_arr)
+                np.save(SimConfig.root_path + '/{}/out_of_capacity_GBR_UE_arr.npy'.format(i), _out_of_capacity_GBR_UE_arr)
 
                 if PARAM.ICIC.flag and PARAM.ICIC.dynamic:
                     np.save(SimConfig.root_path + '/{}/RB_for_edge_ratio_arr.npy'.format(i), _RB_for_edge_ratio_arr)

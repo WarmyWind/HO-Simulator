@@ -216,34 +216,72 @@ class UE:
         self.posi_type = None
         self.RB_type = None
 
-    def estimate_needed_nRB_by_SINR(self, RB_priority, available_ICIC_nRB, available_nonICIC_nRB, RB_width=180*1e3):
+
+    def estimate_needed_ICICandnonICICnRB_by_SINR(self, PARAM, RB_priority, available_ICIC_nRB, available_nonICIC_nRB, RB_width=180*1e3):
+        compensate_coe = (PARAM.ICIC.RB_partition_num * available_ICIC_nRB + available_nonICIC_nRB) / (available_ICIC_nRB + available_nonICIC_nRB)
         try:
             if RB_priority == 'edge':
-                ICIC_SINR = 10 ** (self.RL_state.estimated_ICIC_SINR_dB / 10)
+                ICIC_itf = self.RL_state.estimated_ICIC_itf_power * compensate_coe + self.RL_state.estimated_extra_ICIC_itf_power
+                rec_power = self.RL_state.estimated_rec_power
+                # ICIC_SINR = 10 ** (self.RL_state.estimated_ICIC_SINR_dB / 10)
+                ICIC_SINR = rec_power / (ICIC_itf + PARAM.sigma2)
                 rate_per_ICIC_RB = RB_width * np.log2(1 + ICIC_SINR)
                 needed_nRB = np.ceil(self.min_rate / rate_per_ICIC_RB)
-                if available_ICIC_nRB < needed_nRB:
-                    SINR = 10 ** (self.RL_state.filtered_SINR_dB / 10)
+                if available_ICIC_nRB >= needed_nRB:
+                    ICIC_needed_nRB = needed_nRB
+                    non_ICIC_needed_nRB = 0
+                else:
+                    ICIC_needed_nRB = available_ICIC_nRB
+                    nonICIC_itf = self.RL_state.estimated_itf_power * compensate_coe + self.RL_state.estimated_extra_itf_power
+                    rec_power = self.RL_state.estimated_rec_power
+                    # SINR = 10 ** (self.RL_state.filtered_SINR_dB / 10)
+                    SINR = rec_power / (nonICIC_itf + PARAM.sigma2)
                     rate_per_RB = RB_width * np.log2(1 + SINR)
-                    non_ICIC_needed_rate = self.min_rate - available_ICIC_nRB * RB_width * np.log2(1 + SINR)
+                    non_ICIC_needed_rate = self.min_rate - ICIC_needed_nRB * RB_width * np.log2(1 + SINR)
                     non_ICIC_needed_nRB = np.ceil(non_ICIC_needed_rate / rate_per_RB)
-                    needed_nRB = available_ICIC_nRB + non_ICIC_needed_nRB
+                    # needed_nRB = ICIC_needed_nRB + non_ICIC_needed_nRB
             else:
-                SINR = 10 ** (self.RL_state.filtered_SINR_dB / 10)
+                nonICIC_itf = self.RL_state.estimated_itf_power * compensate_coe + self.RL_state.estimated_extra_itf_power
+                rec_power = self.RL_state.estimated_rec_power * compensate_coe
+                # SINR = 10 ** (self.RL_state.filtered_SINR_dB / 10)
+                SINR = rec_power / (nonICIC_itf + PARAM.sigma2)
                 rate_per_RB = RB_width * np.log2(1 + SINR)
                 needed_nRB = np.ceil(self.min_rate / rate_per_RB)
-                if available_nonICIC_nRB < needed_nRB:
-                    ICIC_SINR = 10 ** (self.RL_state.estimated_ICIC_SINR_dB / 10)
+                if available_nonICIC_nRB >= needed_nRB:
+                    non_ICIC_needed_nRB = needed_nRB
+                    ICIC_needed_nRB = 0
+                else:
+                    non_ICIC_needed_nRB = available_nonICIC_nRB
+                    ICIC_itf = self.RL_state.estimated_ICIC_itf_power * compensate_coe + self.RL_state.estimated_extra_ICIC_itf_power
+                    rec_power = self.RL_state.estimated_rec_power * compensate_coe
+                    # ICIC_SINR = 10 ** (self.RL_state.estimated_ICIC_SINR_dB / 10)
+                    ICIC_SINR = rec_power / (ICIC_itf + PARAM.sigma2)
                     rate_per_ICIC_RB = RB_width * np.log2(1 + ICIC_SINR)
-                    ICIC_needed_rate = self.min_rate - available_nonICIC_nRB * RB_width * np.log2(1 + ICIC_SINR)
+                    ICIC_needed_rate = self.min_rate - non_ICIC_needed_nRB * RB_width * np.log2(1 + ICIC_SINR)
                     ICIC_needed_nRB = np.ceil(ICIC_needed_rate / rate_per_ICIC_RB)
-                    needed_nRB = available_nonICIC_nRB + ICIC_needed_nRB
+                    # needed_nRB = non_ICIC_needed_nRB + ICIC_needed_nRB
 
         except:
             raise Exception('RL_state SINR is None!')
 
-        return needed_nRB
+        return ICIC_needed_nRB, non_ICIC_needed_nRB
 
+    def estimate_needed_nRB_by_SINR(self, PARAM, RB_priority, available_ICIC_nRB, available_nonICIC_nRB):
+        ICIC_needed_nRB, non_ICIC_needed_nRB = self.estimate_needed_ICICandnonICICnRB_by_SINR(PARAM, RB_priority, available_ICIC_nRB, available_nonICIC_nRB)
+        return ICIC_needed_nRB + non_ICIC_needed_nRB
+
+    def is_out_of_capacity(self, PARAM, RB_priority, center_RB_idx, edge_RB_idx):
+        ICIC_needed_nRB, non_ICIC_needed_nRB = self.estimate_needed_ICICandnonICICnRB_by_SINR(PARAM, RB_priority, len(edge_RB_idx), len(center_RB_idx))
+        ocp_ICIC_nRB = 0
+        ocp_nonICIC_nRB = 0
+        for _RB_Nt in self.RB_Nt_ocp:
+            _RB = _RB_Nt[0]
+            if _RB in center_RB_idx:
+                ocp_nonICIC_nRB = ocp_nonICIC_nRB + 1
+            else:
+                ocp_ICIC_nRB = ocp_ICIC_nRB + 1
+        result = not (ICIC_needed_nRB == ocp_ICIC_nRB and non_ICIC_needed_nRB == ocp_nonICIC_nRB)
+        return result
 
     def is_in_invalid_RB(self, _BS, ICIC_flag:bool):
         if ICIC_flag:
